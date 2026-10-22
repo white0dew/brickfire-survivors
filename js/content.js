@@ -444,7 +444,8 @@
     timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', desc: '冻结所有敌人 7 秒' },
     shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', desc: '修复车体 25%，并获得 2 秒无敌' },
     tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', desc: '修复车体 45%，并提升 5 最大装甲' },
-    basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', desc: '修复基地装甲 24%' }
+    basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', desc: '修复基地装甲 24%' },
+    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', desc: '在基地周围部署一座防御塔；基地本身不攻击' }
   };
 
   const WEAPONS = {

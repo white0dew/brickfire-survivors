@@ -7,7 +7,7 @@
   <title>砖火幸存者 // BRICKFIRE SURVIVORS</title>
   <meta name="description" content="经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261022-13">
+  <link rel="stylesheet" href="css/style.css?v=20261022-16">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -32,7 +32,7 @@
           </div>
         </div>
         <div class="hangar-top__right">
-          <div id="padState" class="pad-state">PAD / 按任意键</div>
+          <div id="padState" class="pad-state">PAD / 按手柄键</div>
           <div class="status-led"><i></i> EXTRACTION LINK STABLE</div>
           <button id="fullBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="全屏" title="全屏 (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
           <button id="soundBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="切换声音" title="声音 (M)">
@@ -237,6 +237,7 @@
             <div class="base-meter">
               <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">650 / 650</b></div>
               <div class="meter meter--base"><i id="baseHpMeter"></i></div>
+              <div id="baseTurretNote" class="base-turret-note">防御塔 0 / 4 · 拾取炮塔后启用</div>
             </div>
             <div id="coreNote" class="core-note"><span class="blink-dot"></span> 基地或车体归零即失败 · 基地会自行修复</div>
           </section>
@@ -333,7 +334,7 @@
         <h2 id="howTitle">活到撤离信号亮起</h2>
         <div class="how__grid">
           <article><span class="how__num">01</span><h3>驾驶</h3><p><kbd>WASD</kbd> / 方向键 / 左摇杆移动。主炮自动索敌最近单位，鼠标或右摇杆可改写瞄准方向。RT 可强制补火。</p></article>
-          <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。</p></article>
+          <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。基地本身不攻击，拾取「哨戒炮塔」后才会部署防御塔。</p></article>
           <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；两人都会获得同一套模块。机库的坦克库有 20 台底盘，开局的武器、被动与特性各不相同。</p></article>
           <article><span class="how__num">04</span><h3>破坏 / 合成</h3><p>砖墙可被炮弹击碎，钢板不可。水系阻挡履带但不挡弹道。武器 Lv.6 且对应被动 Lv.2 后，升级卡会出现合成协议；6 条路线可在「合成表」查看。</p></article>
         </div>
@@ -450,10 +451,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261022-13"></script>
-  <script src="js/icons.js?v=20261022-13"></script>
-  <script src="js/audio.js?v=20261022-13"></script>
-  <script src="js/game.js?v=20261022-13"></script>
-  <script src="js/main.js?v=20261022-13"></script>
+  <script src="js/content.js?v=20261022-16"></script>
+  <script src="js/icons.js?v=20261022-16"></script>
+  <script src="js/audio.js?v=20261022-16"></script>
+  <script src="js/game.js?v=20261022-16"></script>
+  <script src="js/main.js?v=20261022-16"></script>
 </body>
 </html>

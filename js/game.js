@@ -237,7 +237,7 @@
       x: coreX, y: coreY, w: CORE_W, h: CORE_H,
       cx: coreX + CORE_W / 2, cy: coreY + CORE_H / 2,
       hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, alive: true, radius: BASE_RADIUS,
-      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, repairRate: 6, repairDelay: 7
+      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, turrets: 0, repairRate: 6, repairDelay: 7
     };
     // The base's own defensive shell is friendly to player fire, but enemy fire can breach it.
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
@@ -723,17 +723,20 @@
       ctx.fillStyle = hexA(p.core, i % 2 ? .35 : .8);
       ctx.fillRect(31 + Math.cos(a) * 24, 31 + Math.sin(a) * 24, 2, 2);
     }
-    // base turret mount and barrel
-    ctx.save();
-    ctx.translate(32, 32);
-    ctx.rotate(c.turretAngle || -Math.PI / 2);
-    ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -16, 6, 32);
-    ctx.fillStyle = '#2d6f65'; ctx.fillRect(-2, -15, 4, 30);
-    ctx.fillStyle = '#9fffe6'; ctx.fillRect(-1, -12, 2, 2);
-    ctx.fillStyle = '#07110e'; ctx.fillRect(-6, -8, 12, 16);
-    ctx.fillStyle = '#3d8c7d'; ctx.fillRect(-4, -6, 8, 12);
-    ctx.fillStyle = '#8fffe6'; ctx.fillRect(-2, -2, 4, 4);
-    ctx.restore();
+    // defense towers are added only by sentry pickups
+    const turretCount = c.turrets || 0;
+    const turretMounts = [[0, -22], [22, 0], [0, 22], [-22, 0]];
+    for (let i = 0; i < turretCount; i++) {
+      const [ox, oy] = turretMounts[i % turretMounts.length];
+      ctx.save();
+      ctx.translate(32 + ox, 32 + oy);
+      ctx.rotate(c.turretAngle || -Math.PI / 2);
+      ctx.fillStyle = '#06100d'; ctx.fillRect(-6, -6, 12, 12);
+      ctx.fillStyle = '#3d8c7d'; ctx.fillRect(-4, -4, 8, 8);
+      ctx.fillStyle = '#06100d'; ctx.fillRect(-2, -12, 4, 12);
+      ctx.fillStyle = '#8fffe6'; ctx.fillRect(-1, -10, 2, 2);
+      ctx.restore();
+    }
     // center light
     const g = ctx.createRadialGradient(32, 32, 1, 32, 32, 13);
     g.addColorStop(0, 'rgba(255,255,255,.95)');
@@ -1475,6 +1478,9 @@
         } else if (p.type === 'basekit') {
           ctx.fillRect(-6, -5, 12, 10); ctx.fillRect(-1, -8, 2, 16); ctx.fillRect(-8, -1, 16, 2);
           ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -3, 6, 6);
+        } else if (p.type === 'turret') {
+          ctx.fillRect(-5, -3, 10, 7); ctx.fillRect(-2, -7, 4, 5); ctx.fillRect(-1, 4, 2, 3);
+          ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -1, 6, 2);
         }
         ctx.restore();
         const near = nearestPlayer(p.x, p.y) || G.player;
@@ -1966,6 +1972,9 @@
     Input.gamepad.selectedCard = 0;
     Input.mobile = { active: false, x: 0, y: 0 };
     loadArena(index);
+    // Give the player one nearby sentry pickup so the base has a clear
+    // defensive choice from the first minute instead of firing for free.
+    if (G.player) spawnPickup('turret', clamp(G.player.x + 110, 24, W - 24), clamp(G.player.y + 20, 24, H - 24), 0);
     for (const p of G.players) {
       p.bonusHp = 0;
       p.noDamageTime = 0;
@@ -2008,8 +2017,8 @@
     AUDIO.startMusic();
     AUDIO.setIntensity(0);
     showToast(G.twoPlayer
-      ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署`
-      : `${G.tank.name} 已部署 // ${G.tank.trait}`, 'cyan');
+      ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署 // 拾取哨戒炮塔`
+      : `${G.tank.name} 已部署 // ${G.tank.trait} // 拾取哨戒炮塔`, 'cyan');
     setTimeout(() => {
       if (G.mode !== 'playing') return;
       if (G.twoPlayer) showToast(isTouchUI() ? '手机双人建议外接手柄 · 靠近倒地队友可救援' : 'P1 键鼠 / P2 手柄 · 靠近倒地队友可救援');
@@ -3219,9 +3228,9 @@
       spawnPickup('xp', e.x, e.y, xpValue);
       const dropChance = (e.elite ? .95 : statsFor(owner).dropChance);
       if (chance(dropChance)) {
-        const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank'];
-        const weights = [15, 15, 15, 13, 15, 20];
-        let r = Math.random() * 93, item = 'star';
+        const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank', 'turret'];
+        const weights = [15, 15, 15, 13, 15, 20, 10];
+        let r = Math.random() * 103, item = 'star';
         for (let i = 0; i < itemKeys.length; i++) { r -= weights[i]; if (r <= 0) { item = itemKeys[i]; break; } }
         spawnPickup(item, e.x, e.y, 0);
       }
@@ -3257,20 +3266,23 @@
     }
   }
 
-  function fireBaseShot(target) {
+  function fireBaseShot(target, turretIndex) {
     const c = G.core;
     if (!c || !c.alive || !target) return;
-    const a = Math.atan2(target.y - c.cy, target.x - c.cx);
+    const mounts = [[0, -22], [22, 0], [0, 22], [-22, 0]];
+    const [ox, oy] = mounts[(turretIndex || 0) % mounts.length];
+    const sx = c.cx + ox, sy = c.cy + oy;
+    const a = Math.atan2(target.y - sy, target.x - sx);
     c.turretAngle = a;
-    const muzzle = 22;
+    const muzzle = 14;
     G.bullets.push({
-      x: c.cx + Math.cos(a) * muzzle, y: c.cy + Math.sin(a) * muzzle,
+      x: sx + Math.cos(a) * muzzle, y: sy + Math.sin(a) * muzzle,
       vx: Math.cos(a) * 520, vy: Math.sin(a) * 520,
       radius: 3.2, damage: 25, life: 1.2, maxLife: 1.2,
       color: '#8fffe6', trail: 16, enemy: false, baseShot: true,
       owner: null, crit: false, pierce: 0, explode: 0, hit: new Set()
     });
-    addEffect({ type: 'muzzle', x: c.cx + Math.cos(a) * 27, y: c.cy + Math.sin(a) * 27, angle: a, life: .16, maxLife: .16, color: '#8fffe6', radius: 13 });
+    addEffect({ type: 'muzzle', x: sx + Math.cos(a) * 19, y: sy + Math.sin(a) * 19, angle: a, life: .16, maxLife: .16, color: '#8fffe6', radius: 11 });
     AUDIO.shoot();
   }
 
@@ -3282,15 +3294,18 @@
     if (c.hp < c.maxHp && c.noDamage > c.repairDelay) {
       c.hp = Math.min(c.maxHp, c.hp + c.repairRate * dt);
     }
+    const turretCount = c.turrets || 0;
+    if (turretCount <= 0) return;
     c.turretCd -= dt;
     if (c.turretCd <= 0) {
-      const target = nearestEnemy(c.cx, c.cy, BASE_RANGE);
-      if (target) {
-        fireBaseShot(target);
-        c.turretCd = .92;
-      } else {
-        c.turretCd = .2;
+      let fired = false;
+      for (let i = 0; i < turretCount; i++) {
+        const target = nearestEnemy(c.cx, c.cy, BASE_RANGE);
+        if (!target) break;
+        fireBaseShot(target, i);
+        fired = true;
       }
+      c.turretCd = fired ? .92 : .2;
     }
   }
 
@@ -3409,6 +3424,23 @@
     }
     const item = ITEMS[pk.type];
     if (!item) return;
+    if (pk.type === 'turret') {
+      if (G.core && G.core.alive) {
+        const max = 4;
+        if ((G.core.turrets || 0) < max) {
+          G.core.turrets = (G.core.turrets || 0) + 1;
+          addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 46, life: .55, maxLife: .55, color: '#8fffe6' });
+          showToast(`基地防御塔 ${G.core.turrets} / ${max} // 自动索敌启用`, 'cyan');
+          AUDIO.item();
+        } else {
+          const heal = G.core.maxHp * .1;
+          G.core.hp = Math.min(G.core.maxHp, G.core.hp + heal);
+          showToast('防御塔已满 // 基地装甲 +10%', 'cyan');
+          AUDIO.tick();
+        }
+      }
+      return;
+    }
     if (pk.type === 'basekit') {
       if (G.core && G.core.alive) {
         const heal = G.core.maxHp * .24;
@@ -3785,6 +3817,11 @@
     if (U.baseHpText) U.baseHpText.textContent = G.core ? `${Math.ceil(G.core.hp)} / ${Math.ceil(G.core.maxHp)}` : '--';
     if (U.baseHpMeter) U.baseHpMeter.style.width = `${basePct}%`;
     if (U.baseMeter) U.baseMeter.classList.toggle('is-low', basePct < 30);
+    if (U.baseTurretNote) {
+      const turrets = (G.core && G.core.turrets) || 0;
+      U.baseTurretNote.textContent = turrets > 0 ? `防御塔 ${turrets} / 4 · 自动索敌` : '防御塔 0 / 4 · 拾取炮塔后启用';
+      U.baseTurretNote.classList.toggle('is-active', turrets > 0);
+    }
     U.coreState.classList.toggle('is-danger', basePct < 30 || hpPct < 35);
     Array.from(U.corePips.children).forEach((el, i) => el.classList.toggle('is-off', progress < (i + 1) * 20));
     U.killCount.textContent = String(G.kills).padStart(3, '0');
@@ -4626,7 +4663,7 @@
       'arenaOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
       'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
-      'baseHpText', 'baseHpMeter', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
+      'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
     for (const id of ids) U[id] = document.getElementById(id);
     U.arenaCards = Array.from(U.arenaOptions ? U.arenaOptions.querySelectorAll('.arena-card') : document.querySelectorAll('.arena-card'));
     U.modeCards = Array.from(document.querySelectorAll('.mode-card'));
@@ -4841,9 +4878,18 @@
     U.mobileDash.addEventListener('pointerdown', e => { e.preventDefault(); if (G.mode === 'playing') Input.dashQueued = true; });
   }
 
+  function gamepadList() {
+    try {
+      const getter = navigator.getGamepads || navigator.webkitGetGamepads;
+      return getter ? (getter.call(navigator) || []) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   function rumble(strength, duration) {
     try {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pads = gamepadList();
       const gp = Array.from(pads).find(p => p && p.connected);
       const actuator = gp && gp.vibrationActuator;
       if (!actuator || !actuator.playEffect) return;
@@ -4860,7 +4906,13 @@
   function syncPadState() {
     const el = document.getElementById('padState');
     if (!el) return;
-    el.textContent = Input.gamepad.connected ? 'PAD / ONLINE' : 'PAD / 按任意键';
+    const supported = !!(navigator.getGamepads || navigator.webkitGetGamepads);
+    el.textContent = !supported ? 'PAD / 不支持' : Input.gamepad.connected ? 'PAD / ONLINE' : 'PAD / 按手柄键';
+    el.title = !supported
+      ? '当前浏览器不支持 Gamepad API；请使用 Chrome / Edge 等支持手柄的浏览器。'
+      : Input.gamepad.connected
+        ? `已识别手柄：${Input.gamepad.id || 'Controller'}`
+        : '未检测到手柄。连接后按任意键；浏览器需支持 Gamepad API 并保持页面聚焦。';
     el.classList.toggle('is-on', Input.gamepad.connected);
   }
 
@@ -4994,7 +5046,7 @@
 
   function pollGamepad() {
     const g = Input.gamepad;
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pads = gamepadList();
     const gp = Array.from(pads).find(p => p && p.connected);
     if (!gp) {
       if (g.connected) {
@@ -5163,7 +5215,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext } };
+      window.__BF_DEBUG = { G, Input, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
     }
     requestAnimationFrame(loop);
   }

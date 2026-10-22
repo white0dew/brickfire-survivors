@@ -1282,3 +1282,13 @@ button.is-pad-focus, [tabindex].is-pad-focus, .upgrade-card.is-pad-focus {
   .run-clock__meta { gap: 5px; }
   .run-clock__meta #objectiveLabel { font-size: 8px; }
 }
+
+/* base turret status */
+.base-turret-note {
+  margin-top: 5px;
+  font-family: var(--font-cn);
+  font-size: 8px;
+  letter-spacing: .06em;
+  color: var(--muted-2);
+}
+.base-turret-note.is-active { color: var(--cyan); }
