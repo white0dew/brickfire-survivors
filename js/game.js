@@ -5,7 +5,7 @@
   const C = window.BF_CONTENT;
   const ICONS = window.BF_ICONS;
   const AUDIO = window.BF_AUDIO;
-  const { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE } = C;
+  const { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE, UPGRADE_RARITY } = C;
 
   const TILE = 32;
   const COLS = 30;
@@ -1418,11 +1418,18 @@
     const ctx = gameCtx;
     ctx.save();
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
     for (const d of G.damageNumbers) {
       const k = d.life / d.maxLife;
-      ctx.globalAlpha = clamp(k * 1.6, 0, 1);
-      ctx.font = `${d.crit ? 'bold 10px' : '7px'} Silkscreen, monospace`;
-      ctx.fillStyle = d.crit ? '#ffd36b' : d.color || '#f0ead8';
+      ctx.globalAlpha = clamp(k * 1.65, 0, 1);
+      const size = d.crit ? 17 : 12;
+      ctx.font = `900 ${size}px Silkscreen, monospace`;
+      // A dark keyline keeps numbers legible over bricks, fire and enemy hulls.
+      ctx.lineWidth = d.crit ? 4 : 3;
+      ctx.strokeStyle = 'rgba(3,7,5,.88)';
+      ctx.strokeText(d.text, d.x, d.y);
+      ctx.fillStyle = d.crit ? '#ffe27a' : d.color || '#fff5dc';
       ctx.fillText(d.text, d.x, d.y);
     }
     ctx.restore();
@@ -2117,6 +2124,34 @@
     return best;
   }
 
+  function autoLineClear(x1, y1, x2, y2) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const steps = Math.max(2, Math.ceil(len / 10));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const tile = tileAt(lerp(x1, x2, t), lerp(y1, y2, t));
+      if (tile.type === 'brick' || tile.type === 'steel') return false;
+    }
+    return true;
+  }
+
+  // Auto-fire is intentionally cover-aware: it will not spend the player's
+  // cover-breaking shots on a target behind a wall. Manual aim still breaks walls.
+  function nearestAutoEnemy(p, range) {
+    const r2 = range * range;
+    const candidates = [];
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      const d = dist2(p.x, p.y, e.x, e.y);
+      if (d < r2) candidates.push({ e, d });
+    }
+    candidates.sort((a, b) => a.d - b.d);
+    for (const c of candidates) {
+      if (autoLineClear(p.x, p.y, c.e.x, c.e.y)) return c.e;
+    }
+    return null;
+  }
+
   function fused(id) {
     return !!(G.fusions && G.fusions[id]);
   }
@@ -2206,7 +2241,7 @@
       p.shield = Math.min(p.shieldMax, p.shield + dt * 18);
     }
     if (p.noDamageTime > 6 && p.hp < p.maxHp) {
-      p.hp = Math.min(p.maxHp, p.hp + dt * 2.2);
+      p.hp = Math.min(p.maxHp, p.hp + dt * 3.2);
     }
     const idx = p.index || 0;
     const wantDash = idx === 0 ? Input.dashQueued : Input.dashQueued2;
@@ -2294,7 +2329,8 @@
     const padManual = (idx === 0 ? !G.twoPlayer : true) && Input.gamepad.connected && Input.gamepad.aimActive;
     const forceFire = idx === 0 ? (!G.twoPlayer && Input.gamepad.fire) : (Input.gamepad.connected && Input.gamepad.fire);
     const manual = mouseManual || padManual;
-    const autoTarget = manual ? null : nearestEnemy(p.x, p.y, 560);
+    const autoTarget = manual ? null : nearestAutoEnemy(p, 560);
+    if ((p.index || 0) === 0) G.autoHold = !manual && !autoTarget && !!nearestEnemy(p.x, p.y, 560);
     if (mouseManual) {
       aimAngle = Math.atan2(Input.mouse.y - p.y, Input.mouse.x - p.x);
     } else if (padManual) {
@@ -2368,10 +2404,10 @@
     const st = statsFor(p);
     const tank = tankData(p);
     const fusion = fused('flame');
-    if (G.hazards.length > 60) G.hazards.shift();
+    if (G.hazards.length > 90) G.hazards.shift();
     G.hazards.push({
       x, y, radius: w.radius * st.area * (fusion ? 1.3 : 1), damage: w.damage * st.damage * (fusion ? 1.3 : 1),
-      life: w.life, maxLife: w.life, tick: .3, seed: rand(TAU), force: !!force, owner: p
+      life: w.life, maxLife: w.life, tick: .24, seed: rand(TAU), force: !!force, owner: p
     });
   }
 
@@ -2459,8 +2495,13 @@
       const w = WEAPONS.flame.levels[Math.min(7, flameLvl - 1)];
       p.flameTimer -= dt;
       if (p.flameTimer <= 0) {
-        addFlamePool(p.x - p.moveX * 9, p.y - p.moveY * 9 + 5, false, p);
-        p.flameTimer = Math.max(.16, w.interval / st.attackSpeed * st.cdr);
+        p.flameSide = ((p.flameSide || 0) + 1) % 2;
+        const side = p.flameSide ? 1 : -1;
+        const bx = p.x - p.moveX * 9;
+        const by = p.y - p.moveY * 9 + 5;
+        addFlamePool(bx - p.moveY * 7 * side, by + p.moveX * 7 * side, false, p);
+        addFlamePool(bx + p.moveY * 7 * side, by - p.moveX * 7 * side, false, p);
+        p.flameTimer = Math.max(.12, w.interval / st.attackSpeed * st.cdr);
       }
     }
     // mines
@@ -2512,7 +2553,7 @@
     for (const f of G.hazards) {
       f.life -= dt; f.tick -= dt;
       if (f.tick <= 0) {
-        f.tick = .32;
+        f.tick = .24;
         for (const e of G.enemies) {
           if (e.dead || e.spawnTimer > 0) continue;
           if (dist2(f.x, f.y, e.x, e.y) < (f.radius + e.radius * e.size * .6) ** 2) {
@@ -2607,14 +2648,14 @@
       G.spawnTimer -= dt;
       // Solo late game needs a little more pressure; co-op keeps its current pacing.
       const soloLate = !G.twoPlayer && G.elapsed >= 225;
-      const cap = wave.max + (soloLate ? 3 : 0);
+      const cap = wave.max + (soloLate ? 1 : 0);
       if (G.spawnTimer <= 0 && G.enemies.length < cap) {
         const type = pick(wave.types);
         spawnEnemy(type);
         // Each minute gets denser: wave tables step down, then a continuous time ramp adds pressure.
-        const timeRamp = 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .18;
+        const timeRamp = 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .10;
         let interval = wave.spawn * rand(1.08, .78) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1) * timeRamp;
-        if (soloLate) interval *= .9;
+        if (soloLate) interval *= .98;
         G.spawnTimer = interval;
         if (G.elapsed > 120 && chance(.15 + G.elapsed / TOTAL_TIME * .16)) setTimeout(() => {
           if (G.mode === 'playing' && G.enemies.length < cap && G.elapsed < TOTAL_TIME) spawnEnemy(pick(wave.types));
@@ -2636,15 +2677,15 @@
     }
     const x = (sp.cx + .5) * TILE, y = (sp.cy + .5) * TILE;
     const mod = G.runMod || {};
-    const timeScale = 1 + G.elapsed / 60 * .26;
-    const dmgScale = 1 + G.elapsed / 60 * .075;
+    const timeScale = 1 + G.elapsed / 60 * .21;
+    const dmgScale = 1 + G.elapsed / 60 * .05;
     const early = G.elapsed < 180 ? .82 : 1;
     const e = {
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
       hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (cfg.boss ? 1 : timeScale) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (cfg.boss ? 1 : timeScale) * (mod.enemyHp || 1),
-      damage: cfg.damage * dmgScale * early * .88 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) * (G.elapsed < 180 ? 1.18 : 1), fireInterval: cfg.fire * (G.elapsed < 180 ? 1.18 : 1), bulletSpeed: cfg.bulletSpeed,
+      damage: cfg.damage * dmgScale * early * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) * (G.elapsed < 180 ? 1.18 : 1), fireInterval: cfg.fire * (G.elapsed < 180 ? 1.18 : 1), bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
@@ -3015,7 +3056,7 @@
       if (b.life <= 0 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) { b.dead = true; continue; }
       const tile = tileAt(b.x, b.y);
       if (!b.baseShot && (tile.type === 'brick' || tile.type === 'steel')) {
-        const broken = hitTile(tile, b.x, b.y, b.damage * .55, '#c45e3d');
+        const broken = hitTile(tile, b.x, b.y, b.damage * .4, '#c45e3d');
         if (b.explode > 0) {
           explodeAt(b.x, b.y, b.explode, b.damage * .48, '#ffb15a', { source: 'cannon', silent: true, owner: b.owner });
           b.dead = true;
@@ -3523,6 +3564,32 @@
     { id: 'emergency_shield', name: '应急护盾', en: 'EMERGENCY BARRIER', icon: 'shield', color: '#79b9ff', desc: '立即获得 <b>40</b> 点护盾。', type: 'utility' }
   ];
 
+  function rollUpgradeRarity(boost) {
+    const level = G.level || 1;
+    const b = boost || 0;
+    const weights = {
+      common: Math.max(24, 58 - level * 1.35 - b * 4),
+      rare: 26 + level * .24 + b * 2,
+      epic: 8 + level * .48 + b * 3,
+      legendary: .8 + level * .14 + b * 1.6
+    };
+    let total = 0;
+    for (const id of Object.keys(weights)) total += weights[id];
+    let r = Math.random() * total;
+    for (const id of Object.keys(weights)) {
+      r -= weights[id];
+      if (r <= 0) return UPGRADE_RARITY[id];
+    }
+    return UPGRADE_RARITY.common;
+  }
+
+  function ensureRareChoice(picked, pool) {
+    if (!picked.length || picked.some(c => c.rarity && c.rarity.rank >= 2)) return;
+    const rare = pool.filter(c => c.rarity && c.rarity.rank >= 2 && !picked.some(x => x.kind === c.kind && x.id === c.id));
+    if (!rare.length) return;
+    picked[picked.length - 1] = weightedPick(rare);
+  }
+
   function getUpgradeChoices() {
     const tank = tankData();
     const affinity = Array.from(new Set((G.twoPlayer ? [tankData(G.players[0]), tankData(G.players[1])] : [tank]).flatMap(t => t.affinity || [])));
@@ -3533,7 +3600,7 @@
       if ((G.passives[f.passive] || 0) < f.passiveLevel) continue;
       fusionCandidates.push({
         kind: 'fusion', id: f.id, data: f, fusion: f, level: 0, nextLevel: 0, max: 0,
-        accent: f.color, weight: 8
+        accent: f.color, rarity: UPGRADE_RARITY.legendary, weight: 8
       });
     }
     const weaponCandidates = [];
@@ -3545,7 +3612,8 @@
       if (lvl === 0 && weaponCount >= 6) continue;
       weaponCandidates.push({
         kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: 8,
-        accent: data.color, weight: (lvl === 0 ? 1.15 : 1.7) * (affinity.includes(id) ? 1.6 : 1)
+        accent: data.color, rarity: rollUpgradeRarity(lvl >= 5 ? 1.2 : 0),
+        weight: (lvl === 0 ? 1.15 : 1.7) * (affinity.includes(id) ? 1.6 : 1)
       });
     }
     const passiveCandidates = [];
@@ -3557,7 +3625,8 @@
       if (lvl === 0 && passiveCount >= 6) continue;
       passiveCandidates.push({
         kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: data.max,
-        accent: data.color, weight: (lvl === 0 ? 1.1 : 1.35) * (affinity.includes(id) ? 1.45 : 1)
+        accent: data.color, rarity: rollUpgradeRarity(lvl >= 4 ? 1 : 0),
+        weight: (lvl === 0 ? 1.1 : 1.35) * (affinity.includes(id) ? 1.45 : 1)
       });
     }
     const picked = [];
@@ -3585,10 +3654,11 @@
       const w = weightedPick(weaponCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
       if (w) picked[picked.length - 1] = w;
     }
+    ensureRareChoice(picked, weaponCandidates.concat(passiveCandidates));
     const utilityPool = UTILITY_CARDS.slice();
     while (picked.length < 3 && utilityPool.length) {
       const utility = utilityPool.splice(Math.floor(Math.random() * utilityPool.length), 1)[0];
-      picked.push({ kind: 'utility', id: utility.id, data: utility, level: 0, nextLevel: 0, max: 0, accent: utility.color, utility });
+      picked.push({ kind: 'utility', id: utility.id, data: utility, level: 0, nextLevel: 0, max: 0, accent: utility.color, rarity: UPGRADE_RARITY.common, utility });
     }
     return picked;
   }
@@ -3612,14 +3682,18 @@
     const cards = choices.map((c, i) => {
       const data = c.data;
       let typeLabel = c.kind === 'fusion' ? '合成协议 // FUSION' : c.kind === 'weapon' ? '武器模块 // WEAPON' : c.kind === 'passive' ? '被动协议 // PASSIVE' : '战地补给 // SUPPLY';
-      let levelLabel = c.kind === 'utility' ? 'FIELD SUPPLY' : c.kind === 'fusion' ? 'EVOLVE' : c.level === 0 ? 'NEW MODULE' : `LV.${c.level} → ${c.level + 1}`;
-      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[c.nextLevel - 1].text : PASSIVES[c.id].text;
+      const rarityBonus = (c.kind === 'weapon' || c.kind === 'passive') ? (c.rarity && c.rarity.bonus || 0) : 0;
+      const gainLevels = 1 + rarityBonus;
+      let levelLabel = c.kind === 'utility' ? 'FIELD SUPPLY' : c.kind === 'fusion' ? 'EVOLVE' : c.level === 0 ? 'NEW MODULE' : `LV.${c.level} → ${Math.min(c.max || 8, c.level + gainLevels)}`;
+      const effectiveNext = Math.min(c.max || 8, (c.nextLevel || 0) + rarityBonus);
+      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[Math.max(0, effectiveNext - 1)].text : PASSIVES[c.id].text;
       let pips = '';
       if (c.kind === 'fusion') {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       } else if (c.kind !== 'utility') {
         const count = c.kind === 'weapon' ? 8 : c.max;
-        for (let p = 0; p < count; p++) pips += `<i class="${p < c.nextLevel ? 'is-on' : ''}"></i>`;
+        const filled = Math.min(count, c.nextLevel + rarityBonus);
+        for (let p = 0; p < count; p++) pips += `<i class="${p < filled ? 'is-on' : ''}"></i>`;
       } else {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       }
@@ -3628,9 +3702,11 @@
       const icon = c.kind === 'utility' ? c.utility.icon : data.icon;
       const color = c.kind === 'utility' ? c.utility.color : data.color;
       const role = c.kind === 'utility' ? '即时补给' : c.kind === 'fusion' ? '武器进化' : (data.role || '') + (data.focus ? ' · ' + data.focus : '');
-      return `<button class="upgrade-card" type="button" data-index="${i}" style="--accent:${color}" aria-label="选择 ${name}">
+      const rarity = c.rarity || UPGRADE_RARITY.common;
+      return `<button class="upgrade-card is-rarity-${rarity.id}" type="button" data-index="${i}" style="--accent:${color};--rarity:${rarity.color}" aria-label="选择 ${rarity.label}${name}">
         <span class="upgrade-card__corner" aria-hidden="true"></span>
         <div class="upgrade-card__top"><span class="upgrade-card__type">${typeLabel}</span><span class="upgrade-card__level">${levelLabel}</span></div>
+        <div class="upgrade-card__rarity"><i></i>${rarity.label} · ${rarity.en}${rarityBonus ? ` · 额外 +${rarityBonus} 级` : ''}</div>
         <div class="upgrade-card__icon"><canvas data-icon="${icon}" data-color="${color}" data-size="82"></canvas></div>
         <div class="upgrade-card__body">
           <h3 class="upgrade-card__name">${name}</h3>
@@ -3659,14 +3735,16 @@
       addParticles(G.player.x, G.player.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
       const cur = G.weapons[c.id] || 0;
-      G.weapons[c.id] = Math.min(8, cur + 1);
+      const gain = 1 + (c.rarity && c.rarity.bonus || 0);
+      G.weapons[c.id] = Math.min(8, cur + gain);
       if (cur === 0) G.weaponCds[c.id] = .5;
-      showToast(`武器解锁 // ${c.data.name}`, 'cyan');
+      showToast(`武器解锁 // ${c.data.name}${gain > 1 ? ` ×${gain}` : ''}`, 'cyan');
     } else if (c.kind === 'passive') {
       const cur = G.passives[c.id] || 0;
-      G.passives[c.id] = Math.min(c.data.max, cur + 1);
+      const gain = 1 + (c.rarity && c.rarity.bonus || 0);
+      G.passives[c.id] = Math.min(c.data.max, cur + gain);
       if (c.id === 'armor') for (const p of G.players) healPlayer(18, p);
-      showToast(`协议升级 // ${c.data.name}`, 'cyan');
+      showToast(`协议升级 // ${c.data.name}${gain > 1 ? ` ×${gain}` : ''}`, 'cyan');
     } else if (c.kind === 'utility') {
       if (c.id === 'field_repair') for (const p of G.players) healPlayer(p.maxHp * .35, p);
       else if (c.id === 'pulse') {
@@ -3757,6 +3835,7 @@
       U.phaseLabel.textContent = `WAVE ${String(clamp(G.waveIndex + 1, 1, 6)).padStart(2, '0')} // ${wave.label}`;
       U.objectiveLabel.textContent = `生存至撤离 · ${fmtShort(remain)}`;
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 // 拉开距离，先吃维修包。';
+      else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 // 手动瞄准可拆墙。';
       else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 // 保持移动，别被包夹。';
       else if (G.weapons.flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
       else U.sideTip.textContent = '提示 // 砖墙可打碎，钢板不可。';

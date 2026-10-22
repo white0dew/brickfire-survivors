@@ -259,6 +259,134 @@
         '............B.CC.B............',
         '............B.CC.B............'
       ]
+    },
+    {
+      id: 'citadel', name: '天穹堡垒', en: 'SKY CITADEL', sector: 'SECTOR 09',
+      desc: '立体交叉火力 · 深层战区',
+      mod: { enemyHp: 1.68, enemySpeed: 1.14, spawnMul: .78, xpMul: 1.24, bossHp: 1.15 },
+      palette: {
+        sky: '#0b111d', ground: '#1e2b3a', groundAlt: '#243446', grid: 'rgba(195,222,255,.045)',
+        fog: 'rgba(114,185,255,.07)', accent: '#8bd4ff', ambient: '#4b9cff',
+        brickA: '#546a8f', brickB: '#2d3b54', brickLight: '#91acd1', brickDark: '#182235',
+        steelA: '#5a7080', steelB: '#2f3f4d', steelLight: '#b4d3e2', water: '#12384d', waterLight: '#347c9d',
+        bush: '#244637', bushLight: '#4b8060', core: '#8bd4ff', hazard: '#ffd36b'
+      },
+      map: [
+        '..............................',
+        '..SS..BBBB......BBBB..SS......',
+        '..SS..B..B......B..B..SS......',
+        '......B..B..SS..B..B..........',
+        '..BBBBBB..B..SS..B..BBBBBB....',
+        '..B....B..B......B..B....B....',
+        '..B....B..BBBB....BBBB..B.....',
+        '..BBBBBB......BB......BBBB....',
+        '........SS....SS..............',
+        '..TT....SS....SS....TT........',
+        '..TT................TT........',
+        '..BBBB..BBBB....BBBB..BBBB....',
+        '..B..B..B..B....B..B..B..B....',
+        '..BBBB..B..B....B..B..BBBB....',
+        '........BBBB....BBBB..........',
+        '......P.....B..B..............',
+        '............B.CC.B............',
+        '............B.CC.B............'
+      ]
+    },
+    {
+      id: 'abyss', name: '深渊泵站', en: 'ABYSS PUMP', sector: 'SECTOR 10',
+      desc: '水网与回廊 · 深层战区',
+      mod: { enemyHp: 1.8, enemySpeed: 1.16, spawnMul: .76, xpMul: 1.28, bossHp: 1.2 },
+      palette: {
+        sky: '#071416', ground: '#183033', groundAlt: '#1e3a3d', grid: 'rgba(152,244,232,.045)',
+        fog: 'rgba(54,224,194,.07)', accent: '#53e6cb', ambient: '#22b79c',
+        brickA: '#3f6070', brickB: '#243843', brickLight: '#7fa9b5', brickDark: '#122129',
+        steelA: '#48666b', steelB: '#263d41', steelLight: '#9ac7c8', water: '#083b45', waterLight: '#1a8d9a',
+        bush: '#1c4b3d', bushLight: '#3f876b', core: '#53e6cb', hazard: '#ffb36b'
+      },
+      map: [
+        '..............................',
+        '..BBBB..WWWW....WWWW..BBBB....',
+        '..B..B..WWWW....WWWW..B..B....',
+        '..B..B..WWWW....WWWW..B..B....',
+        '..BBBB..WWWW....WWWW..BBBB....',
+        '..........WW....WW............',
+        '..SS......WW....WW......SS....',
+        '..SS....................SS....',
+        '........BBBBBBBBBBBB..........',
+        '..TT....B..........B....TT....',
+        '..TT....B..SS..SS..B....TT....',
+        '........B..SS..SS..B..........',
+        '........BBBBBBBBBBBB..........',
+        '..BBBB................BBBB....',
+        '..B..B................B..B....',
+        '......P.....B..B..............',
+        '............B.CC.B............',
+        '............B.CC.B............'
+      ]
+    },
+    {
+      id: 'solar', name: '日冕裂谷', en: 'SOLAR RIFT', sector: 'SECTOR 11',
+      desc: '开阔火线 · 深层战区',
+      mod: { enemyHp: 1.92, enemySpeed: 1.18, spawnMul: .74, xpMul: 1.32, bossHp: 1.28 },
+      palette: {
+        sky: '#180e08', ground: '#342419', groundAlt: '#3e2b1c', grid: 'rgba(255,210,132,.05)',
+        fog: 'rgba(255,143,64,.08)', accent: '#ffbf5a', ambient: '#ff7d2d',
+        brickA: '#8a4b2e', brickB: '#51291b', brickLight: '#d68a55', brickDark: '#2d140d',
+        steelA: '#77664f', steelB: '#41372b', steelLight: '#dbc79a', water: '#3a2318', waterLight: '#9d592d',
+        bush: '#4a3d22', bushLight: '#8c7440', core: '#ffbf5a', hazard: '#ff6f4d'
+      },
+      map: [
+        '..............................',
+        '..BBBB....SSSSSSSS....BBBB....',
+        '..B..B....S......S....B..B....',
+        '..B..B....S..BB..S....B..B....',
+        '..BBBB....S..BB..S....BBBB....',
+        '..........S......S............',
+        '..SS......SSSSSSSS......SS....',
+        '..SS....................SS....',
+        '........TT....TT..............',
+        '..BBBB..TT....TT..BBBB........',
+        '..B..B............B..B........',
+        '..B..B....BBBB....B..B........',
+        '..BBBB....B..B....BBBB........',
+        '..........B..B................',
+        '......P...BBBB................',
+        '............B..B..............',
+        '............B.CC.B............',
+        '............B.CC.B............'
+      ]
+    },
+    {
+      id: 'throne', name: '边境王座', en: 'BORDER THRONE', sector: 'SECTOR 12',
+      desc: '最终深层战区 · 泰坦决战',
+      mod: { enemyHp: 2.05, enemySpeed: 1.2, spawnMul: .72, xpMul: 1.38, bossHp: 1.35 },
+      palette: {
+        sky: '#160d13', ground: '#30232d', groundAlt: '#392a35', grid: 'rgba(255,197,214,.05)',
+        fog: 'rgba(255,101,137,.075)', accent: '#ff9ab2', ambient: '#ff4f78',
+        brickA: '#7c3d53', brickB: '#482433', brickLight: '#c4798e', brickDark: '#29121c',
+        steelA: '#66545c', steelB: '#3b2f36', steelLight: '#c4a7b2', water: '#361b2b', waterLight: '#8b3f63',
+        bush: '#45303a', bushLight: '#7f5565', core: '#ff9ab2', hazard: '#ffcf73'
+      },
+      map: [
+        '..............................',
+        '..SS....BBBB........BBBB....SS',
+        '..SS....B..B........B..B....SS',
+        '........B..B........B..B......',
+        '..BBBB..BBBB........BBBB..BBBB',
+        '..B..B....................B..B',
+        '..B..B..SS..SSSSSS..SS....B..B',
+        '..BBBB..SS..S....S..SS....BBBB',
+        '........SS..S....S..SS........',
+        '..TT....SS..S....S..SS....TT..',
+        '..TT....SS..SSSSSS..SS....TT..',
+        '........SS..........SS........',
+        '..BBBB..BBBB....BBBB..BBBB....',
+        '..B..B..B..B....B..B..B..B....',
+        '..BBBB..BBBB....BBBB..BBBB....',
+        '......P.....B..B..............',
+        '............B.CC.B............',
+        '............B.CC.B............'
+      ]
     }
   ];
 
@@ -304,9 +432,9 @@
     { at: 0, label: '侦察潮', sub: 'SCOUT TIDE', spawn: 1.58, types: ['scout', 'scout', 'grunt'], max: 8 },
     { at: 55, label: '装甲楔', sub: 'ARMORED WEDGE', spawn: 1.30, types: ['grunt', 'scout', 'scout', 'heavy'], max: 13 },
     { at: 110, label: '蜂群突袭', sub: 'SWARM SURGE', spawn: 1.08, types: ['scout', 'bomber', 'grunt', 'scout'], max: 18 },
-    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.92, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 22, elite: true },
-    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.78, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 27, elite: true },
-    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.66, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 32, boss: true }
+    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.96, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 21, elite: true },
+    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.84, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 25, elite: true },
+    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.72, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 29, boss: true }
   ];
 
   const ITEMS = {
@@ -366,14 +494,14 @@
       name: '燃迹喷流', en: 'EMBER TRAIL', short: '燃迹', icon: 'flame', color: '#ff7a2a', type: 'weapon',
       desc: '履带碾过的地方留下燃烧余烬，灼烧追兵。',
       levels: [
-        { damage: 5, interval: .72, life: 3.4, radius: 20, text: '移动时留下火焰，持续灼烧接触敌人。' },
-        { damage: 7, interval: .66, life: 3.7, radius: 22, text: '火焰伤害 <b>+2</b>。' },
-        { damage: 8, interval: .60, life: 4.0, radius: 25, text: '火痕范围扩大。' },
-        { damage: 11, interval: .55, life: 4.3, radius: 27, text: '伤害 <b>+3</b>，持续时间提升。' },
-        { damage: 14, interval: .49, life: 4.7, radius: 30, text: '喷流压力提升，燃烧更久。' },
-        { damage: 17, interval: .43, life: 5.0, radius: 32, text: '伤害 <b>+3</b>。' },
-        { damage: 21, interval: .38, life: 5.3, radius: 35, text: '火焰扩散，范围提升。' },
-        { damage: 28, interval: .31, life: 6.0, radius: 40, text: '<b>焚城协议</b>：所过之处皆为火海。' }
+        { damage: 8, interval: .50, life: 4.2, radius: 24, text: '移动时留下双轨火焰，持续灼烧接触敌人。' },
+        { damage: 10, interval: .44, life: 4.6, radius: 26, text: '火焰伤害 <b>+2</b>，火痕更密。' },
+        { damage: 13, interval: .38, life: 5.0, radius: 29, text: '火痕范围扩大，燃烧更久。' },
+        { damage: 16, interval: .33, life: 5.4, radius: 32, text: '伤害 <b>+3</b>，持续时间提升。' },
+        { damage: 20, interval: .28, life: 5.9, radius: 35, text: '喷流压力提升，双轨铺满身后。' },
+        { damage: 25, interval: .24, life: 6.4, radius: 38, text: '伤害 <b>+5</b>，火焰扩散。' },
+        { damage: 31, interval: .20, life: 7.0, radius: 42, text: '火焰密度与范围提升。' },
+        { damage: 40, interval: .16, life: 7.8, radius: 48, text: '<b>焚城协议</b>：所过之处皆为火海。' }
       ]
     },
     mine: {
@@ -518,9 +646,13 @@
     ['railgun', 'pyro'],
     ['storm', 'sapper'],
     ['hive', 'cryo'],
-    ['oracle', 'scavenger'],
-    ['vampire', 'glass', 'medic'],
-    ['juggernaut', 'phantom', 'demo', 'toxin']
+    ['oracle'],
+    ['vampire', 'glass'],
+    ['juggernaut', 'phantom'],
+    ['medic'],
+    ['demo'],
+    ['toxin'],
+    ['scavenger']
   ];
   const TANK_COSTS = {
     vanguard: 0, twin: 40, bastion: 60, gale: 50, railgun: 90, pyro: 90,
@@ -557,8 +689,10 @@
     pickupRadius: 120, crit: .05, critMult: 1.8, xpGain: 1, cdr: 1, area: 1, damageMult: 1
   };
   const UPGRADE_RARITY = {
-    weapon: { label: '武器模块', accent: '#ffb52d' },
-    passive: { label: '被动协议', accent: '#5ff0ce' }
+    common:    { id: 'common',    label: '常规', en: 'COMMON',    color: '#9fb1a6', rank: 1, weight: 58, bonus: 0 },
+    rare:      { id: 'rare',      label: '稀有', en: 'RARE',      color: '#5ff0ce', rank: 2, weight: 28, bonus: 1 },
+    epic:      { id: 'epic',      label: '史诗', en: 'EPIC',      color: '#ffb52d', rank: 3, weight: 11, bonus: 2 },
+    legendary: { id: 'legendary', label: '传说', en: 'LEGENDARY', color: '#ff6b6b', rank: 4, weight: 3, bonus: 3 }
   };
 
   window.BF_CONTENT = { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE, UPGRADE_RARITY };
