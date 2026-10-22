@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080b0b">
+  <title>砖火幸存者 // BRICKFIRE SURVIVORS</title>
+  <meta name="description" content="经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css?v=20261022-07">
+</head>
+<body>
+  <div id="app" class="app state-menu">
+    <div class="ambient" aria-hidden="true">
+      <div class="ambient__glow ambient__glow--one"></div>
+      <div class="ambient__glow ambient__glow--two"></div>
+      <div class="ambient__grid"></div>
+      <div class="ambient__noise"></div>
+      <div class="ambient__vignette"></div>
+    </div>
+
+    <!-- ================= TITLE / HANGAR ================= -->
+    <section id="menuScreen" class="menu-screen" aria-label="主菜单">
+      <header class="hangar-top">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <div class="brand-name">BRICKFIRE<span>//</span></div>
+            <div class="brand-sub">ARMORED SURVIVAL SYSTEMS</div>
+          </div>
+        </div>
+        <div class="hangar-top__right">
+          <div id="padState" class="pad-state">PAD / WAIT</div>
+          <div class="status-led"><i></i> EXTRACTION LINK STABLE</div>
+          <button id="soundBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="切换声音" title="声音 (M)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8c1.2 1 1.8 2.3 1.8 4S18.2 15 17 16M19.5 5.5C21.4 7.2 22.5 9.5 22.5 12s-1.1 4.8-3 6.5"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="hangar-main">
+        <div class="hero-copy">
+          <div class="eyebrow reveal reveal-1"><span class="eyebrow__line"></span> FC-1985 / REBUILT-2026</div>
+          <h1 class="game-title reveal reveal-2">
+            <span class="game-title__brick">BRICK</span>
+            <span class="game-title__fire">FIRE</span>
+            <span class="game-title__tag">SURVIVORS</span>
+          </h1>
+          <div class="cn-title reveal reveal-2"><span>砖</span><span>火</span><span>幸</span><span>存</span><span>者</span></div>
+          <p class="hero-pitch reveal reveal-3">经典坦克大战，被拖进无尽的钢铁潮汐。<br><strong>活过六分钟。</strong>单人 / 本地双人同屏，吞噬余烬升级。让每一发炮弹都变成奇观。</p>
+
+          <div class="arena-picker reveal reveal-4" role="group" aria-label="选择战役关卡">
+            <div class="section-label"><span>01</span> 战役星图 / CAMPAIGN <b id="stageProgress">01 / 08</b></div>
+            <button id="stagePickerBtn" class="stage-picker-card" type="button">
+              <span id="stageIndex" class="stage-picker-card__index">01</span>
+              <span class="stage-picker-card__copy"><strong id="stageName">熔炉工厂</strong><small id="stageMeta">SECTOR 01 / FURNACE WORKS</small><em id="stageTrait">标准威胁 · 高温余烬</em><span id="stageDifficulty" class="stage-picker-card__difficulty">NORMAL</span></span>
+              <span class="stage-picker-card__cta">打开星图 <b>↗</b></span>
+            </button>
+            <div id="stageHint" class="stage-hint">通关当前关卡，自动解锁下一关。</div>
+          </div>
+
+          <div class="pilot-picker reveal reveal-4" role="group" aria-label="选择坦克">
+            <div class="section-label"><span>02</span> 坦克库 / CHASSIS <b id="tankCountLabel">1 / 20</b></div>
+            <div class="pilot-pair">
+              <button id="tankPickerBtn" class="pilot-card" type="button">
+                <span class="pilot-card__slot">P1</span>
+                <span class="pilot-card__preview"><canvas id="pilotPreview" width="78" height="58" aria-hidden="true"></canvas></span>
+                <span class="pilot-card__copy"><strong id="pilotName">先锋 M-01</strong><small id="pilotRole">均衡 / VANGUARD</small><em id="pilotTrait">全伤害 +10%，最大装甲 +10%</em></span>
+                <span class="pilot-card__cta">更换 <b>↗</b></span>
+              </button>
+              <button id="tankPickerBtn2" class="pilot-card pilot-card--p2 is-hidden" type="button">
+                <span class="pilot-card__slot">P2</span>
+                <span class="pilot-card__preview"><canvas id="pilotPreview2" width="78" height="58" aria-hidden="true"></canvas></span>
+                <span class="pilot-card__copy"><strong id="pilotName2">先锋 M-01</strong><small id="pilotRole2">均衡 / VANGUARD</small><em id="pilotTrait2">全伤害 +10%，最大装甲 +10%</em></span>
+                <span class="pilot-card__cta">更换 <b>↗</b></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mode-picker reveal reveal-4" id="modePicker" role="group" aria-label="选择编队模式">
+            <div class="section-label"><span>03</span> 编队模式 / DEPLOYMENT</div>
+            <div class="mode-options">
+              <button class="mode-card is-active" data-coop="0" type="button" aria-pressed="true"><strong>单人</strong><small>SOLO</small></button>
+              <button class="mode-card" data-coop="1" type="button" aria-pressed="false"><strong>双人合作</strong><small>CO-OP / 2P</small></button>
+            </div>
+            <span id="modeHint" class="mode-hint">P1 键鼠 · 自动索敌 · 单兵生存</span>
+            <span id="touchHint" class="touch-hint">触屏：左侧摇杆移动 · 自动索敌 · 右下 DASH 冲刺 · 点按战场可手动瞄准</span>
+          </div>
+
+          <div class="menu-actions reveal reveal-5">
+            <button id="startBtn" class="cta" type="button">
+              <span class="cta__corners" aria-hidden="true"></span>
+              <span class="cta__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11H5zM14 4v5h5M8 13h8M8 16h5"/></svg></span>
+              <span class="cta__copy"><strong id="startBtnLabel">点火出击</strong><small id="startBtnSub">ENTER THE SECTOR</small></span>
+              <span class="cta__arrow" aria-hidden="true">↗</span>
+            </button>
+            <button id="howBtn" class="text-btn" type="button">战术简报 <span>?</span></button>
+            <button id="fusionBtn" class="text-btn" type="button">合成表 <span>⌁</span></button>
+            <button id="codexBtn" class="text-btn" type="button">敌人图鉴 <span>▦</span></button>
+            <button id="saveBtn" class="text-btn" type="button">存档管理 <span>⇅</span></button>
+          </div>
+
+          <div class="record-strip reveal reveal-6">
+            <div><span>最高生存</span><strong id="bestTime">--:--</strong></div>
+            <div><span>最高等级</span><strong id="bestLevel">LV.01</strong></div>
+            <div><span>成功撤离</span><strong id="bestWins">0</strong></div>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal reveal-3">
+          <div class="visual-frame">
+            <div class="visual-frame__top">
+              <span>CAMPAIGN // LIVE FEED</span>
+              <span class="live-dot"><i></i> REC</span>
+            </div>
+            <canvas id="menuCanvas" width="720" height="760" aria-label="坦克展示画面"></canvas>
+            <div class="visual-frame__scan" aria-hidden="true"></div>
+            <div class="visual-frame__hud visual-frame__hud--tl"><span>EXIT</span><b>06:00</b></div>
+            <div class="visual-frame__hud visual-frame__hud--br"><span>THREAT</span><b>SWARM</b></div>
+            <div class="visual-frame__coords">X 047 / Y 209<br>ALT 000 / HDG 315</div>
+            <div class="visual-frame__cross" aria-hidden="true"><i></i><i></i></div>
+            <div class="visual-frame__caption">
+              <span class="caption-index">UNIT</span>
+              <strong id="visualUnit">先锋 M-01 «VANGUARD»</strong>
+              <small id="visualUnitSub">MODULAR SIEGE PLATFORM / CAMPAIGN 01</small>
+            </div>
+          </div>
+          <div class="visual-note"><span></span> 自动索敌已启用 / AUTO-TARGET ENGAGED</div>
+        </div>
+      </div>
+
+      <footer class="hangar-footer">
+        <div class="ticker">
+          <div class="ticker__track">
+            <span>SURVIVE THE SWARM</span><i></i><span>BREAK THE TIDE</span><i></i><span>COLLECT THE EMBERS</span><i></i><span>EVOLVE YOUR ARMOR</span><i></i><span>WASD / XBOX PAD READY</span><i></i><span>CO-OP LINK READY</span><i></i>
+            <span>SURVIVE THE SWARM</span><i></i><span>BREAK THE TIDE</span><i></i><span>COLLECT THE EMBERS</span><i></i><span>EVOLVE YOUR ARMOR</span><i></i><span>WASD / XBOX PAD READY</span><i></i>
+          </div>
+        </div>
+        <div class="footer-meta"><span>BUILD 2026.10.22</span><span>OPEN-SOURCE INSPIRATION / BATTLE CITY</span><span>NO QUARTER</span></div>
+      </footer>
+    </section>
+
+    <!-- ================= GAME ================= -->
+    <div id="gameLayout" class="game-layout is-hidden" aria-hidden="true">
+      <header class="topbar">
+        <div class="topbar__brand">
+          <div class="mini-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div><strong>BRICKFIRE</strong><span id="sectorLabel">SECTOR 01 / FURNACE WORKS</span></div>
+        </div>
+        <div class="run-clock">
+          <div class="run-clock__meta"><span id="phaseLabel">WAVE 01 // 侦察潮</span><span id="clockLabel">06:00.00</span></div>
+          <div class="run-clock__bar"><i id="clockBar"></i><em id="bossMarker"></em></div>
+        </div>
+        <div class="topbar__controls">
+          <div class="tiny-stat"><span>KILLS</span><b id="topKills">000</b></div>
+          <button id="soundBtn" class="icon-btn" type="button" title="声音 (M)" aria-label="切换声音"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM17 8c1.2 1 1.8 2.3 1.8 4S18.2 15 17 16M19.5 5.5C21.4 7.2 22.5 9.5 22.5 12s-1.1 4.8-3 6.5"/></svg></button>
+          <button id="pauseBtn" class="icon-btn" type="button" title="暂停 (ESC)" aria-label="暂停"><svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zM14 5h4v14h-4z"/></svg></button>
+          <button id="fullBtn" class="icon-btn" type="button" title="全屏 (F)" aria-label="全屏"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+        </div>
+      </header>
+
+      <main class="battle-layout">
+        <section class="battle-column">
+          <div class="battle-frame" id="battleFrame">
+            <div class="frame-corner frame-corner--tl"></div>
+            <div class="frame-corner frame-corner--tr"></div>
+            <div class="frame-corner frame-corner--bl"></div>
+            <div class="frame-corner frame-corner--br"></div>
+            <canvas id="gameCanvas" width="960" height="576" aria-label="坦克大战游戏画面"></canvas>
+            <div class="screen-vignette" aria-hidden="true"></div>
+            <div class="screen-scanlines" aria-hidden="true"></div>
+            <div id="dangerTint" class="danger-tint" aria-hidden="true"></div>
+            <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+            <div id="bossHud" class="boss-hud is-hidden">
+              <div class="boss-hud__meta"><span>BOSS // 泰坦·攻城型</span><b id="bossHpLabel">100%</b></div>
+              <div class="boss-hud__bar"><i id="bossHpBar"></i></div>
+            </div>
+            <div id="mobileHud" class="mobile-hud" aria-hidden="true">
+              <div class="mobile-hud__cell"><span>EVAC</span><i><b id="mCoreBar"></b></i></div>
+              <div class="mobile-hud__cell"><span>BASE</span><i><b id="mBaseBar"></b></i></div>
+              <div class="mobile-hud__cell"><span>ARMOR</span><i><b id="mHpBar"></b></i></div>
+              <div class="mobile-hud__level"><span>LV</span><strong id="mLevel">01</strong></div>
+            </div>
+            <div class="canvas-id">BF-09 // LIVE</div>
+          </div>
+          <div id="mobileStick" class="mobile-stick" aria-hidden="true"><i></i></div>
+          <button id="mobileDash" class="mobile-dash" type="button" aria-label="冲刺">DASH</button>
+
+          <div class="combat-deck">
+            <div class="deck-slot deck-slot--weapon">
+              <span class="deck-slot__key">AUTO</span>
+              <div id="primaryIcon" class="deck-slot__icon"></div>
+              <div class="deck-slot__copy"><small>主武器</small><strong id="primaryName">撕裂者主炮</strong></div>
+            </div>
+            <div class="deck-slot">
+              <span class="deck-slot__key">SPACE</span>
+              <div class="dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h11M10 7l5 5-5 5M15 6h4M15 18h4"/></svg></div>
+              <div class="deck-slot__copy"><small>推进器</small><strong id="dashStatus">就绪</strong></div>
+              <div class="dash-meter"><i id="dashMeter"></i></div>
+            </div>
+            <div class="deck-slot deck-slot--objective">
+              <span class="deck-slot__key">OBJ</span>
+              <div class="objective-glyph" aria-hidden="true"><i></i></div>
+              <div class="deck-slot__copy"><small>当前目标</small><strong id="objectiveLabel">生存至撤离 · 06:00</strong></div>
+            </div>
+            <div id="deckHint" class="deck-hint"><span>WASD</span> 移动 <b>/</b> <span>鼠标 / 右摇杆</span> 瞄准 <b>/</b> <span>SPACE / A</span> 冲刺 <b>/</b> <span>ESC / START</span> 暂停</div>
+          </div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="side-panel pilot-panel">
+            <div class="panel-head"><span>PILOT</span><b id="pilotHudName">M-01</b><i class="panel-head__line"></i></div>
+            <div class="level-row">
+              <div class="level-badge"><small>LV</small><strong id="levelLabel">01</strong></div>
+              <div class="level-info">
+                <div class="level-info__row"><span>装甲完整度</span><b id="hpText">190 / 190</b></div>
+                <div class="meter meter--hp"><i id="hpMeter"></i></div>
+                <div class="level-info__row"><span>余烬同步</span><b id="xpText">0 / 12</b></div>
+                <div class="meter meter--xp"><i id="xpMeter"></i></div>
+              </div>
+            </div>
+            <div class="pilot-tags"><span>ATK <b id="statAtk">100</b></span><span>SPD <b id="statSpd">100</b></span><span>CRIT <b id="statCrit">5%</b></span></div>
+          </section>
+
+          <section id="coopPanel" class="side-panel coop-panel is-hidden">
+            <div class="panel-head"><span>LINKED PILOTS</span><b>CO-OP</b><i class="panel-head__line"></i></div>
+            <div class="coop-list">
+              <div class="coop-unit">
+                <div class="coop-unit__row"><span class="coop-tag">P1</span><b id="coopHp1">190 / 190</b><em id="coopState1">ONLINE</em></div>
+                <div class="meter meter--hp"><i id="coopMeter1"></i></div>
+              </div>
+              <div class="coop-unit">
+                <div class="coop-unit__row"><span class="coop-tag coop-tag--p2">P2</span><b id="coopHp2">190 / 190</b><em id="coopState2">ONLINE</em></div>
+                <div class="meter meter--hp meter--p2"><i id="coopMeter2"></i></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="side-panel core-panel">
+            <div class="panel-head"><span>BASE / EXTRACTION</span><b id="coreState">T-06:00</b><i class="panel-head__line"></i></div>
+            <div class="core-gauge">
+              <div class="core-gauge__ring" id="coreRing" style="--p:0"><i></i><span id="corePercent">0</span></div>
+              <div class="core-gauge__copy"><strong id="coreText">06:00</strong><small>距离撤离</small><div class="core-pips" id="corePips"><i></i><i></i><i></i><i></i><i></i></div></div>
+            </div>
+            <div class="base-meter">
+              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">1000 / 1000</b></div>
+              <div class="meter meter--base"><i id="baseHpMeter"></i></div>
+            </div>
+            <div id="coreNote" class="core-note"><span class="blink-dot"></span> 基地或车体归零即失败 · 基地会自行修复</div>
+          </section>
+
+          <section class="side-panel loadout-panel">
+            <div class="panel-head"><span>LOADOUT</span><b id="slotCount">1 / 6</b><i class="panel-head__line"></i></div>
+            <div id="loadoutList" class="loadout-list">
+              <div class="empty-slot">升级解锁武器模块</div>
+            </div>
+          </section>
+
+          <section class="side-panel intel-panel">
+            <div class="panel-head"><span>FIELD INTEL</span><b>LIVE</b><i class="panel-head__line"></i></div>
+            <div class="intel-grid">
+              <div><span>击毁</span><strong id="killCount">000</strong></div>
+              <div><span>连杀</span><strong id="comboCount">x1.0</strong></div>
+              <div><span>拾取</span><strong id="pickupCount">000</strong></div>
+              <div><span>威胁</span><strong id="threatLabel">低</strong></div>
+            </div>
+            <div class="threat-bars" id="threatBars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </section>
+
+          <div class="side-tip" id="sideTip">提示 // 砖墙可打碎，钢板不可。</div>
+        </aside>
+      </main>
+    </div>
+
+    <!-- ================= LEVEL UP ================= -->
+    <section id="levelupScreen" class="overlay levelup hidden" aria-modal="true" role="dialog" aria-labelledby="levelupTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="levelup__content">
+        <div class="levelup__head">
+          <div class="levelup__eyebrow"><span class="spark"></span> EMBER RESONANCE / 余烬共鸣</div>
+          <h2 id="levelupTitle"><span>LEVEL</span> <strong id="newLevel">02</strong> <em>战术升级</em></h2>
+          <p>选择一项协议，装进这具钢铁棺材。</p>
+        </div>
+        <div id="upgradeCards" class="upgrade-cards"></div>
+        <div class="levelup__foot">
+          <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择</span>
+          <button id="rerollBtn" class="reroll-btn" type="button"><span>↻</span> 重掷协议 <b id="rerollCount">2</b></button>
+          <span class="levelup__hint">每次升级暂停战场</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAUSE ================= -->
+    <section id="pauseScreen" class="overlay pause hidden" aria-modal="true" role="dialog" aria-labelledby="pauseTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="pause__card">
+        <div class="pause__stripe"></div>
+        <div class="pause__eyebrow">SYSTEM HOLD / 战术暂停</div>
+        <h2 id="pauseTitle">战场暂停</h2>
+        <p>战场仍在推进。你的决定还没做完。</p>
+        <div class="pause__actions">
+          <button id="resumeBtn" class="cta cta--small" type="button"><span class="cta__copy"><strong>继续战斗</strong><small>RESUME</small></span><span class="cta__arrow">↗</span></button>
+          <button id="restartBtn" class="text-btn" type="button">重新出击</button>
+          <button id="quitBtn" class="text-btn text-btn--muted" type="button">返回机库</button>
+        </div>
+        <div class="pause__controls">
+          <span><kbd>WASD</kbd> 移动</span><span><kbd>鼠标 / 右摇杆</kbd> 瞄准</span><span><kbd>SPACE / A</kbd> 冲刺</span><span><kbd>M</kbd> 静音</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RESULT ================= -->
+    <section id="resultScreen" class="overlay result hidden" aria-modal="true" role="dialog" aria-labelledby="resultTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="result__content">
+        <div id="resultTag" class="result__tag">MISSION FAILED // 车体击毁</div>
+        <h2 id="resultTitle">钢铁归零</h2>
+        <div id="resultSeal" class="result__seal" aria-hidden="true"><span></span><i></i><b>BF</b></div>
+        <p id="resultFlavor">你的车体停止了转动。但余烬会记住这次失败。</p>
+        <div class="result__stats">
+          <div><span>生存时间</span><strong id="resultTime">00:00</strong></div>
+          <div><span>抵达等级</span><strong id="resultLevel">LV.01</strong></div>
+          <div><span>击毁单位</span><strong id="resultKills">000</strong></div>
+          <div><span>生存进度</span><strong id="resultCore">0%</strong></div>
+        </div>
+        <div class="result__build" id="resultBuild"></div>
+        <div class="result__actions">
+          <button id="nextBtn" class="cta cta--small is-hidden" type="button"><span class="cta__copy"><strong>下一关</strong><small>NEXT SECTOR</small></span><span class="cta__arrow">↗</span></button>
+          <button id="againBtn" class="cta cta--small" type="button"><span class="cta__copy"><strong>再次出击</strong><small>REDEPLOY</small></span><span class="cta__arrow">↗</span></button>
+          <button id="backBtn" class="text-btn" type="button">返回机库</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW TO ================= -->
+    <section id="howScreen" class="overlay how hidden" aria-modal="true" role="dialog" aria-labelledby="howTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="how__panel">
+        <button id="howClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="how__eyebrow">FIELD MANUAL / 战术简报</div>
+        <h2 id="howTitle">活到撤离信号亮起</h2>
+        <div class="how__grid">
+          <article><span class="how__num">01</span><h3>驾驶</h3><p><kbd>WASD</kbd> / 方向键 / 左摇杆移动。主炮自动索敌最近单位，鼠标或右摇杆可改写瞄准方向。RT 可强制补火。</p></article>
+          <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。</p></article>
+          <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；两人都会获得同一套模块。机库的坦克库有 20 台底盘，开局的武器、被动与特性各不相同。</p></article>
+          <article><span class="how__num">04</span><h3>破坏 / 合成</h3><p>砖墙可被炮弹击碎，钢板不可。水系阻挡履带但不挡弹道。武器 Lv.6 且对应被动 Lv.2 后，升级卡会出现合成协议；6 条路线可在「合成表」查看。</p></article>
+        </div>
+        <div class="how__legend"><span><i class="chip chip--star"></i> 星星：立即升级主炮</span><span><i class="chip chip--bomb"></i> 手雷：清屏爆破</span><span><i class="chip chip--shield"></i> 头盔：无敌护盾</span><span><i class="chip chip--time"></i> 时钟：冻结敌军</span><span><i class="chip chip--shovel"></i> 维修：修复车体</span></div>
+        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · START 暂停<br>双人同屏 // P1 键鼠 · P2 手柄；P2 也可用方向键移动、Enter 冲刺</div>
+        <button id="howStart" class="cta cta--small" type="button"><span class="cta__copy"><strong>明白了，出击</strong><small>DEPLOY NOW</small></span><span class="cta__arrow">↗</span></button>
+      </div>
+    </section>
+
+    <!-- ================= CAMPAIGN MAP ================= -->
+    <section id="stageScreen" class="overlay stage-select hidden" aria-modal="true" role="dialog" aria-labelledby="stageTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="tank-select__panel stage-select__panel">
+        <button id="stageClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="tank-select__head">
+          <div class="how__eyebrow">CAMPAIGN MAP / 战役星图</div>
+          <h2 id="stageTitle">逐区推进</h2>
+          <p>通关当前关卡，自动解锁下一关。已经突破的关卡可以重复挑战。</p>
+        </div>
+        <div class="difficulty-picker" role="group" aria-label="选择难度">
+          <div class="section-label"><span>THREAT</span> 难度 / DIFFICULTY</div>
+          <div id="difficultyOptions" class="difficulty-options">
+            <button class="difficulty-card is-active" data-difficulty="normal" type="button" aria-pressed="true"><strong>普通</strong><small>NORMAL</small><em>标准威胁 · 标准核心奖励</em></button>
+            <button class="difficulty-card" data-difficulty="hard" type="button" aria-pressed="false"><strong>困难</strong><small>HARD</small><em>敌军强化 · 核心奖励 +25%</em></button>
+            <button class="difficulty-card" data-difficulty="nightmare" type="button" aria-pressed="false"><strong>噩梦</strong><small>NIGHTMARE</small><em>极限围杀 · 核心奖励 +60%</em></button>
+          </div>
+          <span id="difficultyHint" class="difficulty-hint">普通：标准敌军强度，适合首次推进。</span>
+        </div>
+        <div id="arenaOptions" class="arena-options stage-grid"></div>
+        <div class="stage-select__foot">
+          <span id="stageFootHint" class="tank-detail">当前进度会保存在本机。</span>
+          <button id="stageConfirm" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>RETURN TO HANGAR</small></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TANK ARCHIVE ================= -->
+    <section id="tankScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="tankTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="tank-select__panel">
+        <button id="tankClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="tank-select__head">
+          <div class="how__eyebrow">CHASSIS ARCHIVE / 坦克库 · <b id="tankSlotLabel">P1</b></div>
+          <h2 id="tankTitle">选择你的坦克</h2>
+          <p id="tankScreenHint">初始只配发先锋。每台锁定底盘对应一座关卡封印核心：击破核心，击败苏醒的封印守卫即可永久解锁；合金核心也可直接兑换。</p>
+        </div>
+        <div id="tankGrid" class="tank-grid"></div>
+        <div class="tank-select__foot">
+          <div id="tankDetail" class="tank-detail"></div>
+          <div class="tank-select__actions">
+            <span id="tankCores" class="tank-cores">核心 0</span>
+            <button id="tankUnlockBtn" class="cta cta--small is-hidden" type="button"><span class="cta__copy"><strong>兑换</strong><small>UNLOCK CHASSIS</small></span><span class="cta__arrow">↗</span></button>
+            <button id="tankConfirm" class="cta cta--small" type="button"><span class="cta__copy"><strong>装配完毕</strong><small>CONFIRM CHASSIS</small></span><span class="cta__arrow">↗</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FUSION CODEX ================= -->
+    <section id="fusionScreen" class="overlay fusion-screen hidden" aria-modal="true" role="dialog" aria-labelledby="fusionTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="how__panel fusion-panel">
+        <button id="fusionClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="how__eyebrow">FUSION CODEX / 合成协议</div>
+        <h2 id="fusionTitle">把两条协议焊成一件武器</h2>
+        <p class="fusion-lead">武器达到 <b>6 级</b>，对应被动达到 <b>2 级</b>，升级时会出现合成卡。合成保留原武器，并永久强化。</p>
+        <div id="fusionGrid" class="fusion-grid"></div>
+        <button id="fusionDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE CODEX</small></span><span class="cta__arrow">↗</span></button>
+      </div>
+    </section>
+
+    <!-- ================= ENEMY CODEX ================= -->
+    <section id="codexScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="codexTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="tank-select__panel codex-panel">
+        <button id="codexClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="tank-select__head">
+          <div class="how__eyebrow">HOSTILE ARCHIVE / 敌人图鉴 · <b id="codexProgress">0 / 26</b></div>
+          <h2 id="codexTitle">战场上的钢铁标本</h2>
+          <p>遭遇过的单位会自动记录。普通、精英、Boss 分栏归档；封锁区守卫需要击破对应封印核心才会现身。</p>
+        </div>
+        <div id="codexGrid" class="codex-grid"></div>
+        <div class="tank-select__foot">
+          <div class="codex-legend"><span class="is-normal">普通</span><span class="is-elite">精英</span><span class="is-boss">Boss</span></div>
+          <button id="codexDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE ARCHIVE</small></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SAVE MANAGER ================= -->
+    <section id="saveScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="saveTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="tank-select__panel save-panel">
+        <button id="saveClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="tank-select__head">
+          <div class="how__eyebrow">LOCAL ARCHIVE / 存档管理</div>
+          <h2 id="saveTitle">把战场进度带走</h2>
+          <p>导出包含战役星图、底盘解锁、合金核心、记录和敌人图鉴。导入会覆盖本机现有存档，建议先下载备份。</p>
+        </div>
+        <textarea id="saveText" class="save-text" spellcheck="false" placeholder="点击“导出”生成存档 JSON，或粘贴存档 JSON 后点“导入覆盖”。"></textarea>
+        <div class="save-actions">
+          <button id="saveExportBtn" class="cta cta--small" type="button"><span class="cta__copy"><strong>导出并下载</strong><small>EXPORT SAVE</small></span><span class="cta__arrow">↓</span></button>
+          <button id="saveCopyBtn" class="text-btn" type="button">复制 JSON</button>
+          <button id="saveImportBtn" class="text-btn text-btn--danger" type="button">导入覆盖</button>
+          <span id="saveStatus" class="save-status" role="status"></span>
+        </div>
+        <div class="tank-select__foot">
+          <div class="save-foot-note">存档只保存在本机浏览器；导入 JSON 时不会上传服务器。</div>
+          <button id="saveDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE ARCHIVE</small></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
+  </div>
+
+  <script src="js/content.js?v=20261022-07"></script>
+  <script src="js/icons.js?v=20261022-07"></script>
+  <script src="js/audio.js?v=20261022-07"></script>
+  <script src="js/game.js?v=20261022-07"></script>
+  <script src="js/main.js?v=20261022-07"></script>
+</body>
+</html>
