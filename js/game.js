@@ -5,7 +5,7 @@
   const C = window.BF_CONTENT;
   const ICONS = window.BF_ICONS;
   const AUDIO = window.BF_AUDIO;
-  const { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE, UPGRADE_RARITY } = C;
+  const { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE } = C;
 
   const TILE = 32;
   const COLS = 30;
@@ -164,7 +164,7 @@
     keys: new Set(),
     mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
-    gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: 0, prevButtons: [] },
+    gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: 0, prevButtons: [], focusEl: null, uiKey: '' },
     dashQueued: false,
     dashQueued2: false
   };
@@ -2648,14 +2648,14 @@
       G.spawnTimer -= dt;
       // Solo late game needs a little more pressure; co-op keeps its current pacing.
       const soloLate = !G.twoPlayer && G.elapsed >= 225;
-      const cap = wave.max + (soloLate ? 1 : 0);
+      const cap = wave.max + (soloLate ? 2 : 0);
       if (G.spawnTimer <= 0 && G.enemies.length < cap) {
         const type = pick(wave.types);
         spawnEnemy(type);
         // Each minute gets denser: wave tables step down, then a continuous time ramp adds pressure.
-        const timeRamp = 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .10;
+        const timeRamp = 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .15;
         let interval = wave.spawn * rand(1.08, .78) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1) * timeRamp;
-        if (soloLate) interval *= .98;
+        if (soloLate) interval *= .94;
         G.spawnTimer = interval;
         if (G.elapsed > 120 && chance(.15 + G.elapsed / TOTAL_TIME * .16)) setTimeout(() => {
           if (G.mode === 'playing' && G.enemies.length < cap && G.elapsed < TOTAL_TIME) spawnEnemy(pick(wave.types));
@@ -2677,8 +2677,8 @@
     }
     const x = (sp.cx + .5) * TILE, y = (sp.cy + .5) * TILE;
     const mod = G.runMod || {};
-    const timeScale = 1 + G.elapsed / 60 * .21;
-    const dmgScale = 1 + G.elapsed / 60 * .05;
+    const timeScale = 1 + G.elapsed / 60 * .25;
+    const dmgScale = 1 + G.elapsed / 60 * .065;
     const early = G.elapsed < 180 ? .82 : 1;
     const e = {
       id: ++G.entityId,
@@ -3564,32 +3564,6 @@
     { id: 'emergency_shield', name: '应急护盾', en: 'EMERGENCY BARRIER', icon: 'shield', color: '#79b9ff', desc: '立即获得 <b>40</b> 点护盾。', type: 'utility' }
   ];
 
-  function rollUpgradeRarity(boost) {
-    const level = G.level || 1;
-    const b = boost || 0;
-    const weights = {
-      common: Math.max(24, 58 - level * 1.35 - b * 4),
-      rare: 26 + level * .24 + b * 2,
-      epic: 8 + level * .48 + b * 3,
-      legendary: .8 + level * .14 + b * 1.6
-    };
-    let total = 0;
-    for (const id of Object.keys(weights)) total += weights[id];
-    let r = Math.random() * total;
-    for (const id of Object.keys(weights)) {
-      r -= weights[id];
-      if (r <= 0) return UPGRADE_RARITY[id];
-    }
-    return UPGRADE_RARITY.common;
-  }
-
-  function ensureRareChoice(picked, pool) {
-    if (!picked.length || picked.some(c => c.rarity && c.rarity.rank >= 2)) return;
-    const rare = pool.filter(c => c.rarity && c.rarity.rank >= 2 && !picked.some(x => x.kind === c.kind && x.id === c.id));
-    if (!rare.length) return;
-    picked[picked.length - 1] = weightedPick(rare);
-  }
-
   function getUpgradeChoices() {
     const tank = tankData();
     const affinity = Array.from(new Set((G.twoPlayer ? [tankData(G.players[0]), tankData(G.players[1])] : [tank]).flatMap(t => t.affinity || [])));
@@ -3600,7 +3574,7 @@
       if ((G.passives[f.passive] || 0) < f.passiveLevel) continue;
       fusionCandidates.push({
         kind: 'fusion', id: f.id, data: f, fusion: f, level: 0, nextLevel: 0, max: 0,
-        accent: f.color, rarity: UPGRADE_RARITY.legendary, weight: 8
+        accent: f.color, weight: 8
       });
     }
     const weaponCandidates = [];
@@ -3612,7 +3586,7 @@
       if (lvl === 0 && weaponCount >= 6) continue;
       weaponCandidates.push({
         kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: 8,
-        accent: data.color, rarity: rollUpgradeRarity(lvl >= 5 ? 1.2 : 0),
+        accent: data.color,
         weight: (lvl === 0 ? 1.15 : 1.7) * (affinity.includes(id) ? 1.6 : 1)
       });
     }
@@ -3625,7 +3599,7 @@
       if (lvl === 0 && passiveCount >= 6) continue;
       passiveCandidates.push({
         kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: data.max,
-        accent: data.color, rarity: rollUpgradeRarity(lvl >= 4 ? 1 : 0),
+        accent: data.color,
         weight: (lvl === 0 ? 1.1 : 1.35) * (affinity.includes(id) ? 1.45 : 1)
       });
     }
@@ -3654,11 +3628,10 @@
       const w = weightedPick(weaponCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
       if (w) picked[picked.length - 1] = w;
     }
-    ensureRareChoice(picked, weaponCandidates.concat(passiveCandidates));
     const utilityPool = UTILITY_CARDS.slice();
     while (picked.length < 3 && utilityPool.length) {
       const utility = utilityPool.splice(Math.floor(Math.random() * utilityPool.length), 1)[0];
-      picked.push({ kind: 'utility', id: utility.id, data: utility, level: 0, nextLevel: 0, max: 0, accent: utility.color, rarity: UPGRADE_RARITY.common, utility });
+      picked.push({ kind: 'utility', id: utility.id, data: utility, level: 0, nextLevel: 0, max: 0, accent: utility.color, utility });
     }
     return picked;
   }
@@ -3682,18 +3655,14 @@
     const cards = choices.map((c, i) => {
       const data = c.data;
       let typeLabel = c.kind === 'fusion' ? '合成协议 // FUSION' : c.kind === 'weapon' ? '武器模块 // WEAPON' : c.kind === 'passive' ? '被动协议 // PASSIVE' : '战地补给 // SUPPLY';
-      const rarityBonus = (c.kind === 'weapon' || c.kind === 'passive') ? (c.rarity && c.rarity.bonus || 0) : 0;
-      const gainLevels = 1 + rarityBonus;
-      let levelLabel = c.kind === 'utility' ? 'FIELD SUPPLY' : c.kind === 'fusion' ? 'EVOLVE' : c.level === 0 ? 'NEW MODULE' : `LV.${c.level} → ${Math.min(c.max || 8, c.level + gainLevels)}`;
-      const effectiveNext = Math.min(c.max || 8, (c.nextLevel || 0) + rarityBonus);
-      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[Math.max(0, effectiveNext - 1)].text : PASSIVES[c.id].text;
+      let levelLabel = c.kind === 'utility' ? 'FIELD SUPPLY' : c.kind === 'fusion' ? 'EVOLVE' : c.level === 0 ? 'NEW MODULE' : `LV.${c.level} → ${c.level + 1}`;
+      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[c.nextLevel - 1].text : PASSIVES[c.id].text;
       let pips = '';
       if (c.kind === 'fusion') {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       } else if (c.kind !== 'utility') {
         const count = c.kind === 'weapon' ? 8 : c.max;
-        const filled = Math.min(count, c.nextLevel + rarityBonus);
-        for (let p = 0; p < count; p++) pips += `<i class="${p < filled ? 'is-on' : ''}"></i>`;
+        for (let p = 0; p < count; p++) pips += `<i class="${p < c.nextLevel ? 'is-on' : ''}"></i>`;
       } else {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       }
@@ -3702,11 +3671,9 @@
       const icon = c.kind === 'utility' ? c.utility.icon : data.icon;
       const color = c.kind === 'utility' ? c.utility.color : data.color;
       const role = c.kind === 'utility' ? '即时补给' : c.kind === 'fusion' ? '武器进化' : (data.role || '') + (data.focus ? ' · ' + data.focus : '');
-      const rarity = c.rarity || UPGRADE_RARITY.common;
-      return `<button class="upgrade-card is-rarity-${rarity.id}" type="button" data-index="${i}" style="--accent:${color};--rarity:${rarity.color}" aria-label="选择 ${rarity.label}${name}">
+      return `<button class="upgrade-card" type="button" data-index="${i}" style="--accent:${color}" aria-label="选择 ${name}">
         <span class="upgrade-card__corner" aria-hidden="true"></span>
         <div class="upgrade-card__top"><span class="upgrade-card__type">${typeLabel}</span><span class="upgrade-card__level">${levelLabel}</span></div>
-        <div class="upgrade-card__rarity"><i></i>${rarity.label} · ${rarity.en}${rarityBonus ? ` · 额外 +${rarityBonus} 级` : ''}</div>
         <div class="upgrade-card__icon"><canvas data-icon="${icon}" data-color="${color}" data-size="82"></canvas></div>
         <div class="upgrade-card__body">
           <h3 class="upgrade-card__name">${name}</h3>
@@ -3735,16 +3702,14 @@
       addParticles(G.player.x, G.player.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
       const cur = G.weapons[c.id] || 0;
-      const gain = 1 + (c.rarity && c.rarity.bonus || 0);
-      G.weapons[c.id] = Math.min(8, cur + gain);
+      G.weapons[c.id] = Math.min(8, cur + 1);
       if (cur === 0) G.weaponCds[c.id] = .5;
-      showToast(`武器解锁 // ${c.data.name}${gain > 1 ? ` ×${gain}` : ''}`, 'cyan');
+      showToast(`武器解锁 // ${c.data.name}`, 'cyan');
     } else if (c.kind === 'passive') {
       const cur = G.passives[c.id] || 0;
-      const gain = 1 + (c.rarity && c.rarity.bonus || 0);
-      G.passives[c.id] = Math.min(c.data.max, cur + gain);
+      G.passives[c.id] = Math.min(c.data.max, cur + 1);
       if (c.id === 'armor') for (const p of G.players) healPlayer(18, p);
-      showToast(`协议升级 // ${c.data.name}${gain > 1 ? ` ×${gain}` : ''}`, 'cyan');
+      showToast(`协议升级 // ${c.data.name}`, 'cyan');
     } else if (c.kind === 'utility') {
       if (c.id === 'field_repair') for (const p of G.players) healPlayer(p.maxHp * .35, p);
       else if (c.id === 'pulse') {
@@ -4890,6 +4855,134 @@
     el.classList.toggle('is-on', Input.gamepad.connected);
   }
 
+  function isUiVisible(el) {
+    if (!el || el.classList.contains('hidden') || el.classList.contains('is-hidden')) return false;
+    const style = getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  }
+
+  function uiContext() {
+    const overlays = [
+      ['levelup', U.levelupScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
+      ['stage', U.stageScreen], ['tank', U.tankScreen], ['fusion', U.fusionScreen],
+      ['codex', U.codexScreen], ['save', U.saveScreen], ['how', U.howScreen]
+    ];
+    for (const [key, el] of overlays) {
+      if (isUiVisible(el)) return { key, root: el };
+    }
+    if (G.mode === 'menu' && isUiVisible(U.menuScreen)) return { key: 'menu', root: U.menuScreen };
+    return null;
+  }
+
+  function padFocusables(root) {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter(el => {
+      if (!isUiVisible(el) || el.disabled) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 2 && r.height > 2;
+    });
+  }
+
+  function setPadFocus(el) {
+    const g = Input.gamepad;
+    if (!el) return;
+    if (g.focusEl && g.focusEl !== el) g.focusEl.classList.remove('is-pad-focus');
+    g.focusEl = el;
+    el.classList.add('is-pad-focus');
+    try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+  }
+
+  function clearPadFocus() {
+    const g = Input.gamepad;
+    if (g.focusEl) g.focusEl.classList.remove('is-pad-focus');
+    g.focusEl = null;
+  }
+
+  function defaultPadFocus(ctx) {
+    if (!ctx) return null;
+    if (ctx.key === 'menu') return U.startBtn;
+    if (ctx.key === 'levelup') return U.upgradeCards && U.upgradeCards.querySelector('.upgrade-card');
+    if (ctx.key === 'pause') return U.resumeBtn;
+    if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
+    const list = padFocusables(ctx.root);
+    return list.find(el => el.classList.contains('arena-card') || el.classList.contains('tank-card')) ||
+      list.find(el => el.classList.contains('cta') && !el.classList.contains('close-btn')) || list[0] || null;
+  }
+
+  function syncPadContext(force) {
+    const g = Input.gamepad;
+    const ctx = uiContext();
+    if (!ctx) { g.uiKey = ''; clearPadFocus(); return null; }
+    if (force || ctx.key !== g.uiKey) {
+      g.uiKey = ctx.key;
+      g.selectedCard = 0;
+      const first = defaultPadFocus(ctx);
+      if (first) setPadFocus(first); else clearPadFocus();
+    } else if (!g.focusEl || !padFocusables(ctx.root).includes(g.focusEl)) {
+      const first = defaultPadFocus(ctx);
+      if (first) setPadFocus(first); else clearPadFocus();
+    }
+    return ctx;
+  }
+
+  function movePadFocus(dx, dy) {
+    const g = Input.gamepad;
+    const ctx = syncPadContext(false);
+    if (!ctx) return;
+    const list = padFocusables(ctx.root);
+    if (!list.length) return;
+    if (!g.focusEl || !list.includes(g.focusEl)) { setPadFocus(list[0]); return; }
+    const cur = g.focusEl.getBoundingClientRect();
+    const cx = cur.left + cur.width / 2, cy = cur.top + cur.height / 2;
+    let best = null, bestScore = Infinity;
+    for (const el of list) {
+      if (el === g.focusEl) continue;
+      const r = el.getBoundingClientRect();
+      const ex = r.left + r.width / 2, ey = r.top + r.height / 2;
+      const px = ex - cx, py = ey - cy;
+      const primary = dx ? px * Math.sign(dx) : py * Math.sign(dy);
+      const perp = dx ? Math.abs(py) : Math.abs(px);
+      if (primary < 5) continue;
+      const score = primary + perp * 2.1;
+      if (score < bestScore) { bestScore = score; best = el; }
+    }
+    if (best) { setPadFocus(best); return; }
+    // Keep short lists usable at the edges: wrap to the nearest item in the
+    // requested direction rather than dropping input.
+    if (dx) setPadFocus(dx > 0 ? list[0] : list[list.length - 1]);
+    else setPadFocus(dy > 0 ? list[0] : list[list.length - 1]);
+  }
+
+  function activatePadFocus() {
+    const g = Input.gamepad;
+    const ctx = syncPadContext(false);
+    if (!ctx) return false;
+    const el = g.focusEl;
+    if (el && padFocusables(ctx.root).includes(el)) {
+      AUDIO.init();
+      el.click();
+      return true;
+    }
+    const first = defaultPadFocus(ctx);
+    if (first) { setPadFocus(first); return true; }
+    return false;
+  }
+
+  function backPadContext() {
+    const ctx = syncPadContext(false);
+    if (!ctx || ctx.key === 'menu') return false;
+    if (ctx.key === 'levelup') return false;
+    if (ctx.key === 'stage') closeStageScreen();
+    else if (ctx.key === 'tank') closeTankScreen();
+    else if (ctx.key === 'fusion') closeFusionScreen();
+    else if (ctx.key === 'codex') closeCodexScreen();
+    else if (ctx.key === 'save') closeSaveScreen();
+    else if (ctx.key === 'how') hideHow();
+    else if (ctx.key === 'pause') resumeGame();
+    else if (ctx.key === 'result') returnToMenu();
+    return true;
+  }
+
   function pollGamepad() {
     const g = Input.gamepad;
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -4938,30 +5031,42 @@
     const was = i => !!g.prevButtons[i];
     const just = i => pressed(i) && !was(i);
 
-    if (G.mode === 'menu' && (just(14) || just(15))) {
-      selectCoop(!G.coopSelected);
-    }
-    if (just(9)) {
-      if (G.mode === 'playing') pauseGame();
-      else if (G.mode === 'paused') resumeGame();
-      else if (G.mode === 'result') returnToMenu();
-    }
-    if (just(0)) {
-      if (G.mode === 'playing') {
+    if (G.mode === 'playing') {
+      clearPadFocus();
+      g.uiKey = '';
+      if (just(0)) {
         if (G.twoPlayer) Input.dashQueued2 = true; else Input.dashQueued = true;
-      } else if (G.mode === 'menu') {
-        if (!U.howScreen.classList.contains('hidden')) hideHow();
-        AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected);
-      } else if (G.mode === 'levelup') chooseUpgrade(g.selectedCard || 0);
-      else if (G.mode === 'paused') resumeGame();
-      else if (G.mode === 'result') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); }
-    }
-    if (G.mode === 'levelup') {
-      if (just(14) || just(4)) g.selectedCard = (g.selectedCard + 2) % 3;
-      if (just(15) || just(5)) g.selectedCard = (g.selectedCard + 1) % 3;
-      if (just(1)) rerollUpgrades();
-      const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
-      cards.forEach((card, i) => card.classList.toggle('is-pad', i === g.selectedCard));
+      }
+      if (just(9)) pauseGame();
+    } else {
+      const ctx = syncPadContext(false);
+      if (ctx && ctx.key === 'levelup') {
+        const cardCount = 3;
+        if (just(14) || just(12) || just(4)) g.selectedCard = (g.selectedCard + cardCount - 1) % cardCount;
+        if (just(15) || just(13) || just(5)) g.selectedCard = (g.selectedCard + 1) % cardCount;
+        if (just(0)) { AUDIO.init(); chooseUpgrade(g.selectedCard || 0); }
+        if (just(1)) rerollUpgrades();
+        const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
+        if (cards[g.selectedCard]) setPadFocus(cards[g.selectedCard]);
+        cards.forEach((card, i) => card.classList.toggle('is-pad', i === g.selectedCard));
+      } else if (ctx) {
+        if (just(12)) movePadFocus(0, -1);
+        else if (just(13)) movePadFocus(0, 1);
+        else if (just(14)) movePadFocus(-1, 0);
+        else if (just(15)) movePadFocus(1, 0);
+        if (just(0)) activatePadFocus();
+        if (just(1)) backPadContext();
+        if (just(9)) {
+          if (G.mode === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); }
+          else if (G.mode === 'paused') resumeGame();
+          else if (G.mode === 'result') returnToMenu();
+        }
+      } else if (G.mode === 'paused') {
+        if (just(0) || just(9)) resumeGame();
+      } else if (G.mode === 'result') {
+        if (just(0)) { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); }
+        if (just(9)) returnToMenu();
+      }
     }
     g.prevButtons = Array.from(btns, b => !!(b && b.pressed));
   }
@@ -5026,7 +5131,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000) };
+      window.__BF_DEBUG = { G, Input, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext } };
     }
     requestAnimationFrame(loop);
   }

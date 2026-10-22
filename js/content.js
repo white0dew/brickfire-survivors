@@ -432,9 +432,9 @@
     { at: 0, label: '侦察潮', sub: 'SCOUT TIDE', spawn: 1.58, types: ['scout', 'scout', 'grunt'], max: 8 },
     { at: 55, label: '装甲楔', sub: 'ARMORED WEDGE', spawn: 1.30, types: ['grunt', 'scout', 'scout', 'heavy'], max: 13 },
     { at: 110, label: '蜂群突袭', sub: 'SWARM SURGE', spawn: 1.08, types: ['scout', 'bomber', 'grunt', 'scout'], max: 18 },
-    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.96, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 21, elite: true },
-    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.84, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 25, elite: true },
-    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.72, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 29, boss: true }
+    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.94, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 22, elite: true },
+    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.80, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 27, elite: true },
+    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.68, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 31, boss: true }
   ];
 
   const ITEMS = {
@@ -688,12 +688,5 @@
     maxHp: 190, speed: 128, radius: 13, fireInterval: .60, damage: 17,
     pickupRadius: 120, crit: .05, critMult: 1.8, xpGain: 1, cdr: 1, area: 1, damageMult: 1
   };
-  const UPGRADE_RARITY = {
-    common:    { id: 'common',    label: '常规', en: 'COMMON',    color: '#9fb1a6', rank: 1, weight: 58, bonus: 0 },
-    rare:      { id: 'rare',      label: '稀有', en: 'RARE',      color: '#5ff0ce', rank: 2, weight: 28, bonus: 1 },
-    epic:      { id: 'epic',      label: '史诗', en: 'EPIC',      color: '#ffb52d', rank: 3, weight: 11, bonus: 2 },
-    legendary: { id: 'legendary', label: '传说', en: 'LEGENDARY', color: '#ff6b6b', rank: 4, weight: 3, bonus: 3 }
-  };
-
-  window.BF_CONTENT = { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE, UPGRADE_RARITY };
+  window.BF_CONTENT = { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE };
 })();
