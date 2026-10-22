@@ -7,7 +7,7 @@
   <title>砖火幸存者 // BRICKFIRE SURVIVORS</title>
   <meta name="description" content="经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261022-11">
+  <link rel="stylesheet" href="css/style.css?v=20261022-13">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -32,8 +32,9 @@
           </div>
         </div>
         <div class="hangar-top__right">
-          <div id="padState" class="pad-state">PAD / WAIT</div>
+          <div id="padState" class="pad-state">PAD / 按任意键</div>
           <div class="status-led"><i></i> EXTRACTION LINK STABLE</div>
+          <button id="fullBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="全屏" title="全屏 (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
           <button id="soundBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="切换声音" title="声音 (M)">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8c1.2 1 1.8 2.3 1.8 4S18.2 15 17 16M19.5 5.5C21.4 7.2 22.5 9.5 22.5 12s-1.1 4.8-3 6.5"/></svg>
           </button>
@@ -150,7 +151,7 @@
           <div><strong>BRICKFIRE</strong><span id="sectorLabel">SECTOR 01 / FURNACE WORKS</span></div>
         </div>
         <div class="run-clock">
-          <div class="run-clock__meta"><span id="phaseLabel">WAVE 01 // 侦察潮</span><span id="clockLabel">06:00.00</span></div>
+          <div class="run-clock__meta"><span id="phaseLabel">WAVE 01 // 侦察潮</span><span id="objectiveLabel">生存至撤离 · 06:00</span><span id="clockLabel">06:00.00</span></div>
           <div class="run-clock__bar"><i id="clockBar"></i><em id="bossMarker"></em></div>
         </div>
         <div class="topbar__controls">
@@ -188,24 +189,13 @@
           <div id="mobileStick" class="mobile-stick" aria-hidden="true"><i></i></div>
           <button id="mobileDash" class="mobile-dash" type="button" aria-label="冲刺">DASH</button>
 
-          <div class="combat-deck">
-            <div class="deck-slot deck-slot--weapon">
-              <span class="deck-slot__key">AUTO</span>
-              <div id="primaryIcon" class="deck-slot__icon"></div>
-              <div class="deck-slot__copy"><small>主武器</small><strong id="primaryName">撕裂者主炮</strong></div>
-            </div>
-            <div class="deck-slot">
-              <span class="deck-slot__key">SPACE</span>
+          <div class="combat-deck combat-deck--thruster">
+            <div class="deck-slot deck-slot--thruster">
+              <span class="deck-slot__key">SPACE / A</span>
               <div class="dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h11M10 7l5 5-5 5M15 6h4M15 18h4"/></svg></div>
-              <div class="deck-slot__copy"><small>推进器</small><strong id="dashStatus">就绪</strong></div>
+              <div class="deck-slot__copy"><small>推进器 / THRUSTER</small><strong id="dashStatus">就绪</strong></div>
               <div class="dash-meter"><i id="dashMeter"></i></div>
             </div>
-            <div class="deck-slot deck-slot--objective">
-              <span class="deck-slot__key">OBJ</span>
-              <div class="objective-glyph" aria-hidden="true"><i></i></div>
-              <div class="deck-slot__copy"><small>当前目标</small><strong id="objectiveLabel">生存至撤离 · 06:00</strong></div>
-            </div>
-            <div id="deckHint" class="deck-hint"><span>WASD</span> 移动 <b>/</b> <span>鼠标 / 右摇杆</span> 瞄准 <b>/</b> <span>SPACE / A</span> 冲刺 <b>/</b> <span>ESC / START</span> 暂停</div>
           </div>
         </section>
 
@@ -245,7 +235,7 @@
               <div class="core-gauge__copy"><strong id="coreText">06:00</strong><small>距离撤离</small><div class="core-pips" id="corePips"><i></i><i></i><i></i><i></i><i></i></div></div>
             </div>
             <div class="base-meter">
-              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">1000 / 1000</b></div>
+              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">650 / 650</b></div>
               <div class="meter meter--base"><i id="baseHpMeter"></i></div>
             </div>
             <div id="coreNote" class="core-note"><span class="blink-dot"></span> 基地或车体归零即失败 · 基地会自行修复</div>
@@ -460,10 +450,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261022-11"></script>
-  <script src="js/icons.js?v=20261022-11"></script>
-  <script src="js/audio.js?v=20261022-11"></script>
-  <script src="js/game.js?v=20261022-11"></script>
-  <script src="js/main.js?v=20261022-11"></script>
+  <script src="js/content.js?v=20261022-13"></script>
+  <script src="js/icons.js?v=20261022-13"></script>
+  <script src="js/audio.js?v=20261022-13"></script>
+  <script src="js/game.js?v=20261022-13"></script>
+  <script src="js/main.js?v=20261022-13"></script>
 </body>
 </html>

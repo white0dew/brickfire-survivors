@@ -16,7 +16,7 @@
   const BOSS_AT = 285;
   const CORE_W = 64;
   const CORE_H = 64;
-  const BASE_MAX_HP = 1000;
+  const BASE_MAX_HP = 650;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
   const MAX_PARTICLES = 620;
@@ -164,7 +164,7 @@
     keys: new Set(),
     mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
-    gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: 0, prevButtons: [], focusEl: null, uiKey: '' },
+    gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: 0, prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
     dashQueued: false,
     dashQueued2: false
   };
@@ -1990,7 +1990,7 @@
     U.bossHud.classList.add('is-hidden');
     const diff = difficultyData(G.difficulty);
     U.sectorLabel.textContent = `${MAPS[index].sector} / ${MAPS[index].en} · ${diff.name}`;
-    U.objectiveLabel.textContent = `${MAPS[index].sector} // ${diff.name} · 生存至撤离 · 06:00`;
+    U.objectiveLabel.textContent = '生存至撤离 · 06:00';
     U.sideTip.textContent = G.twoPlayer
       ? `P1 // ${G.tank.name} · P2 // ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
@@ -3846,7 +3846,7 @@
       }
     }
     if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.twoPlayer ? '双人 06:00 · 双车或基地归零即失败' : '生存 06:00 · 车体或基地归零即失败'}`;
-    if (G.weapons.cannon) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 8 ? '湮灭主炮' : WEAPONS.cannon.name;
+    if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 8 ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
     if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 // 队友靠近并停留 2.4 秒可重启`;
     U.objectiveLabel.title = G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? '泰坦会攻击最近的你和基地，撑到撤离' : '活到撤离，车体或基地归零即失败');
@@ -4615,7 +4615,7 @@
   /* ---------------- input / lifecycle ---------------- */
   function cacheUI() {
     const ids = ['app', 'menuScreen', 'menuCanvas', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
-      'gameLayout', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn',
+      'gameLayout', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'slotCount', 'loadoutList',
       'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
@@ -4635,6 +4635,14 @@
   }
 
   function bindUI() {
+    window.addEventListener('gamepadconnected', () => {
+      Input.gamepad.connected = true;
+      syncPadState();
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+      Input.gamepad.connected = false;
+      syncPadState();
+    });
     U.modeCards.forEach(card => card.addEventListener('click', () => { AUDIO.init(); selectCoop(card.dataset.coop === '1'); AUDIO.tick(); }));
     U.startBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); });
     U.arenaOptions.addEventListener('click', e => {
@@ -4710,6 +4718,7 @@
     U.soundBtn.addEventListener('click', toggleMute);
     U.pauseBtn.addEventListener('click', pauseGame);
     U.fullBtn.addEventListener('click', toggleFullscreen);
+    if (U.fullBtnMenu) U.fullBtnMenu.addEventListener('click', toggleFullscreen);
     U.resumeBtn.addEventListener('click', resumeGame);
     U.restartBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); });
     U.quitBtn.addEventListener('click', returnToMenu);
@@ -4851,7 +4860,7 @@
   function syncPadState() {
     const el = document.getElementById('padState');
     if (!el) return;
-    el.textContent = Input.gamepad.connected ? 'PAD / ONLINE' : 'PAD / WAIT';
+    el.textContent = Input.gamepad.connected ? 'PAD / ONLINE' : 'PAD / 按任意键';
     el.classList.toggle('is-on', Input.gamepad.connected);
   }
 
@@ -5030,6 +5039,28 @@
     const pressed = i => !!(btns[i] && btns[i].pressed);
     const was = i => !!g.prevButtons[i];
     const just = i => pressed(i) && !was(i);
+    const dpadPressed = pressed(12) || pressed(13) || pressed(14) || pressed(15);
+    let padStep = null;
+    if (G.mode !== 'playing' && !dpadPressed) {
+      const ax = Math.abs(x) >= .48 ? Math.sign(x) : 0;
+      const ay = Math.abs(y) >= .48 ? Math.sign(y) : 0;
+      if (ax || ay) {
+        const dx = Math.abs(ax) >= Math.abs(ay) ? ax : 0;
+        const dy = dx ? 0 : ay;
+        const nowMs = performance.now();
+        if (dx !== g.uiDirX || dy !== g.uiDirY) {
+          g.uiDirX = dx; g.uiDirY = dy; g.uiRepeatAt = nowMs + 340;
+          padStep = { dx, dy };
+        } else if (nowMs >= g.uiRepeatAt) {
+          g.uiRepeatAt = nowMs + 150;
+          padStep = { dx, dy };
+        }
+      } else {
+        g.uiDirX = 0; g.uiDirY = 0;
+      }
+    } else if (G.mode === 'playing') {
+      g.uiDirX = 0; g.uiDirY = 0;
+    }
 
     if (G.mode === 'playing') {
       clearPadFocus();
@@ -5042,15 +5073,18 @@
       const ctx = syncPadContext(false);
       if (ctx && ctx.key === 'levelup') {
         const cardCount = 3;
-        if (just(14) || just(12) || just(4)) g.selectedCard = (g.selectedCard + cardCount - 1) % cardCount;
-        if (just(15) || just(13) || just(5)) g.selectedCard = (g.selectedCard + 1) % cardCount;
+        const left = just(14) || just(12) || just(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
+        const right = just(15) || just(13) || just(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
+        if (left) g.selectedCard = (g.selectedCard + cardCount - 1) % cardCount;
+        if (right) g.selectedCard = (g.selectedCard + 1) % cardCount;
         if (just(0)) { AUDIO.init(); chooseUpgrade(g.selectedCard || 0); }
         if (just(1)) rerollUpgrades();
         const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
         if (cards[g.selectedCard]) setPadFocus(cards[g.selectedCard]);
         cards.forEach((card, i) => card.classList.toggle('is-pad', i === g.selectedCard));
       } else if (ctx) {
-        if (just(12)) movePadFocus(0, -1);
+        if (padStep) movePadFocus(padStep.dx, padStep.dy);
+        else if (just(12)) movePadFocus(0, -1);
         else if (just(13)) movePadFocus(0, 1);
         else if (just(14)) movePadFocus(-1, 0);
         else if (just(15)) movePadFocus(1, 0);
@@ -5094,8 +5128,6 @@
     updateBestStats();
     syncPadState();
     U.bossMarker.style.left = `${BOSS_AT / TOTAL_TIME * 100}%`;
-    U.primaryIcon.innerHTML = '<canvas data-icon="cannon" data-color="#ffb52d" data-size="36"></canvas>';
-    ICONS.applyAll(U.primaryIcon);
     rebuildMenuCache();
     if (new URLSearchParams(location.search).has('debug')) {
       const tick = (seconds, autoMove) => {
