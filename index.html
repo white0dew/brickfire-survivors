@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080b0b">
-  <title>砖火幸存者 // BRICKFIRE SURVIVORS</title>
-  <meta name="description" content="经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
+  <title>钢铁余烬 // STEEL EMBERS</title>
+  <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261022-16">
+  <link rel="stylesheet" href="css/style.css?v=20261022-20">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -27,7 +27,7 @@
             <span></span><span></span><span></span><span></span>
           </div>
           <div>
-            <div class="brand-name">BRICKFIRE<span>//</span></div>
+            <div class="brand-name">STEEL EMBERS<span>//</span></div>
             <div class="brand-sub">ARMORED SURVIVAL SYSTEMS</div>
           </div>
         </div>
@@ -45,11 +45,11 @@
         <div class="hero-copy">
           <div class="eyebrow reveal reveal-1"><span class="eyebrow__line"></span> FC-1985 / REBUILT-2026</div>
           <h1 class="game-title reveal reveal-2">
-            <span class="game-title__brick">BRICK</span>
-            <span class="game-title__fire">FIRE</span>
+            <span class="game-title__brick">STEEL</span>
+            <span class="game-title__fire">EMBER</span>
             <span class="game-title__tag">SURVIVORS</span>
           </h1>
-          <div class="cn-title reveal reveal-2"><span>砖</span><span>火</span><span>幸</span><span>存</span><span>者</span></div>
+          <div class="cn-title reveal reveal-2"><span>钢</span><span>铁</span><span>余</span><span>烬</span></div>
           <p class="hero-pitch reveal reveal-3">经典坦克大战，被拖进无尽的钢铁潮汐。<br><strong>活过六分钟。</strong>单人 / 本地双人同屏，吞噬余烬升级。让每一发炮弹都变成奇观。</p>
 
           <div class="arena-picker reveal reveal-4" role="group" aria-label="选择战役关卡">
@@ -100,6 +100,7 @@
             <button id="howBtn" class="text-btn" type="button">战术简报 <span>?</span></button>
             <button id="fusionBtn" class="text-btn" type="button">合成表 <span>⌁</span></button>
             <button id="codexBtn" class="text-btn" type="button">敌人图鉴 <span>▦</span></button>
+            <button id="itemBtn" class="text-btn" type="button">道具说明 <span>▤</span></button>
             <button id="saveBtn" class="text-btn" type="button">存档管理 <span>⇅</span></button>
           </div>
 
@@ -148,7 +149,7 @@
       <header class="topbar">
         <div class="topbar__brand">
           <div class="mini-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-          <div><strong>BRICKFIRE</strong><span id="sectorLabel">SECTOR 01 / FURNACE WORKS</span></div>
+          <div><strong>STEEL EMBERS</strong><span id="sectorLabel">SECTOR 01 / FURNACE WORKS</span></div>
         </div>
         <div class="run-clock">
           <div class="run-clock__meta"><span id="phaseLabel">WAVE 01 // 侦察潮</span><span id="objectiveLabel">生存至撤离 · 06:00</span><span id="clockLabel">06:00.00</span></div>
@@ -188,14 +189,21 @@
           </div>
           <div id="mobileStick" class="mobile-stick" aria-hidden="true"><i></i></div>
           <button id="mobileDash" class="mobile-dash" type="button" aria-label="冲刺">DASH</button>
+          <button id="mobileRecall" class="mobile-recall" type="button" aria-label="回程">HOME</button>
 
-          <div class="combat-deck combat-deck--thruster">
+          <div class="combat-deck combat-deck--actions">
             <div class="deck-slot deck-slot--thruster">
               <span class="deck-slot__key">SPACE / A</span>
               <div class="dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h11M10 7l5 5-5 5M15 6h4M15 18h4"/></svg></div>
               <div class="deck-slot__copy"><small>推进器 / THRUSTER</small><strong id="dashStatus">就绪</strong></div>
               <div class="dash-meter"><i id="dashMeter"></i></div>
             </div>
+            <button id="recallBtn" class="deck-slot deck-slot--recall" type="button" title="回程至基地 (B / 手柄 Y)">
+              <span class="deck-slot__key">B / Y</span>
+              <div class="recall-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v8h-5v-5H9v5H4z"/><path d="M12 3v4"/></svg></div>
+              <div class="deck-slot__copy"><small>回程 / RECALL</small><strong id="recallStatus">就绪</strong></div>
+              <div class="recall-meter"><i id="recallMeter"></i></div>
+            </button>
           </div>
         </section>
 
@@ -235,7 +243,7 @@
               <div class="core-gauge__copy"><strong id="coreText">06:00</strong><small>距离撤离</small><div class="core-pips" id="corePips"><i></i><i></i><i></i><i></i><i></i></div></div>
             </div>
             <div class="base-meter">
-              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">650 / 650</b></div>
+              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">520 / 520</b></div>
               <div class="meter meter--base"><i id="baseHpMeter"></i></div>
               <div id="baseTurretNote" class="base-turret-note">防御塔 0 / 4 · 拾取炮塔后启用</div>
             </div>
@@ -333,13 +341,14 @@
         <div class="how__eyebrow">FIELD MANUAL / 战术简报</div>
         <h2 id="howTitle">活到撤离信号亮起</h2>
         <div class="how__grid">
-          <article><span class="how__num">01</span><h3>驾驶</h3><p><kbd>WASD</kbd> / 方向键 / 左摇杆移动。主炮自动索敌最近单位，鼠标或右摇杆可改写瞄准方向。RT 可强制补火。</p></article>
-          <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。基地本身不攻击，拾取「哨戒炮塔」后才会部署防御塔。</p></article>
-          <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；两人都会获得同一套模块。机库的坦克库有 20 台底盘，开局的武器、被动与特性各不相同。</p></article>
-          <article><span class="how__num">04</span><h3>破坏 / 合成</h3><p>砖墙可被炮弹击碎，钢板不可。水系阻挡履带但不挡弹道。武器 Lv.6 且对应被动 Lv.2 后，升级卡会出现合成协议；6 条路线可在「合成表」查看。</p></article>
+          <article><span class="how__num">01</span><h3>驾驶</h3><p><kbd>WASD</kbd> / 方向键 / 左摇杆移动。主炮自动索敌，封印核心优先于普通敌人；鼠标或右摇杆可改写瞄准方向。RT 可强制补火，<kbd>B</kbd> / 手柄 <kbd>Y</kbd> 回程。</p></article>
+          <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。攻击封印会弹出增援小兵，击破后唤醒守卫。基地本身不攻击，拾取「哨戒炮塔」后才会部署防御塔。</p></article>
+          <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；两人都会获得同一套模块。战场共有 <b>36 种</b>升级协议（16 武器 + 20 被动）、<b>16 条</b>进化路线，机库的 20 台底盘各有不同开局。</p></article>
+          <article><span class="how__num">04</span><h3>破坏 / 合成</h3><p>砖墙可被炮弹击碎，钢板不可。水系阻挡履带但不挡弹道。武器 Lv.6 且对应被动 Lv.2 后，升级卡会出现合成协议；<b>16 条</b>进化路线可在「合成表」查看。</p></article>
         </div>
         <div class="how__legend"><span><i class="chip chip--star"></i> 星星：立即升级主炮</span><span><i class="chip chip--bomb"></i> 手雷：清屏爆破</span><span><i class="chip chip--shield"></i> 头盔：无敌护盾</span><span><i class="chip chip--time"></i> 时钟：冻结敌军</span><span><i class="chip chip--shovel"></i> 维修：修复车体</span></div>
-        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回；主页、星图、坦克库、简报和结算均可用手柄操作<br>双人同屏 // P1 键鼠 · P2 手柄；P2 也可用方向键移动、Enter 冲刺</div>
+        <div class="how__pad" style="margin-top:8px;opacity:.9">完整道具效果与基地道具说明，请在机库打开「道具说明」。</div>
+        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · Y 回程 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回；主页、星图、坦克库、简报、图鉴和道具说明均可用手柄操作<br>双人同屏 // P1 键鼠 · P2 手柄；P2 也可用方向键移动、Enter 冲刺</div>
         <button id="howStart" class="cta cta--small" type="button"><span class="cta__copy"><strong>明白了，出击</strong><small>DEPLOY NOW</small></span><span class="cta__arrow">↗</span></button>
       </div>
     </section>
@@ -424,6 +433,24 @@
       </div>
     </section>
 
+    <!-- ================= ITEM GUIDE ================= -->
+    <section id="itemScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="itemTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="tank-select__panel codex-panel item-guide-panel">
+        <button id="itemClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="tank-select__head">
+          <div class="how__eyebrow">FIELD MANUAL / 道具说明 · <b>8 ITEMS</b></div>
+          <h2 id="itemTitle">每一种补给，都能改写战局</h2>
+          <p>战场掉落物不会进入背包，拾取即生效。靠近掉落物会自动吸附；优先拾取能救急或能拆开敌群的那一个。</p>
+        </div>
+        <div id="itemGrid" class="item-guide-grid"></div>
+        <div class="tank-select__foot">
+          <div class="codex-legend"><span class="is-normal">拾取即生效</span><span class="is-elite">可叠加</span><span class="is-boss">基地道具</span></div>
+          <button id="itemDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE MANUAL</small></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= SAVE MANAGER ================= -->
     <section id="saveScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="saveTitle">
       <div class="overlay__backdrop"></div>
@@ -451,10 +478,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261022-16"></script>
-  <script src="js/icons.js?v=20261022-16"></script>
-  <script src="js/audio.js?v=20261022-16"></script>
-  <script src="js/game.js?v=20261022-16"></script>
-  <script src="js/main.js?v=20261022-16"></script>
+  <script src="js/content.js?v=20261022-20"></script>
+  <script src="js/icons.js?v=20261022-20"></script>
+  <script src="js/audio.js?v=20261022-20"></script>
+  <script src="js/game.js?v=20261022-20"></script>
+  <script src="js/main.js?v=20261022-20"></script>
 </body>
 </html>

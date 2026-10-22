@@ -1,4 +1,4 @@
-/* BRICKFIRE // tiny procedural audio engine */
+/* STEEL EMBERS // tiny procedural audio engine */
 (function () {
   'use strict';
 

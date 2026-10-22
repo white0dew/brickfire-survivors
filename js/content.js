@@ -1,4 +1,4 @@
-/* BRICKFIRE // content definitions. All art is generated at runtime. */
+/* STEEL EMBERS // content definitions. All art is generated at runtime. */
 (function () {
   'use strict';
 
@@ -438,14 +438,14 @@
   ];
 
   const ITEMS = {
-    star: { name: '火炮星星', en: 'STAR', color: '#ffb52d', desc: '主炮立即提升 1 级' },
-    grenade: { name: '震荡手雷', en: 'GRENADE', color: '#ff5b4a', desc: '清除屏幕内所有敌弹并重创敌军' },
-    helmet: { name: '反应头盔', en: 'HELMET', color: '#5ff0ce', desc: '获得 8 秒无敌护盾' },
-    timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', desc: '冻结所有敌人 7 秒' },
-    shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', desc: '修复车体 25%，并获得 2 秒无敌' },
-    tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', desc: '修复车体 45%，并提升 5 最大装甲' },
-    basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', desc: '修复基地装甲 24%' },
-    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', desc: '在基地周围部署一座防御塔；基地本身不攻击' }
+    star: { name: '火炮星星', en: 'STAR', color: '#ffb52d', glyph: '✦', desc: '主炮立即提升 1 级', detail: '主炮满级后，随机提升另一把武器；全部满级则修复 25 点装甲。' },
+    grenade: { name: '震荡手雷', en: 'GRENADE', color: '#ff5b4a', glyph: '●', desc: '清除全屏敌弹并重创敌军', detail: '对屏幕内所有敌人造成高额伤害，同时清空敌方弹幕。' },
+    helmet: { name: '反应头盔', en: 'HELMET', color: '#5ff0ce', glyph: '◒', desc: '获得 8 秒无敌护盾', detail: '持续期间免疫一切伤害；适合强行拾取或穿越弹幕。' },
+    timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', glyph: '◷', desc: '冻结所有敌人 7 秒', detail: '敌人停止移动与开火；Boss 同样受影响。' },
+    shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', glyph: '✚', desc: '修复车体 25%，并获得 2 秒无敌', detail: '立即回复最大装甲的 25%，短暂无敌便于脱离包围。' },
+    tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', glyph: '▣', desc: '修复车体 45%，并提升 5 最大装甲', detail: '永久增加 5 点最大装甲，并按新上限修复 45%。' },
+    basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', glyph: '⌂', desc: '修复基地装甲 24%', detail: '只对基地生效；基地装甲归零会立即失守。' },
+    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', glyph: '⌖', desc: '在基地周围部署防御塔', detail: '最多部署 4 座；基地本身不攻击。塔满后拾取改为修复基地 10% 装甲。' }
   };
 
   const WEAPONS = {
@@ -532,6 +532,146 @@
         { damage: 320, interval: 3.8, radius: 90, count: 3, delay: .48, text: '光柱数量 <b>3</b>。' },
         { damage: 430, interval: 3.35, radius: 104, count: 3, delay: .42, text: '<b>天基惩戒</b>：三连审判抹除敌群。' }
       ]
+    },
+    scatter: {
+      name: '碎星霰弹', en: 'STARBURST SCATTER', short: '霰弹', icon: 'cannon', color: '#ff9a4a', type: 'weapon',
+      desc: '朝目标喷出扇形弹幕，贴脸时全部命中。',
+      levels: [
+        { damage: 12, interval: 1.08, speed: 500, pellets: 4, spread: .58, pierce: 0, text: '向目标喷出 <b>4</b> 枚弹丸。' },
+        { damage: 15, interval: 1.0, speed: 510, pellets: 5, spread: .62, pierce: 0, text: '弹丸 <b>+1</b>，伤害提升。' },
+        { damage: 18, interval: .94, speed: 520, pellets: 6, spread: .66, pierce: 0, text: '扇面扩大到 <b>6</b> 枚。' },
+        { damage: 22, interval: .86, speed: 540, pellets: 6, spread: .7, pierce: 1, text: '弹丸可贯穿 <b>1</b> 个目标。' },
+        { damage: 27, interval: .78, speed: 560, pellets: 7, spread: .74, pierce: 1, text: '伤害 <b>+5</b>，装填加速。' },
+        { damage: 33, interval: .70, speed: 580, pellets: 8, spread: .78, pierce: 1, text: '近距爆发提升，弹丸 <b>8</b> 枚。' },
+        { damage: 40, interval: .62, speed: 600, pellets: 9, spread: .82, pierce: 1, text: '弹幕密度大幅提升。' },
+        { damage: 50, interval: .54, speed: 630, pellets: 12, spread: .96, pierce: 2, text: '<b>超新星散射</b>：12 枚弹丸覆盖整片扇区。' }
+      ]
+    },
+    laser: {
+      name: '棱镜激光', en: 'PRISM LANCE', short: '激光', icon: 'arc', color: '#ff6b8a', type: 'weapon',
+      desc: '高频直线光束，瞬间贯穿一整列敌人。',
+      levels: [
+        { damage: 24, interval: 1.25, speed: 1450, pierce: 99, text: '每 <b>1.25</b> 秒发射一道贯穿光束。' },
+        { damage: 30, interval: 1.16, speed: 1500, pierce: 99, text: '光束伤害 <b>+6</b>。' },
+        { damage: 37, interval: 1.08, speed: 1550, pierce: 99, text: '聚焦透镜升级，伤害提升。' },
+        { damage: 45, interval: .98, speed: 1600, pierce: 99, text: '冷却缩短，光束更密集。' },
+        { damage: 54, interval: .88, speed: 1650, pierce: 99, text: '伤害 <b>+9</b>，穿透整条直线。' },
+        { damage: 64, interval: .78, speed: 1720, pierce: 99, text: '棱镜过载，发射频率提升。' },
+        { damage: 76, interval: .66, speed: 1800, pierce: 99, text: '高热光束灼穿重甲。' },
+        { damage: 92, interval: .52, speed: 1900, pierce: 99, text: '<b>湮灭棱镜</b>：几乎不间断的贯穿射线。' }
+      ]
+    },
+    missile: {
+      name: '黄蜂导弹', en: 'HORNET PODS', short: '导弹', icon: 'mine', color: '#ffd05a', type: 'weapon',
+      desc: '发射自动追踪的微型导弹，命中后爆炸。',
+      levels: [
+        { damage: 32, interval: 2.2, speed: 310, count: 1, explode: 30, turn: 4.2, text: '发射 <b>1</b> 枚追踪导弹。' },
+        { damage: 40, interval: 2.08, speed: 320, count: 1, explode: 34, turn: 4.5, text: '导弹伤害与爆炸范围提升。' },
+        { damage: 46, interval: 1.96, speed: 330, count: 2, explode: 38, turn: 4.8, text: '齐射 <b>2</b> 枚导弹。' },
+        { damage: 56, interval: 1.82, speed: 345, count: 2, explode: 44, turn: 5.1, text: '推进器升级，追踪更灵敏。' },
+        { damage: 68, interval: 1.68, speed: 360, count: 2, explode: 50, turn: 5.5, text: '弹头装药强化。' },
+        { damage: 82, interval: 1.52, speed: 375, count: 3, explode: 58, turn: 6.0, text: '齐射 <b>3</b> 枚导弹。' },
+        { damage: 100, interval: 1.36, speed: 390, count: 3, explode: 66, turn: 6.4, text: '蜂群弹幕形成饱和追踪。' },
+        { damage: 125, interval: 1.16, speed: 410, count: 4, explode: 78, turn: 7.0, text: '<b>蜂群饱和</b>：四枚导弹同时锁定。' }
+      ]
+    },
+    frost: {
+      name: '霜环发生器', en: 'CRYO RING', short: '霜环', icon: 'cooling', color: '#9bd8ff', type: 'weapon',
+      desc: '周期性释放霜冻脉冲，伤害并减速周围敌人。',
+      levels: [
+        { damage: 14, interval: 2.4, radius: 88, slow: 1.2, text: '释放霜环，减速周围敌人 <b>1.2</b> 秒。' },
+        { damage: 19, interval: 2.25, radius: 96, slow: 1.35, text: '霜环范围与伤害提升。' },
+        { damage: 24, interval: 2.1, radius: 104, slow: 1.5, text: '低温扩散，减速时间延长。' },
+        { damage: 31, interval: 1.92, radius: 114, slow: 1.7, text: '冻结效率提升。' },
+        { damage: 39, interval: 1.74, radius: 124, slow: 1.9, text: '霜环伤害 <b>+8</b>。' },
+        { damage: 49, interval: 1.56, radius: 136, slow: 2.1, text: '冷却缩短，覆盖更大。' },
+        { damage: 61, interval: 1.38, radius: 148, slow: 2.3, text: '接近绝对零度的脉冲。' },
+        { damage: 78, interval: 1.18, radius: 165, slow: 2.6, text: '<b>绝对零度</b>：大范围冻结与重创。' }
+      ]
+    },
+    toxin: {
+      name: '腐蚀毒池', en: 'VENOM FIELD', short: '毒池', icon: 'flame', color: '#a9e56e', type: 'weapon',
+      desc: '在敌群脚下投放持续腐蚀的毒池。',
+      levels: [
+        { damage: 7, interval: 2.6, radius: 42, life: 3.4, tick: .45, text: '投放毒池，持续 <b>3.4</b> 秒。' },
+        { damage: 9, interval: 2.48, radius: 46, life: 3.7, tick: .44, text: '毒池范围与持续时间提升。' },
+        { damage: 12, interval: 2.34, radius: 50, life: 4.0, tick: .43, text: '腐蚀浓度提升。' },
+        { damage: 15, interval: 2.2, radius: 55, life: 4.3, tick: .42, text: '毒池可覆盖更多敌人。' },
+        { damage: 19, interval: 2.05, radius: 60, life: 4.6, tick: .4, text: '毒性伤害 <b>+4</b>。' },
+        { damage: 24, interval: 1.88, radius: 65, life: 5.0, tick: .38, text: '毒池持续时间延长。' },
+        { damage: 30, interval: 1.7, radius: 70, life: 5.4, tick: .36, text: '高浓度腐蚀液。' },
+        { damage: 38, interval: 1.48, radius: 78, life: 6.0, tick: .32, text: '<b>腐化生态</b>：毒池连成一片。' }
+      ]
+    },
+    gravity: {
+      name: '引力奇点', en: 'GRAVITY WELL', short: '引力', icon: 'orbital', color: '#b896ff', type: 'weapon',
+      desc: '制造吸附奇点，把敌军拖入中心并持续碾碎。',
+      levels: [
+        { damage: 18, interval: 4.6, radius: 82, life: 1.2, pull: 44, text: '生成 <b>1.2</b> 秒吸附奇点。' },
+        { damage: 24, interval: 4.35, radius: 90, life: 1.35, pull: 52, text: '奇点范围与引力提升。' },
+        { damage: 31, interval: 4.1, radius: 98, life: 1.5, pull: 60, text: '引力场持续时间延长。' },
+        { damage: 40, interval: 3.85, radius: 108, life: 1.7, pull: 68, text: '中心碾碎伤害提升。' },
+        { damage: 51, interval: 3.6, radius: 118, life: 1.9, pull: 78, text: '奇点质量增加。' },
+        { damage: 64, interval: 3.3, radius: 130, life: 2.15, pull: 88, text: '吸附力大幅增强。' },
+        { damage: 80, interval: 3.0, radius: 142, life: 2.4, pull: 100, text: '接近事件视界。' },
+        { damage: 102, interval: 2.65, radius: 160, life: 2.8, pull: 118, text: '<b>事件视界</b>：把整片敌群拖进湮灭。' }
+      ]
+    },
+    saw: {
+      name: '回旋锯刃', en: 'ORBIT SAWS', short: '锯刃', icon: 'drone', color: '#ffcf5a', type: 'weapon',
+      desc: '锯刃环绕车体旋转，持续切割近身敌人。',
+      levels: [
+        { damage: 14, count: 1, radius: 36, tick: .32, text: '召唤 <b>1</b> 枚环绕锯刃。' },
+        { damage: 18, count: 1, radius: 39, tick: .30, text: '锯刃伤害提升。' },
+        { damage: 23, count: 2, radius: 42, tick: .29, text: '环绕锯刃 <b>2</b> 枚。' },
+        { damage: 29, count: 2, radius: 46, tick: .27, text: '切割频率提升。' },
+        { damage: 36, count: 2, radius: 50, tick: .25, text: '锯刃转速与伤害提升。' },
+        { damage: 44, count: 3, radius: 54, tick: .23, text: '环绕锯刃 <b>3</b> 枚。' },
+        { damage: 54, count: 3, radius: 58, tick: .21, text: '高硬度合金刀刃。' },
+        { damage: 68, count: 4, radius: 64, tick: .18, text: '<b>切割风暴</b>：四枚锯刃形成绞肉机。' }
+      ]
+    },
+    sentry: {
+      name: '部署哨戒', en: 'DEPLOY SENTRY', short: '哨戒', icon: 'turret', color: '#8fffe6', type: 'weapon',
+      desc: '在战场上部署自动炮塔，替你守住一片区域。',
+      levels: [
+        { damage: 12, interval: 1.6, count: 1, range: 220, life: 8, fire: .72, text: '部署 <b>1</b> 座哨戒炮塔。' },
+        { damage: 15, interval: 1.52, count: 1, range: 230, life: 8.5, fire: .68, text: '炮塔伤害与射程提升。' },
+        { damage: 19, interval: 1.44, count: 1, range: 240, life: 9.2, fire: .64, text: '炮塔持续更久。' },
+        { damage: 24, interval: 1.34, count: 2, range: 250, life: 10, fire: .60, text: '同时部署 <b>2</b> 座炮塔。' },
+        { damage: 30, interval: 1.24, count: 2, range: 260, life: 10.8, fire: .56, text: '炮塔火力提升。' },
+        { damage: 37, interval: 1.14, count: 2, range: 270, life: 11.6, fire: .52, text: '自动装填机升级。' },
+        { damage: 45, interval: 1.04, count: 3, range: 280, life: 12.4, fire: .48, text: '同时部署 <b>3</b> 座炮塔。' },
+        { damage: 56, interval: .92, count: 3, range: 300, life: 14, fire: .42, text: '<b>堡垒网络</b>：三座重炮哨戒全场。' }
+      ]
+    },
+    meteor: {
+      name: '流星火雨', en: 'METEOR RAIN', short: '流星', icon: 'flame', color: '#ff7a2a', type: 'weapon',
+      desc: '呼叫流星砸向敌群，留下大范围爆炸。',
+      levels: [
+        { damage: 70, interval: 5.2, radius: 48, count: 1, delay: .7, text: '每 <b>5.2</b> 秒召唤 1 颗流星。' },
+        { damage: 90, interval: 5.0, radius: 52, count: 1, delay: .66, text: '流星伤害 <b>+20</b>。' },
+        { damage: 112, interval: 4.7, radius: 56, count: 1, delay: .62, text: '撞击范围提升。' },
+        { damage: 138, interval: 4.45, radius: 62, count: 2, delay: .58, text: '每次召唤 <b>2</b> 颗流星。' },
+        { damage: 170, interval: 4.15, radius: 68, count: 2, delay: .54, text: '流星质量与伤害提升。' },
+        { damage: 208, interval: 3.85, radius: 74, count: 2, delay: .50, text: '坠落速度加快。' },
+        { damage: 255, interval: 3.5, radius: 82, count: 3, delay: .46, text: '每次召唤 <b>3</b> 颗流星。' },
+        { damage: 320, interval: 3.0, radius: 94, count: 3, delay: .40, text: '<b>流星风暴</b>：火雨覆盖整片战区。' }
+      ]
+    },
+    rail: {
+      name: '磁轨重炮', en: 'RAIL CANNON', short: '磁轨', icon: 'cannon', color: '#9dbbff', type: 'weapon',
+      desc: '蓄力发射超高速磁轨弹，穿透并爆破整条直线。',
+      levels: [
+        { damage: 64, interval: 2.4, speed: 1750, pierce: 99, explode: 42, text: '发射穿透磁轨弹，命中引发爆炸。' },
+        { damage: 79, interval: 2.28, speed: 1800, pierce: 99, explode: 46, text: '磁轨伤害 <b>+15</b>。' },
+        { damage: 97, interval: 2.16, speed: 1850, pierce: 99, explode: 50, text: '电容升级，伤害提升。' },
+        { damage: 119, interval: 2.02, speed: 1900, pierce: 99, explode: 56, text: '穿透爆破范围扩大。' },
+        { damage: 146, interval: 1.86, speed: 1980, pierce: 99, explode: 62, text: '磁轨加速，装填缩短。' },
+        { damage: 178, interval: 1.68, speed: 2060, pierce: 99, explode: 70, text: '弹芯密度提升。' },
+        { damage: 218, interval: 1.48, speed: 2150, pierce: 99, explode: 78, text: '接近舰炮级输出。' },
+        { damage: 270, interval: 1.22, speed: 2300, pierce: 99, explode: 92, text: '<b>歼星磁轨</b>：一发贯穿整条战线。' }
+      ]
     }
   };
 
@@ -586,6 +726,56 @@
       desc: '获得可再生护盾，抵挡下一次伤害。', max: 4,
       stats: ['护盾 +24'], text: '获得 <b>24</b> 点护盾，脱战 6 秒后重新充能。'
     },
+    regen: {
+      name: '纳米修复', en: 'NANO REPAIR', short: '修复', icon: 'nano', color: '#a9e56e',
+      desc: '纳米胶体持续修补车体。', max: 5,
+      stats: ['每秒修复 +1.1'], text: '每秒修复 <b>1.1</b> 点装甲。'
+    },
+    plating: {
+      name: '反应装甲', en: 'REACTIVE PLATING', short: '减伤', icon: 'armor', color: '#c9d8d3',
+      desc: '命中瞬间偏转部分伤害。', max: 5,
+      stats: ['受到伤害 -4%'], text: '受到的全部伤害 <b>-4%</b>。'
+    },
+    pierce: {
+      name: '穿甲校准', en: 'PIERCE CALIBRATION', short: '穿透', icon: 'warhead', color: '#ffcf5a',
+      desc: '所有弹丸额外贯穿敌人。', max: 5,
+      stats: ['弹丸穿透 +1'], text: '所有弹丸 <b>穿透 +1</b>。'
+    },
+    dash: {
+      name: '矢量推进', en: 'VECTOR THRUST', short: '冲刺', icon: 'engine', color: '#9bd8ff',
+      desc: '压缩推进器再装填时间。', max: 5,
+      stats: ['冲刺冷却 -5%'], text: '冲刺冷却 <b>-5%</b>。'
+    },
+    fortune: {
+      name: '回收协议', en: 'SALVAGE PROTOCOL', short: '掉落', icon: 'salvage', color: '#f5d76e',
+      desc: '从残骸中拆出更多特殊道具。', max: 5,
+      stats: ['特殊掉落 +2%'], text: '特殊道具掉率 <b>+2%</b>。'
+    },
+    execute: {
+      name: '处决协议', en: 'EXECUTION PROTOCOL', short: '处决', icon: 'crit', color: '#ff4f58',
+      desc: '对濒危目标造成额外伤害。', max: 5,
+      stats: ['对残血伤害 +8%'], text: '对生命低于 <b>35%</b> 的敌人伤害 <b>+8%</b>。'
+    },
+    venom: {
+      name: '毒剂弹头', en: 'VENOM WARHEAD', short: '毒弹', icon: 'flame', color: '#a9e56e',
+      desc: '所有攻击附加持续中毒。', max: 5,
+      stats: ['中毒伤害提升'], text: '命中附加 <b>2 秒中毒</b>，每秒伤害随等级提升。'
+    },
+    frostbite: {
+      name: '低温弹头', en: 'CRYO WARHEAD', short: '冻伤', icon: 'cooling', color: '#9bd8ff',
+      desc: '命中减速目标，为走位创造空间。', max: 5,
+      stats: ['命中减速'], text: '命中使敌人减速 <b>1.0 秒</b>，持续时间随等级提升。'
+    },
+    persist: {
+      name: '持续增幅', en: 'PERSISTENCE', short: '持续', icon: 'cooling', color: '#b896ff',
+      desc: '延长火焰、毒池等区域效果。', max: 5,
+      stats: ['区域持续 +10%'], text: '火焰与毒池持续时间 <b>+10%</b>。'
+    },
+    guardian: {
+      name: '基地守护', en: 'BASE GUARDIAN', short: '守家', icon: 'shield', color: '#5ff0ce',
+      desc: '强化基地装甲与自动维修。', max: 5,
+      stats: ['基地减伤 +5%'], text: '基地受到伤害 <b>-5%</b>，维修速度提升。'
+    },
   };
 
 
@@ -618,7 +808,17 @@
     arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'雷神风暴', en:'THUNDERSTORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，闪电在敌群中爆裂。' },
     flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'焚城炼狱', en:'INFERNO', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的火海。' },
     mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:6, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
-    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:6, passiveLevel:2, name:'天基审判', en:'ORBITAL JUDGEMENT', color:'#b896ff', icon:'orbital', desc:'光柱 +1，暴击由轨道放大，审判覆盖整片战区。' }
+    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:6, passiveLevel:2, name:'天基审判', en:'ORBITAL JUDGEMENT', color:'#b896ff', icon:'orbital', desc:'光柱 +1，暴击由轨道放大，审判覆盖整片战区。' },
+    scatter: { id:'scatter', weapon:'scatter', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'超新星霰弹', en:'SUPERNOVA BUCKSHOT', color:'#ff9a4a', icon:'cannon', desc:'弹丸 +3，扇面爆炸，命中引发 <b>超新星爆裂</b>。' },
+    laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:6, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
+    missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:6, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
+    frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
+    toxin: { id:'toxin', weapon:'toxin', passive:'salvage', weaponLevel:6, passiveLevel:2, name:'腐化生态', en:'CORROSIVE BIOSPHERE', color:'#a9e56e', icon:'flame', desc:'毒池 +1 层，范围与持续时间大幅提升。' },
+    gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
+    saw: { id:'saw', weapon:'saw', passive:'engine', weaponLevel:6, passiveLevel:2, name:'切割风暴', en:'BLADE STORM', color:'#ffcf5a', icon:'drone', desc:'锯刃 +1，环绕半径扩大，切割频率提升。' },
+    sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，炮塔射程与耐久提升，形成交叉火力。' },
+    meteor: { id:'meteor', weapon:'meteor', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'流星风暴', en:'METEOR STORM', color:'#ff7a2a', icon:'flame', desc:'流星 +1，撞击半径与伤害提升，火雨覆盖全场。' },
+    rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
   };
 
   // Role tags make each upgrade card's battlefield job explicit.
@@ -628,6 +828,16 @@
   Object.assign(WEAPONS.flame, { role:'区域封锁', focus:'走位 / 持续灼烧' });
   Object.assign(WEAPONS.mine, { role:'陷阱控场', focus:'埋伏 / 爆发' });
   Object.assign(WEAPONS.orbital, { role:'重型炮击', focus:'敌群 / 高伤害' });
+  Object.assign(WEAPONS.scatter, { role:'近距爆发', focus:'贴脸 / 扇形清群' });
+  Object.assign(WEAPONS.laser, { role:'直线穿透', focus:'单列 / 高频射线' });
+  Object.assign(WEAPONS.missile, { role:'追踪爆发', focus:'自动锁定 / 爆炸' });
+  Object.assign(WEAPONS.frost, { role:'范围控场', focus:'减速 / 近身防御' });
+  Object.assign(WEAPONS.toxin, { role:'区域封锁', focus:'毒池 / 持续伤害' });
+  Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
+  Object.assign(WEAPONS.saw, { role:'环绕切割', focus:'近身 / 持续输出' });
+  Object.assign(WEAPONS.sentry, { role:'阵地部署', focus:'自动炮塔 / 守区' });
+  Object.assign(WEAPONS.meteor, { role:'范围轰炸', focus:'流星 / 大范围爆发' });
+  Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
   Object.assign(PASSIVES.engine, { role:'机动' });
   Object.assign(PASSIVES.armor, { role:'生存' });
   Object.assign(PASSIVES.loader, { role:'输出频率' });
@@ -638,6 +848,16 @@
   Object.assign(PASSIVES.salvage, { role:'成长' });
   Object.assign(PASSIVES.overdrive, { role:'全伤' });
   Object.assign(PASSIVES.shield, { role:'容错' });
+  Object.assign(PASSIVES.regen, { role:'续航' });
+  Object.assign(PASSIVES.plating, { role:'减伤' });
+  Object.assign(PASSIVES.pierce, { role:'穿透' });
+  Object.assign(PASSIVES.dash, { role:'机动' });
+  Object.assign(PASSIVES.fortune, { role:'资源' });
+  Object.assign(PASSIVES.execute, { role:'收割' });
+  Object.assign(PASSIVES.venom, { role:'持续伤害' });
+  Object.assign(PASSIVES.frostbite, { role:'控制' });
+  Object.assign(PASSIVES.persist, { role:'区域延长' });
+  Object.assign(PASSIVES.guardian, { role:'基地防御' });
 
   // Progression: each sealed chassis has a seal core placed in its stage.
   // Break the core, defeat the summoned seal guard, and the chassis is permanently unlocked.

@@ -1,4 +1,4 @@
-/* BRICKFIRE // procedural pixel icon painter */
+/* STEEL EMBERS // procedural pixel icon painter */
 (function () {
   'use strict';
 

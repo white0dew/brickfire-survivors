@@ -1,4 +1,4 @@
-/* BRICKFIRE // main game. Canvas pixel renderer + roguelite systems. */
+/* STEEL EMBERS // main game. Canvas pixel renderer + roguelite systems. */
 (function () {
   'use strict';
 
@@ -16,9 +16,10 @@
   const BOSS_AT = 285;
   const CORE_W = 64;
   const CORE_H = 64;
-  const BASE_MAX_HP = 650;
+  const BASE_MAX_HP = 520;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
+  const RECALL_CD = 30;
   const MAX_PARTICLES = 620;
   const MAX_EFFECTS = 160;
   const TAU = Math.PI * 2;
@@ -98,6 +99,8 @@
     seals: [],
     mines: [],
     strikes: [],
+    sentries: [],
+    vortices: [],
     effects: [],
     particles: [],
     damageNumbers: [],
@@ -132,6 +135,8 @@
     arcTimer: 0,
     orbitalTimer: 0,
     coreTurretCd: 0,
+    recallCd: 0,
+    recallMax: RECALL_CD,
     rerolls: 2,
     currentChoices: [],
     loadoutDirty: true,
@@ -193,7 +198,8 @@
       fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
       hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0, secondWindUsed: false,
-      weaponCds: {}, droneState: [], flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
+      weaponCds: {}, droneState: [], sawState: [], flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
+      scatterTimer: .2, laserTimer: .45, missileTimer: .8, frostTimer: .9, toxinTimer: .8, gravityTimer: 1.1, sentryTimer: 1.2, meteorTimer: 1.3, railTimer: .65,
       bodyColor: p2 ? pal.body : pal.body,
       bodyLight: p2 ? pal.light : pal.light,
       bodyDark: p2 ? pal.dark : pal.dark,
@@ -332,7 +338,7 @@
         tankId: tank.id,
         tankIndex: TANKS.indexOf(tank),
         x: chosen.x, y: chosen.y, radius: 17,
-        hp: maxHp, maxHp, hitFlash: 0, dead: false, seed: rand(TAU), ring: rand(TAU)
+        hp: maxHp, maxHp, hitFlash: 0, minionCd: 0, dead: false, seed: rand(TAU), ring: rand(TAU)
       });
     }
   }
@@ -1304,39 +1310,76 @@
 
   function drawHazards(t) {
     const ctx = gameCtx;
-    // flame pools
+    // flame and toxin pools
     for (const f of G.hazards) {
       const k = f.life / f.maxLife;
+      const toxin = f.kind === 'toxin';
+      const c0 = toxin ? '#d8ff9a' : '#fff1b0';
+      const c1 = toxin ? '#8dd94e' : '#ff8a2b';
+      const c2 = toxin ? '#2d5d22' : '#c52f1c';
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       const radius = f.radius * (1 + Math.sin(t * 7 + f.seed) * .08);
       const g = ctx.createRadialGradient(f.x, f.y, 2, f.x, f.y, radius);
-      g.addColorStop(0, hexA('#fff1b0', .55 * k));
-      g.addColorStop(.25, hexA('#ff8a2b', .48 * k));
-      g.addColorStop(.7, hexA('#c52f1c', .16 * k));
-      g.addColorStop(1, hexA('#c52f1c', 0));
+      g.addColorStop(0, hexA(c0, .5 * k));
+      g.addColorStop(.25, hexA(c1, .42 * k));
+      g.addColorStop(.7, hexA(c2, .16 * k));
+      g.addColorStop(1, hexA(c2, 0));
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, radius, 0, TAU); ctx.fill();
-      ctx.fillStyle = hexA('#ffcf6b', .55 * k);
+      ctx.fillStyle = hexA(toxin ? '#baff7a' : '#ffcf6b', .55 * k);
       for (let i = 0; i < 3; i++) {
         const a = f.seed + i * 2.1 + t * 1.8;
         ctx.fillRect(f.x + Math.cos(a) * radius * .5, f.y + Math.sin(a) * radius * .4 - 2, 3, 3);
       }
       ctx.restore();
     }
+    // gravity wells
+    for (const v of G.vortices) {
+      const k = clamp(v.life / v.maxLife, 0, 1);
+      ctx.save(); ctx.translate(v.x, v.y);
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, v.radius);
+      g.addColorStop(0, hexA('#d9c7ff', .34 * k));
+      g.addColorStop(.4, hexA('#9d76ff', .14 * k));
+      g.addColorStop(1, hexA('#6b3dbb', 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, v.radius, 0, TAU); ctx.fill();
+      for (let i = 0; i < 4; i++) {
+        const rr = v.radius * (.22 + i * .16);
+        ctx.strokeStyle = hexA('#c7b2ff', (.32 - i * .05) * k); ctx.lineWidth = 1;
+        ctx.setLineDash([3, 5]); ctx.lineDashOffset = -t * (16 + i * 5);
+        ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.fillStyle = hexA('#f2eaff', .7 * k); ctx.fillRect(-2, -2, 4, 4);
+      ctx.restore();
+    }
+    // deployed sentries
+    for (const s of G.sentries) {
+      ctx.save(); ctx.translate(s.x, s.y);
+      ctx.fillStyle = 'rgba(4,10,8,.9)'; ctx.fillRect(-9, -9, 18, 18);
+      ctx.fillStyle = '#254a43'; ctx.fillRect(-7, -7, 14, 14);
+      ctx.fillStyle = '#8fffe6'; ctx.fillRect(-4, -4, 8, 8);
+      ctx.fillStyle = '#07100d'; ctx.fillRect(-2, -2, 4, 4);
+      ctx.rotate(s.angle || 0); ctx.fillStyle = '#c8fff5'; ctx.fillRect(4, -1, 11, 2);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(5,10,8,.7)'; ctx.fillRect(s.x - 9, s.y - 15, 18, 3);
+      ctx.fillStyle = '#8fffe6'; ctx.fillRect(s.x - 9, s.y - 15, 18 * clamp(s.life / s.maxLife, 0, 1), 3);
+    }
     // mines
     for (const m of G.mines) drawMineShape(ctx, m, t);
-    // orbital warnings & beams
+    // orbital / meteor warnings & beams
     for (const s of G.strikes) {
       if (s.state === 'warn') {
         const k = 1 - s.timer / s.delay;
+        const color = s.color || '#b896ff';
         ctx.save();
-        ctx.strokeStyle = hexA('#b896ff', .5 + Math.sin(t * 15) * .2); ctx.lineWidth = 1;
+        ctx.strokeStyle = hexA(color, .5 + Math.sin(t * 15) * .2); ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]); ctx.lineDashOffset = t * 20;
         ctx.beginPath(); ctx.arc(s.x, s.y, s.radius * (1.2 - k * .2), 0, TAU); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.strokeStyle = hexA('#b896ff', .22); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.stroke();
-        ctx.fillStyle = hexA('#b896ff', .06); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.fill();
-        ctx.fillStyle = hexA('#b896ff', .65); ctx.fillRect(s.x - 1, s.y - 12, 2, 24); ctx.fillRect(s.x - 12, s.y - 1, 24, 2);
+        ctx.strokeStyle = hexA(color, .22); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.stroke();
+        ctx.fillStyle = hexA(color, .06); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.fill();
+        ctx.fillStyle = hexA(color, .65); ctx.fillRect(s.x - 1, s.y - 12, 2, 24); ctx.fillRect(s.x - 12, s.y - 1, 24, 2);
         ctx.restore();
       }
     }
@@ -1546,6 +1589,7 @@
     units.sort((a, b) => a.y - b.y);
     for (const u of units) u.draw();
     drawDrones(t);
+    drawSaws(t);
     drawBullets(t);
     drawEffects(t);
     drawParticles();
@@ -1904,6 +1948,8 @@
     G.seals = [];
     G.mines = [];
     G.strikes = [];
+    G.sentries = [];
+    G.vortices = [];
     G.effects = [];
     G.particles = [];
     G.damageNumbers = [];
@@ -1950,6 +1996,8 @@
     G.mineTimer = 0;
     G.arcTimer = 1.3;
     G.orbitalTimer = 2.2;
+    G.recallCd = 0;
+    G.recallMax = RECALL_CD;
     G.rerolls = 2;
     G.currentChoices = [];
     G.loadoutDirty = true;
@@ -2026,7 +2074,7 @@
     }, 2600);
     setTimeout(() => { if (G.mode === 'playing') showToast('收集青色余烬，升级你的钢铁构筑'); }, 5600);
     if (G.seals.length) setTimeout(() => {
-      if (G.mode === 'playing') showToast(`SEAL // 本关 ${G.seals.length} 座封印核心 · 击破核心召唤守卫`, 'red');
+      if (G.mode === 'playing') showToast(`SEAL // 本关 ${G.seals.length} 座封印核心 · 主炮优先索敌 · 受击弹出增援`, 'red');
     }, 4200);
   }
 
@@ -2041,6 +2089,16 @@
     const salvageLvl = G.passives.salvage || 0;
     const overdriveLvl = G.passives.overdrive || 0;
     const shieldLvl = G.passives.shield || 0;
+    const regenLvl = G.passives.regen || 0;
+    const platingLvl = G.passives.plating || 0;
+    const pierceLvl = G.passives.pierce || 0;
+    const dashLvl = G.passives.dash || 0;
+    const fortuneLvl = G.passives.fortune || 0;
+    const executeLvl = G.passives.execute || 0;
+    const venomLvl = G.passives.venom || 0;
+    const frostbiteLvl = G.passives.frostbite || 0;
+    const persistLvl = G.passives.persist || 0;
+    const guardianLvl = G.passives.guardian || 0;
     const base = {
       damage: 1 + overdriveLvl * .08 + warheadLvl * .04,
       attackSpeed: 1 + loaderLvl * .07,
@@ -2050,7 +2108,14 @@
       critMult: 1.8,
       pickup: PLAYER_BASE.pickupRadius * (1 + magnetLvl * .22),
       xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
-      dropChance: .025 + salvageLvl * .015
+      dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
+      regen: regenLvl * 1.1,
+      damageTaken: Math.max(.55, 1 - platingLvl * .04),
+      pierceAdd: pierceLvl,
+      execute: executeLvl * .08,
+      venom: venomLvl,
+      frostbite: frostbiteLvl,
+      duration: 1 + persistLvl * .1
     };
     for (const p of G.players || []) {
       const tank = p.tank || (p.index === 1 ? TANKS.find(t => t.id === G.tankIds[1]) : G.tank) || TANKS[0];
@@ -2064,7 +2129,14 @@
         critMult: 1.8,
         pickup: base.pickup * (tank.pickupMul || 1),
         xpGain: base.xpGain * (tank.xpMul || 1),
-        dropChance: base.dropChance + (tank.dropAdd || 0)
+        dropChance: base.dropChance + (tank.dropAdd || 0),
+        regen: base.regen,
+        damageTaken: base.damageTaken,
+        pierceAdd: base.pierceAdd,
+        execute: base.execute,
+        venom: base.venom,
+        frostbite: base.frostbite,
+        duration: base.duration
       };
       p.stats = st;
       const oldMax = p.maxHp || PLAYER_BASE.maxHp;
@@ -2075,13 +2147,15 @@
       p.shieldMax = shieldLvl * 24;
       if (fullHeal || p.shieldMax <= 0) p.shield = p.shieldMax;
       else if (p.shieldMax > oldShieldMax) p.shield = Math.min(p.shieldMax, p.shield + (p.shieldMax - oldShieldMax));
-      p.dashMax = 2.3 * st.cdr * (tank.dashCdMul || 1);
+      p.dashMax = 2.3 * st.cdr * (tank.dashCdMul || 1) * (1 - dashLvl * .05);
       p.radius = PLAYER_BASE.radius;
       p.bodyColor = tank.colors.body;
       p.bodyLight = tank.colors.light;
       p.bodyDark = tank.colors.dark;
       p.coreColor = tank.colors.core;
     }
+    G.coreArmor = guardianLvl * .05;
+    if (G.core) G.core.repairRate = 6 + guardianLvl * 1.2;
     const first = (G.players || [])[0];
     G.stats = first && first.stats ? first.stats : base;
   }
@@ -2144,10 +2218,36 @@
     return true;
   }
 
+  function nearestSeal(x, y, range) {
+    let best = null, bd = range * range;
+    for (const s of G.seals || []) {
+      if (s.dead) continue;
+      const d = dist2(x, y, s.x, s.y);
+      if (d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+
+  function nearestAttackable(x, y, range) {
+    const enemy = nearestEnemy(x, y, range);
+    const seal = nearestSeal(x, y, range);
+    if (!seal) return enemy;
+    if (!enemy) return seal;
+    return dist2(x, y, seal.x, seal.y) <= dist2(x, y, enemy.x, enemy.y) ? seal : enemy;
+  }
+
   // Auto-fire is intentionally cover-aware: it will not spend the player's
   // cover-breaking shots on a target behind a wall. Manual aim still breaks walls.
+  // Seals are objectives, so auto-fire prioritizes an exposed seal over nearby trash.
   function nearestAutoEnemy(p, range) {
     const r2 = range * range;
+    let sealTarget = null, sealDist = Infinity;
+    for (const s of G.seals || []) {
+      if (s.dead) continue;
+      const d = dist2(p.x, p.y, s.x, s.y);
+      if (d < r2 && d < sealDist && autoLineClear(p.x, p.y, s.x, s.y)) { sealDist = d; sealTarget = s; }
+    }
+    if (sealTarget) return sealTarget;
     const candidates = [];
     for (const e of G.enemies) {
       if (e.dead || e.spawnTimer > 0) continue;
@@ -2252,6 +2352,9 @@
     if (p.noDamageTime > 6 && p.hp < p.maxHp) {
       p.hp = Math.min(p.maxHp, p.hp + dt * 3.2);
     }
+    if (p.hp < p.maxHp && statsFor(p).regen) {
+      p.hp = Math.min(p.maxHp, p.hp + statsFor(p).regen * dt);
+    }
     const idx = p.index || 0;
     const wantDash = idx === 0 ? Input.dashQueued : Input.dashQueued2;
     if (wantDash) {
@@ -2339,7 +2442,7 @@
     const forceFire = idx === 0 ? (!G.twoPlayer && Input.gamepad.fire) : (Input.gamepad.connected && Input.gamepad.fire);
     const manual = mouseManual || padManual;
     const autoTarget = manual ? null : nearestAutoEnemy(p, 560);
-    if ((p.index || 0) === 0) G.autoHold = !manual && !autoTarget && !!nearestEnemy(p.x, p.y, 560);
+    if ((p.index || 0) === 0) G.autoHold = !manual && !autoTarget && !!nearestAttackable(p.x, p.y, 560);
     if (mouseManual) {
       aimAngle = Math.atan2(Input.mouse.y - p.y, Input.mouse.x - p.x);
     } else if (padManual) {
@@ -2373,7 +2476,7 @@
     const fusion = fused('cannon');
     const shots = (w.shots || 1) + (tank.extraShots || 0) + (fusion ? 1 : 0);
     const spread = shots > 1 ? .055 : 0;
-    const pierce = (w.pierce || 0) + (tank.pierceAdd || 0) + (fusion ? 2 : 0);
+    const pierce = (w.pierce || 0) + (tank.pierceAdd || 0) + (st.pierceAdd || 0) + (fusion ? 2 : 0);
     const explode = (w.explode ? w.explode * st.area : 0) + (tank.explodeAdd ? tank.explodeAdd * st.area : 0) + (fusion ? 38 * st.area : 0);
     for (let i = 0; i < shots; i++) {
       const a = angle + (i - (shots - 1) / 2) * spread;
@@ -2400,7 +2503,7 @@
     const crit = chance(st.crit);
     G.bullets.push({
       x: ds.x, y: ds.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, radius: 2.3,
-      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone') ? 1.3 : 1), crit, pierce: 0, explode: 0, owner: p,
+      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone') ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p,
       life: .9, maxLife: .9, color: '#5ff0ce', trail: 10, enemy: false, hit: new Set()
     });
     addEffect({ type: 'muzzle', x: ds.x, y: ds.y, life: .08, maxLife: .08, color: '#5ff0ce' });
@@ -2416,7 +2519,35 @@
     if (G.hazards.length > 90) G.hazards.shift();
     G.hazards.push({
       x, y, radius: w.radius * st.area * (fusion ? 1.3 : 1), damage: w.damage * st.damage * (fusion ? 1.3 : 1),
-      life: w.life, maxLife: w.life, tick: .24, seed: rand(TAU), force: !!force, owner: p
+      life: w.life * st.duration, maxLife: w.life * st.duration, tick: .24, seed: rand(TAU), force: !!force, owner: p
+    });
+  }
+
+  function spawnPlayerBullet(x, y, angle, speed, baseDamage, owner, opts) {
+    opts = opts || {};
+    const st = statsFor(owner);
+    const crit = opts.crit !== undefined ? !!opts.crit : chance(st.crit);
+    const damage = baseDamage * st.damage * (crit ? st.critMult : 1) * (opts.damageMul || 1);
+    const b = {
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      radius: opts.radius || 2.6,
+      damage, crit,
+      pierce: (opts.pierce || 0) + (st.pierceAdd || 0),
+      explode: opts.explode || 0,
+      owner, life: opts.life || 1.4, maxLife: opts.life || 1.4,
+      color: opts.color || '#ffd15c', trail: opts.trail || 12,
+      enemy: false, hit: new Set(), homing: !!opts.homing, target: opts.target || null,
+      turn: opts.turn || 0, laser: !!opts.laser
+    };
+    G.bullets.push(b);
+    return b;
+  }
+
+  function addToxinPool(x, y, damage, radius, owner, life, tick) {
+    if (G.hazards.length > 95) G.hazards.shift();
+    G.hazards.push({
+      kind: 'toxin', x, y, radius, damage, owner,
+      life, maxLife: life, tick: tick || .4, tickEvery: tick || .4, seed: rand(TAU), color: '#a9e56e'
     });
   }
 
@@ -2442,7 +2573,7 @@
         ds.y = p.y + Math.sin(angle) * 24;
         ds.cd -= dt;
         if (ds.cd <= 0) {
-          const target = nearestEnemy(ds.x, ds.y, w.range);
+          const target = nearestAttackable(ds.x, ds.y, w.range);
           if (target) {
             spawnBulletFromDrone(ds, target, droneLvl, p);
             ds.cd = Math.max(.16, w.interval / st.attackSpeed * st.cdr);
@@ -2556,23 +2687,300 @@
         } else p.orbitalTimer = .4;
       }
     }
+    // scatter shotgun
+    const scatterLvl = G.weapons.scatter || 0;
+    if (scatterLvl) {
+      const w = WEAPONS.scatter.levels[Math.min(7, scatterLvl - 1)];
+      p.scatterTimer -= dt;
+      if (p.scatterTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 560);
+        if (target) {
+          const baseA = Math.atan2(target.y - p.y, target.x - p.x);
+          const pellets = w.pellets + (fused('scatter') ? 3 : 0);
+          const spread = w.spread * (fused('scatter') ? 1.12 : 1);
+          for (let i = 0; i < pellets; i++) {
+            const a = baseA + (i - (pellets - 1) / 2) * (spread / Math.max(1, pellets - 1));
+            spawnPlayerBullet(p.x + Math.cos(a) * 22, p.y + Math.sin(a) * 22, a, w.speed, w.damage, p, {
+              pierce: w.pierce || 0, radius: 2.4, life: .9, color: '#ff9a4a', trail: 9,
+              explode: fused('scatter') ? 26 * st.area : 0
+            });
+          }
+          addEffect({ type: 'muzzle', x: p.x + Math.cos(baseA) * 25, y: p.y + Math.sin(baseA) * 25, angle: baseA, life: .12, maxLife: .12, color: '#ff9a4a', radius: 9 });
+          AUDIO.shoot();
+          p.scatterTimer = Math.max(.42, w.interval / st.attackSpeed * st.cdr);
+        } else p.scatterTimer = .15;
+      }
+    }
+    // prism laser
+    const laserLvl = G.weapons.laser || 0;
+    if (laserLvl) {
+      const w = WEAPONS.laser.levels[Math.min(7, laserLvl - 1)];
+      p.laserTimer -= dt;
+      if (p.laserTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 600);
+        if (target) {
+          const a = Math.atan2(target.y - p.y, target.x - p.x);
+          spawnPlayerBullet(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, a, w.speed, w.damage * (fused('laser') ? 1.55 : 1), p, {
+            pierce: w.pierce, radius: fused('laser') ? 3.6 : 2.6, life: .95, color: '#ff6b8a', trail: 54, laser: true
+          });
+          addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 25, y: p.y + Math.sin(a) * 25, angle: a, life: .1, maxLife: .1, color: '#ff6b8a', radius: 12 });
+          AUDIO.tone(880, .08, 'sawtooth', .018, 1600);
+          p.laserTimer = Math.max(.26, w.interval / st.attackSpeed * st.cdr);
+        } else p.laserTimer = .15;
+      }
+    }
+    // homing missile pod
+    const missileLvl = G.weapons.missile || 0;
+    if (missileLvl) {
+      const w = WEAPONS.missile.levels[Math.min(7, missileLvl - 1)];
+      p.missileTimer -= dt;
+      if (p.missileTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 600);
+        if (target) {
+          const count = w.count + (fused('missile') ? 2 : 0);
+          for (let i = 0; i < count; i++) {
+            const a = Math.atan2(target.y - p.y, target.x - p.x) + rand(.25, -.25);
+            spawnPlayerBullet(p.x + Math.cos(a) * 18, p.y + Math.sin(a) * 18, a, w.speed, w.damage, p, {
+              homing: true, target, turn: w.turn * (fused('missile') ? 1.25 : 1), explode: w.explode * st.area * (fused('missile') ? 1.3 : 1),
+              radius: 2.8, life: 3.2, color: '#ffd05a', trail: 16
+            });
+          }
+          addEffect({ type: 'muzzle', x: p.x, y: p.y, life: .12, maxLife: .12, color: '#ffd05a', radius: 15 });
+          AUDIO.tone(170, .16, 'square', .018, 420);
+          p.missileTimer = Math.max(.65, w.interval / st.attackSpeed * st.cdr);
+        } else p.missileTimer = .2;
+      }
+    }
+    // cryo pulse
+    const frostLvl = G.weapons.frost || 0;
+    if (frostLvl) {
+      const w = WEAPONS.frost.levels[Math.min(7, frostLvl - 1)];
+      p.frostTimer -= dt;
+      if (p.frostTimer <= 0) {
+        const radius = w.radius * st.area * (fused('frost') ? 1.3 : 1);
+        let hitAny = false;
+        for (const e of G.enemies) {
+          if (e.dead || e.spawnTimer > 0) continue;
+          if (dist2(p.x, p.y, e.x, e.y) > (radius + e.radius * e.size) ** 2) continue;
+          damageEnemy(e, w.damage * st.damage * (fused('frost') ? 1.3 : 1), false, 'frost', p);
+          e.slowTimer = Math.max(e.slowTimer || 0, w.slow + (fused('frost') ? .8 : 0));
+          hitAny = true;
+        }
+        for (const seal of G.seals || []) {
+          if (!seal.dead && dist2(p.x, p.y, seal.x, seal.y) < (radius + seal.radius) ** 2) {
+            damageSeal(seal, w.damage * st.damage * .7 * (fused('frost') ? 1.3 : 1));
+            hitAny = true;
+          }
+        }
+        if (hitAny) {
+          addEffect({ type: 'ring', x: p.x, y: p.y, radius, life: .45, maxLife: .45, color: '#9bd8ff' });
+          addEffect({ type: 'explosion', x: p.x, y: p.y, radius: radius * .55, life: .3, maxLife: .3, color: '#c7f5ff' });
+          AUDIO.tone(610, .18, 'sine', .02, 300);
+        }
+        p.frostTimer = Math.max(.55, w.interval / st.attackSpeed * st.cdr);
+      }
+    }
+    // toxin pool
+    const toxinLvl = G.weapons.toxin || 0;
+    if (toxinLvl) {
+      const w = WEAPONS.toxin.levels[Math.min(7, toxinLvl - 1)];
+      p.toxinTimer -= dt;
+      if (p.toxinTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 600);
+        if (target) {
+          const radius = w.radius * st.area * (fused('toxin') ? 1.25 : 1);
+          const life = w.life * st.duration * (fused('toxin') ? 1.25 : 1);
+          addToxinPool(target.x, target.y, w.damage * st.damage * (fused('toxin') ? 1.35 : 1), radius, p, life, w.tick);
+          if (fused('toxin')) addToxinPool(target.x + rand(34, -34), target.y + rand(34, -34), w.damage * st.damage, radius * .8, p, life * .8, w.tick);
+          addEffect({ type: 'ring', x: target.x, y: target.y, radius, life: .4, maxLife: .4, color: '#a9e56e' });
+          AUDIO.tone(150, .25, 'sine', .015, 280);
+          p.toxinTimer = Math.max(.6, w.interval / st.attackSpeed * st.cdr);
+        } else p.toxinTimer = .25;
+      }
+    }
+    // gravity well
+    const gravityLvl = G.weapons.gravity || 0;
+    if (gravityLvl) {
+      const w = WEAPONS.gravity.levels[Math.min(7, gravityLvl - 1)];
+      p.gravityTimer -= dt;
+      if (p.gravityTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 560);
+        if (target) {
+          if (G.vortices.length > 8) G.vortices.shift();
+          G.vortices.push({
+            x: target.x, y: target.y, radius: w.radius * st.area * (fused('gravity') ? 1.3 : 1),
+            life: w.life * st.duration, maxLife: w.life * st.duration,
+            damage: w.damage * st.damage * (fused('gravity') ? 1.35 : 1),
+            pull: w.pull * (fused('gravity') ? 2 : 1), tick: .45, owner: p, seed: rand(TAU)
+          });
+          addEffect({ type: 'ring', x: target.x, y: target.y, radius: w.radius * .7, life: .6, maxLife: .6, color: '#b896ff' });
+          AUDIO.tone(90, .55, 'sine', .02, 180);
+          p.gravityTimer = Math.max(1.1, w.interval / st.attackSpeed * st.cdr);
+        } else p.gravityTimer = .3;
+      }
+    }
+    // orbiting saws
+    const sawLvl = G.weapons.saw || 0;
+    if (sawLvl) {
+      const w = WEAPONS.saw.levels[Math.min(7, sawLvl - 1)];
+      const count = w.count + (fused('saw') ? 1 : 0);
+      if (!p.sawState) p.sawState = [];
+      while (p.sawState.length < count) p.sawState.push({ phase: (p.sawState.length / count) * TAU, x: p.x, y: p.y, hit: new Set(), hitCd: 0 });
+      if (p.sawState.length > count) p.sawState.length = count;
+      for (let i = 0; i < p.sawState.length; i++) {
+        const s = p.sawState[i];
+        s.hitCd = Math.max(0, s.hitCd - dt);
+        if (s.hitCd <= 0) { s.hit.clear(); s.hitCd = w.tick * (fused('saw') ? .82 : 1); }
+        const angle = G.animTime * 2.3 + s.phase;
+        s.x = p.x + Math.cos(angle) * w.radius * (fused('saw') ? 1.15 : 1);
+        s.y = p.y + Math.sin(angle) * w.radius * .82 * (fused('saw') ? 1.15 : 1);
+        for (const e of G.enemies) {
+          if (e.dead || e.spawnTimer > 0 || s.hit.has(e.id)) continue;
+          if (dist2(s.x, s.y, e.x, e.y) < (13 + e.radius * e.size * .7) ** 2) {
+            s.hit.add(e.id);
+            damageEnemy(e, w.damage * st.damage, false, 'saw', p);
+            addParticle(e.x, e.y, rand(35, -35), rand(35, -35), '#ffcf5a', 'spark', .25, 1.7);
+          }
+        }
+        for (const seal of G.seals || []) {
+          const key = 'seal:' + seal.tankId;
+          if (!seal.dead && !s.hit.has(key) && dist2(s.x, s.y, seal.x, seal.y) < (15 + seal.radius) ** 2) {
+            s.hit.add(key);
+            damageSeal(seal, w.damage * st.damage * .45);
+          }
+        }
+      }
+    } else if (p.sawState) p.sawState.length = 0;
+    // deploy sentry
+    const sentryLvl = G.weapons.sentry || 0;
+    if (sentryLvl) {
+      const w = WEAPONS.sentry.levels[Math.min(7, sentryLvl - 1)];
+      const count = w.count + (fused('sentry') ? 1 : 0);
+      p.sentryTimer -= dt;
+      const owned = G.sentries.filter(s => s.owner === p && s.life > 0).length;
+      if (p.sentryTimer <= 0 && owned < count) {
+        G.sentries.push({
+          x: clamp(p.x + rand(34, -34), 28, W - 28), y: clamp(p.y + rand(30, -30), 28, H - 28),
+          owner: p, life: w.life * (fused('sentry') ? 1.25 : 1), maxLife: w.life * (fused('sentry') ? 1.25 : 1),
+          range: w.range * (fused('sentry') ? 1.15 : 1), fire: w.fire * .85,
+          damage: w.damage * (fused('sentry') ? 1.25 : 1), fireCd: .3, angle: -Math.PI / 2, seed: rand(TAU)
+        });
+        addEffect({ type: 'ring', x: p.x, y: p.y, radius: 24, life: .3, maxLife: .3, color: '#8fffe6' });
+        p.sentryTimer = Math.max(.8, w.interval / st.attackSpeed * st.cdr);
+      } else if (p.sentryTimer <= 0) p.sentryTimer = .4;
+    }
+    // meteor rain
+    const meteorLvl = G.weapons.meteor || 0;
+    if (meteorLvl) {
+      const w = WEAPONS.meteor.levels[Math.min(7, meteorLvl - 1)];
+      p.meteorTimer -= dt;
+      if (p.meteorTimer <= 0) {
+        const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
+        if (candidates.length) {
+          const count = w.count + (fused('meteor') ? 1 : 0);
+          for (let i = 0; i < count; i++) {
+            const target = candidates[(Math.random() * candidates.length) | 0];
+            G.strikes.push({
+              x: clamp(target.x + rand(42, -42), 30, W - 30), y: clamp(target.y + rand(42, -42), 30, H - 30),
+              radius: w.radius * st.area * (fused('meteor') ? 1.2 : 1), damage: w.damage * st.damage * (fused('meteor') ? 1.25 : 1), owner: p,
+              delay: w.delay, timer: w.delay, state: 'warn', color: '#ff7a2a'
+            });
+          }
+          p.meteorTimer = Math.max(1.1, w.interval / st.attackSpeed * st.cdr);
+          AUDIO.tone(120, .45, 'sawtooth', .02, 260);
+        } else p.meteorTimer = .2;
+      }
+    }
+    // rail cannon
+    const railLvl = G.weapons.rail || 0;
+    if (railLvl) {
+      const w = WEAPONS.rail.levels[Math.min(7, railLvl - 1)];
+      p.railTimer -= dt;
+      if (p.railTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 650);
+        if (target) {
+          const a = Math.atan2(target.y - p.y, target.x - p.x);
+          spawnPlayerBullet(p.x + Math.cos(a) * 26, p.y + Math.sin(a) * 26, a, w.speed, w.damage * (fused('rail') ? 1.35 : 1), p, {
+            pierce: w.pierce, explode: w.explode * st.area * (fused('rail') ? 1.3 : 1), radius: 4.2, life: 1.15, color: '#9dbbff', trail: 42
+          });
+          addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 28, y: p.y + Math.sin(a) * 28, angle: a, life: .16, maxLife: .16, color: '#9dbbff', radius: 16 });
+          addShake(2.5, .15); AUDIO.tone(70, .3, 'square', .025, 160);
+          p.railTimer = Math.max(.7, w.interval / st.attackSpeed * st.cdr);
+        } else p.railTimer = .2;
+      }
+    }
   }
 
   function updateHazards(dt) {
     for (const f of G.hazards) {
+      const toxin = f.kind === 'toxin';
       f.life -= dt; f.tick -= dt;
       if (f.tick <= 0) {
-        f.tick = .24;
+        f.tick = toxin ? (f.tickEvery || .4) : .24;
         for (const e of G.enemies) {
           if (e.dead || e.spawnTimer > 0) continue;
           if (dist2(f.x, f.y, e.x, e.y) < (f.radius + e.radius * e.size * .6) ** 2) {
-            damageEnemy(e, f.damage, false, 'flame', f.owner);
+            damageEnemy(e, f.damage, false, toxin ? 'poison' : 'flame', f.owner);
+          }
+        }
+        if (toxin) {
+          for (const seal of G.seals || []) {
+            if (!seal.dead && dist2(f.x, f.y, seal.x, seal.y) < (f.radius + seal.radius) ** 2) damageSeal(seal, f.damage * .4);
           }
         }
       }
-      if (chance(dt * 2)) addParticle(f.x + rand(f.radius, -f.radius), f.y + rand(f.radius * .5, -f.radius * .5), rand(8, -8), rand(-18, -35), '#ff9a45', 'ember', .55, 2);
+      if (chance(dt * 2)) addParticle(
+        f.x + rand(f.radius, -f.radius), f.y + rand(f.radius * .5, -f.radius * .5),
+        rand(8, -8), rand(-18, -35), toxin ? '#a9e56e' : '#ff9a45', 'ember', .55, 2
+      );
     }
     G.hazards = G.hazards.filter(f => f.life > 0);
+    // gravity wells pull enemies toward the center and crush them in ticks.
+    for (const v of G.vortices) {
+      v.life -= dt; v.tick -= dt;
+      for (const e of G.enemies) {
+        if (e.dead || e.spawnTimer > 0) continue;
+        const d = dist(v.x, v.y, e.x, e.y);
+        if (d > 4 && d < v.radius + e.radius) {
+          const pull = v.pull * (1 - d / (v.radius + e.radius)) * dt;
+          e.x += (v.x - e.x) / d * pull;
+          e.y += (v.y - e.y) / d * pull;
+        }
+      }
+      if (v.tick <= 0) {
+        v.tick = .45;
+        for (const e of G.enemies) {
+          if (e.dead || e.spawnTimer > 0) continue;
+          if (dist2(v.x, v.y, e.x, e.y) < (v.radius * .72) ** 2) {
+            damageEnemy(e, v.damage, false, 'gravity', v.owner);
+            e.slowTimer = Math.max(e.slowTimer || 0, .5);
+          }
+        }
+        for (const seal of G.seals || []) {
+          if (!seal.dead && dist2(v.x, v.y, seal.x, seal.y) < (v.radius * .72) ** 2) damageSeal(seal, v.damage * .35);
+        }
+      }
+      if (chance(dt * 4)) addParticle(v.x + rand(v.radius, -v.radius), v.y + rand(v.radius, -v.radius), rand(12, -12), rand(12, -12), '#b896ff', 'spark', .4, 2);
+    }
+    G.vortices = G.vortices.filter(v => v.life > 0);
+    // deployed sentries
+    for (const s of G.sentries) {
+      s.life -= dt; s.fireCd -= dt;
+      if (s.life <= 0) continue;
+      if (s.fireCd <= 0) {
+        const target = nearestEnemy(s.x, s.y, s.range);
+        if (target) {
+          const a = Math.atan2(target.y - s.y, target.x - s.x);
+          s.angle = a;
+          spawnPlayerBullet(s.x + Math.cos(a) * 12, s.y + Math.sin(a) * 12, a, 620, s.damage, s.owner, {
+            radius: 2.3, life: 1.1, color: '#8fffe6', trail: 12
+          });
+          s.fireCd = s.fire;
+          addEffect({ type: 'muzzle', x: s.x + Math.cos(a) * 13, y: s.y + Math.sin(a) * 13, angle: a, life: .08, maxLife: .08, color: '#8fffe6', radius: 6 });
+        } else s.fireCd = .18;
+      }
+    }
+    G.sentries = G.sentries.filter(s => s.life > 0);
     for (const m of G.mines) {
       m.arm -= dt; m.life -= dt;
       if (m.life <= 0) { m.dead = true; continue; }
@@ -2593,10 +3001,11 @@
       s.timer -= dt;
       if (s.timer <= 0) {
         s.state = 'done';
-        addEffect({ type: 'beam', x: s.x, y: s.y, radius: s.radius, life: .5, maxLife: .5, color: '#b896ff' });
-        explodeAt(s.x, s.y, s.radius, s.damage, '#b896ff', { source: 'orbital', owner: s.owner });
+        const color = s.color || '#b896ff';
+        addEffect({ type: 'beam', x: s.x, y: s.y, radius: s.radius, life: .5, maxLife: .5, color });
+        explodeAt(s.x, s.y, s.radius, s.damage, color, { source: 'orbital', owner: s.owner });
         addShake(9, .33);
-        G.flash = .6; G.flashColor = '#b896ff';
+        G.flash = .6; G.flashColor = color;
         AUDIO.bigExplode();
       }
     }
@@ -3007,11 +3416,45 @@
     return false;
   }
 
+  function spawnSealMinions(seal, count, force) {
+    if (!seal || (seal.dead && !force)) return;
+    const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+    let spawned = 0;
+    for (const [ox, oy] of offsets) {
+      if (spawned >= count) break;
+      const cx = clamp(Math.floor(seal.x / TILE) + ox, 1, COLS - 2);
+      const cy = clamp(Math.floor(seal.y / TILE) + oy, 1, ROWS - 2);
+      const x = (cx + .5) * TILE, y = (cy + .5) * TILE;
+      if (collidesWorld(x, y, 12, false)) continue;
+      const e = spawnEnemy(pick(['scout', 'grunt']), { spawn: { cx, cy }, warning: true });
+      if (!e) continue;
+      e.x = x; e.y = y; e.cx = cx; e.cy = cy;
+      spawned++;
+    }
+    if (spawned) {
+      addEffect({ type: 'ring', x: seal.x, y: seal.y, radius: 30, life: .28, maxLife: .28, color: '#ff8a5a' });
+      addParticles(seal.x, seal.y, 8, '#ff8a5a', 'spark', .6);
+    }
+  }
+
+  function updateSeals(dt) {
+    for (const seal of G.seals) {
+      if (seal.dead) continue;
+      seal.minionCd = Math.max(0, (seal.minionCd || 0) - dt);
+      seal.hitFlash = Math.max(0, (seal.hitFlash || 0) - dt * 4);
+    }
+  }
+
   function damageSeal(seal, amount) {
     if (!seal || seal.dead) return;
     seal.hp -= amount;
     seal.hitFlash = .12;
     for (let i = 0; i < 4; i++) addParticle(seal.x + rand(8, -8), seal.y + rand(8, -8), rand(45, -45), rand(45, -45), '#ffe3a0', 'spark', .35, 2);
+    if ((seal.minionCd || 0) <= 0) {
+      spawnSealMinions(seal, 2);
+      seal.minionCd = .52;
+      if (!seal.minionWarned) { seal.minionWarned = true; showToast('封印反应 // 守卫增援弹出', 'red'); }
+    }
     if (seal.hp <= 0) breakSeal(seal);
   }
 
@@ -3025,6 +3468,7 @@
     addParticles(seal.x, seal.y, 12, '#5b4d3b', 'smoke', .9);
     addShake(9, .5); G.flash = Math.max(G.flash, .5); G.flashColor = '#ffd05a';
     AUDIO.explode(1.4);
+    spawnSealMinions(seal, 4, true);
     showToast(`封印核心破裂 // ${tank ? tank.name : '未知底盘'} 守卫苏醒`, 'red');
     spawnSealBoss(seal);
   }
@@ -3061,6 +3505,21 @@
   function updateBullets(dt) {
     for (const b of G.bullets) {
       if (b.dead) continue;
+      if (b.homing) {
+        let target = b.target && !b.target.dead ? b.target : null;
+        if (!target) target = nearestAttackable(b.x, b.y, 300);
+        if (target && !target.dead) {
+          b.target = target;
+          const speed = Math.max(40, Math.hypot(b.vx, b.vy));
+          const cur = Math.atan2(b.vy, b.vx);
+          const want = Math.atan2(target.y - b.y, target.x - b.x);
+          let diff = ((want - cur + Math.PI) % TAU + TAU) % TAU - Math.PI;
+          const turn = (b.turn || 4) * dt;
+          diff = clamp(diff, -turn, turn);
+          const next = cur + diff;
+          b.vx = Math.cos(next) * speed; b.vy = Math.sin(next) * speed;
+        }
+      }
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) { b.dead = true; continue; }
       const tile = tileAt(b.x, b.y);
@@ -3173,6 +3632,7 @@
     if (!e || e.dead || e.spawnTimer > 0) return;
     const tank = tankData(owner);
     const st = statsFor(owner);
+    if (st.execute && e.maxHp && e.hp / e.maxHp < .35) amount *= 1 + st.execute;
     e.hp -= amount;
     e.hitFlash = .12;
     if (tank.slowOnHit && source !== 'flame' && source !== 'poison') {
@@ -3182,6 +3642,14 @@
       e.poisonTimer = Math.max(e.poisonTimer || 0, 2);
       e.poisonDps = Math.max(e.poisonDps || 0, 4 * st.damage);
       e.poisonOwner = owner;
+    }
+    if (st.venom && source !== 'poison' && source !== 'flame') {
+      e.poisonTimer = Math.max(e.poisonTimer || 0, 2);
+      e.poisonDps = Math.max(e.poisonDps || 0, (1.2 + st.venom * .35) * st.damage);
+      e.poisonOwner = owner;
+    }
+    if (st.frostbite && source !== 'flame' && source !== 'poison') {
+      e.slowTimer = Math.max(e.slowTimer || 0, 1 + st.frostbite * .15);
     }
     G.totalDamage += amount;
     if (source !== 'flame' || chance(.45)) addDamageNumber(e.x, e.y - 17 * (e.size || 1), Math.round(amount), crit ? '#ffd15c' : '#f4ead2', crit);
@@ -3247,7 +3715,7 @@
   function damageBase(amount, source) {
     const c = G.core;
     if (!c || !c.alive) return;
-    amount = Math.max(1, amount);
+    amount = Math.max(1, amount * (1 - (G.coreArmor || 0)));
     c.hp = Math.max(0, c.hp - amount);
     c.noDamage = 0;
     c.hitFlash = .2;
@@ -3309,10 +3777,50 @@
     }
   }
 
+  function recallToBase() {
+    if (G.mode !== 'playing' || !G.core || !G.core.alive) return false;
+    if ((G.recallCd || 0) > 0) {
+      showToast(`回程充能中 // ${Math.ceil(G.recallCd)} 秒`, 'red');
+      return false;
+    }
+    const active = activePlayers();
+    if (!active.length) return false;
+    const spots = [[0, -86], [-86, 0], [86, 0], [0, 86], [-86, -58], [86, -58], [0, -116], [-116, 0], [116, 0], [0, 116]];
+    const used = [];
+    for (const p of active) {
+      let spot = null;
+      for (const [ox, oy] of spots) {
+        const x = clamp(G.core.cx + ox, p.radius + 6, W - p.radius - 6);
+        const y = clamp(G.core.cy + oy, p.radius + 6, H - p.radius - 6);
+        if (dist(x, y, G.core.cx, G.core.cy) < G.core.radius + p.radius + 4) continue;
+        if (collidesWorld(x, y, p.radius - 2, false)) continue;
+        if (used.some(q => dist(x, y, q.x, q.y) < 34)) continue;
+        spot = { x, y }; break;
+      }
+      if (!spot) spot = findPlayerSpawn({ x: G.core.cx, y: G.core.cy });
+      if (!spot || dist(spot.x, spot.y, G.core.cx, G.core.cy) < G.core.radius + p.radius + 4) {
+        spot = { x: G.core.cx, y: clamp(G.core.cy - G.core.radius - p.radius - 10, p.radius + 6, H - p.radius - 6) };
+      }
+      used.push(spot);
+      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 28, life: .35, maxLife: .35, color: '#8fffe6' });
+      addParticles(p.x, p.y, 14, '#8fffe6', 'spark', .8);
+      p.x = spot.x; p.y = spot.y; p.vx = 0; p.vy = 0; p.moving = false;
+      p.invincible = Math.max(p.invincible, 1.3);
+      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 28, life: .5, maxLife: .5, color: '#8fffe6' });
+    }
+    G.recallCd = RECALL_CD;
+    G.player = (G.players || []).find(p => p.alive && !p.downed) || G.player;
+    addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 64, life: .55, maxLife: .55, color: '#8fffe6' });
+    addShake(3.5, .25); G.flash = Math.max(G.flash, .3); G.flashColor = '#8fffe6';
+    showToast('回程协议 // 全队撤回基地', 'cyan');
+    AUDIO.confirm();
+    return true;
+  }
+
   function damagePlayer(amount, target) {
     const p = target || G.player;
     if (!p || !p.alive || p.downed || p.invincible > 0 || p.dashTimer > 0) return;
-    amount *= .9 * (tankData(p).damageTakenMul || 1);
+    amount *= .9 * (tankData(p).damageTakenMul || 1) * (statsFor(p).damageTaken || 1);
     p.noDamageTime = 0;
     if (p.shield > 0) {
       p.shield = Math.max(0, p.shield - amount);
@@ -3535,6 +4043,7 @@
   function updateStatus(dt) {
     G.animTime += dt;
     G.freezeTimer = Math.max(0, G.freezeTimer - dt);
+    G.recallCd = Math.max(0, (G.recallCd || 0) - dt);
     G.comboTimer = Math.max(0, G.comboTimer - dt);
     if (G.comboTimer <= 0) G.combo = 0;
     G.flash = Math.max(0, G.flash - dt * 1.8);
@@ -3584,6 +4093,29 @@
         ctx.fillStyle = accent; ctx.fillRect(-9, -6, 2, 2); ctx.fillRect(7, -6, 2, 2); ctx.fillRect(-9, 4, 2, 2); ctx.fillRect(7, 4, 2, 2);
         ctx.strokeStyle = hexA(accent, .18); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(0, 0, 10 + Math.sin(t * 5 + i) * 2, 0, TAU); ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawSaws(t) {
+    const ctx = gameCtx;
+    for (const p of G.players || []) {
+      if (!p.sawState || !p.sawState.length || p.downed) continue;
+      const accent = p.index === 1 ? '#ffb52d' : '#ffcf5a';
+      for (const s of p.sawState) {
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(t * 9);
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 17);
+        g.addColorStop(0, hexA(accent, .38)); g.addColorStop(1, hexA(accent, 0));
+        ctx.fillStyle = g; ctx.fillRect(-17, -17, 34, 34);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#070c0a'; ctx.fillRect(-9, -9, 18, 18);
+        ctx.strokeStyle = accent; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
+        ctx.fillStyle = '#d8fff6';
+        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; ctx.fillRect(Math.cos(a) * 7 - 1, Math.sin(a) * 7 - 1, 2, 2); }
+        ctx.fillStyle = '#08120e'; ctx.fillRect(-2, -2, 4, 4);
         ctx.restore();
       }
     }
@@ -3861,6 +4393,18 @@
     const dashLeft = Math.max(0, p.dashCd);
     U.dashStatus.textContent = dashLeft <= .03 ? '就绪' : `充能 ${dashLeft.toFixed(1)}s`;
     U.dashMeter.style.width = `${dashLeft <= .03 ? 100 : clamp((1 - dashLeft / p.dashMax) * 100, 0, 100)}%`;
+    const recallLeft = Math.max(0, G.recallCd || 0);
+    if (U.recallStatus) U.recallStatus.textContent = recallLeft <= .03 ? '就绪' : `冷却 ${Math.ceil(recallLeft)}s`;
+    if (U.recallMeter) U.recallMeter.style.width = `${recallLeft <= .03 ? 100 : clamp((1 - recallLeft / (G.recallMax || RECALL_CD)) * 100, 0, 100)}%`;
+    if (U.recallBtn) {
+      U.recallBtn.disabled = recallLeft > .03;
+      U.recallBtn.classList.toggle('is-cooling', recallLeft > .03);
+    }
+    if (U.mobileRecall) {
+      U.mobileRecall.disabled = recallLeft > .03;
+      U.mobileRecall.classList.toggle('is-cooling', recallLeft > .03);
+      U.mobileRecall.textContent = recallLeft <= .03 ? 'HOME' : `${Math.ceil(recallLeft)}s`;
+    }
     if (U.coopPanel) {
       U.coopPanel.classList.toggle('is-hidden', !G.twoPlayer);
       if (G.twoPlayer) {
@@ -4560,6 +5104,29 @@
   }
   function closeCodexScreen() { U.codexScreen.classList.add('hidden'); }
 
+  function renderItemGuide() {
+    if (!U.itemGrid) return;
+    U.itemGrid.innerHTML = Object.entries(ITEMS).map(([id, item]) => {
+      const baseItem = id === 'basekit' || id === 'turret';
+      return `<article class="item-guide-card" style="--item-color:${item.color}">
+        <span class="item-guide-card__tag">${baseItem ? 'BASE' : 'FIELD'}</span>
+        <div class="item-guide-card__head">
+          <span class="item-guide-card__glyph">${item.glyph || '◇'}</span>
+          <div class="item-guide-card__title"><strong>${item.name}</strong><small>${item.en}</small></div>
+        </div>
+        <div class="item-guide-card__desc">${item.desc}</div>
+        <div class="item-guide-card__detail">${item.detail || ''}</div>
+      </article>`;
+    }).join('');
+  }
+
+  function openItemGuide() {
+    renderItemGuide();
+    U.itemScreen.classList.remove('hidden');
+    AUDIO.init(); AUDIO.tick();
+  }
+  function closeItemGuide() { U.itemScreen.classList.add('hidden'); }
+
   const SAVE_KEYS = ['bf.campaign', 'bf.hangar', 'bf.tanks', 'bf.tank', 'bf.records', 'bf.codex'];
 
   function makeSaveText() {
@@ -4624,10 +5191,10 @@
     let parsed;
     try { parsed = JSON.parse(U.saveText.value); } catch (e) { setSaveStatus('JSON 解析失败，请检查文本完整性。', 'bad'); return; }
     const data = parsed && parsed.data ? parsed.data : parsed;
-    if (!data || typeof data !== 'object' || Array.isArray(data)) { setSaveStatus('不是有效的砖火存档。', 'bad'); return; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) { setSaveStatus('不是有效的钢铁余烬存档。', 'bad'); return; }
     const keys = Object.keys(data).filter(k => SAVE_KEYS.includes(k));
-    if (!keys.length) { setSaveStatus('存档中没有可导入的砖火数据。', 'bad'); return; }
-    if (!window.confirm('导入会覆盖当前浏览器里的砖火存档，是否继续？')) return;
+    if (!keys.length) { setSaveStatus('存档中没有可导入的钢铁余烬数据。', 'bad'); return; }
+    if (!window.confirm('导入会覆盖当前浏览器里的钢铁余烬存档，是否继续？')) return;
     try {
       // Full restore: keys absent from the archive are cleared too.
       for (const key of SAVE_KEYS) localStorage.removeItem(key);
@@ -4656,14 +5223,14 @@
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'slotCount', 'loadoutList',
       'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
-      'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter',
+      'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
       'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
-      'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
+      'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'itemBtn', 'itemScreen', 'itemGrid', 'itemClose', 'itemDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
     for (const id of ids) U[id] = document.getElementById(id);
     U.arenaCards = Array.from(U.arenaOptions ? U.arenaOptions.querySelectorAll('.arena-card') : document.querySelectorAll('.arena-card'));
     U.modeCards = Array.from(document.querySelectorAll('.mode-card'));
@@ -4740,6 +5307,12 @@
     U.codexClose.addEventListener('click', closeCodexScreen);
     U.codexDone.addEventListener('click', closeCodexScreen);
     U.codexScreen.addEventListener('click', e => { if (e.target === U.codexScreen || e.target.classList.contains('overlay__backdrop')) closeCodexScreen(); });
+    U.itemBtn.addEventListener('click', openItemGuide);
+    U.itemClose.addEventListener('click', closeItemGuide);
+    U.itemDone.addEventListener('click', closeItemGuide);
+    U.itemScreen.addEventListener('click', e => { if (e.target === U.itemScreen || e.target.classList.contains('overlay__backdrop')) closeItemGuide(); });
+    if (U.recallBtn) U.recallBtn.addEventListener('click', recallToBase);
+    if (U.mobileRecall) U.mobileRecall.addEventListener('click', recallToBase);
     U.saveBtn.addEventListener('click', openSaveScreen);
     U.saveClose.addEventListener('click', closeSaveScreen);
     U.saveDone.addEventListener('click', closeSaveScreen);
@@ -4797,6 +5370,9 @@
         if (!U.stageScreen.classList.contains('hidden')) { closeStageScreen(); return; }
         if (!U.tankScreen.classList.contains('hidden')) { closeTankScreen(); return; }
         if (!U.fusionScreen.classList.contains('hidden')) { closeFusionScreen(); return; }
+        if (!U.codexScreen.classList.contains('hidden')) { closeCodexScreen(); return; }
+        if (!U.itemScreen.classList.contains('hidden')) { closeItemGuide(); return; }
+        if (!U.saveScreen.classList.contains('hidden')) { closeSaveScreen(); return; }
         if (!U.howScreen.classList.contains('hidden')) { hideHow(); return; }
         if (G.mode === 'paused') { resumeGame(); return; }
         if (G.mode === 'playing') { pauseGame(); return; }
@@ -4815,7 +5391,7 @@
           if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); hideHow(); startRun(G.arenaIndex, G.coopSelected); }
           return;
         }
-        if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden')) return;
+        if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden') || !U.codexScreen.classList.contains('hidden') || !U.itemScreen.classList.contains('hidden') || !U.saveScreen.classList.contains('hidden')) return;
         if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); }
         return;
       }
@@ -4836,6 +5412,7 @@
         Input.keys.add(e.code);
         e.preventDefault();
       }
+      if (e.code === 'KeyB') { if (!e.repeat) recallToBase(); return; }
       if (e.code === 'KeyP') pauseGame();
     });
     window.addEventListener('keyup', e => Input.keys.delete(e.code));
@@ -4926,7 +5503,7 @@
     const overlays = [
       ['levelup', U.levelupScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
       ['stage', U.stageScreen], ['tank', U.tankScreen], ['fusion', U.fusionScreen],
-      ['codex', U.codexScreen], ['save', U.saveScreen], ['how', U.howScreen]
+      ['codex', U.codexScreen], ['item', U.itemScreen], ['save', U.saveScreen], ['how', U.howScreen]
     ];
     for (const [key, el] of overlays) {
       if (isUiVisible(el)) return { key, root: el };
@@ -5037,6 +5614,7 @@
     else if (ctx.key === 'tank') closeTankScreen();
     else if (ctx.key === 'fusion') closeFusionScreen();
     else if (ctx.key === 'codex') closeCodexScreen();
+    else if (ctx.key === 'item') closeItemGuide();
     else if (ctx.key === 'save') closeSaveScreen();
     else if (ctx.key === 'how') hideHow();
     else if (ctx.key === 'pause') resumeGame();
@@ -5120,6 +5698,7 @@
       if (just(0)) {
         if (G.twoPlayer) Input.dashQueued2 = true; else Input.dashQueued = true;
       }
+      if (just(3)) recallToBase();
       if (just(9)) pauseGame();
     } else {
       const ctx = syncPadContext(false);
@@ -5229,6 +5808,7 @@
     updateWaves(dt);
     if (G.mode !== 'playing') return;
     updateBase(dt);
+    updateSeals(dt);
     if (G.mode !== 'playing') return;
     updatePlayers(dt);
     if (G.mode !== 'playing') return;
