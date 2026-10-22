@@ -64,9 +64,9 @@
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   }
 
-  const SPAWN_POINTS = [
-    { cx: 2, cy: 0 }, { cx: 14, cy: 0 }, { cx: 27, cy: 0 },
-    { cx: 2, cy: 9 }, { cx: 27, cy: 9 }
+  const FALLBACK_SPAWN_POINTS = [
+    { cx: 2, cy: 0, side: 'top' }, { cx: 14, cy: 0, side: 'top' }, { cx: 27, cy: 0, side: 'top' },
+    { cx: 2, cy: 9, side: 'left' }, { cx: 27, cy: 9, side: 'right' }
   ];
 
   const G = {
@@ -119,6 +119,9 @@
     comboTimer: 0,
     revives: 0,
     spawnTimer: 0,
+    sideSpawnTimer: 0,
+    sideWarned: false,
+    spawnPoints: [],
     eliteFlags: {},
     boss: null,
     bossSpawned: false,
@@ -162,7 +165,7 @@
     entityId: 1,
     lastEnemySound: 0,
     resolvingUpgrade: false,
-    stats: { damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8, pickup: 58, xpGain: 1, dropChance: .032 }
+    stats: { damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8, pickup: 58, xpGain: 1, dropChance: .032, pierceAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0 }
   };
 
   const Input = {
@@ -195,10 +198,10 @@
       hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp,
       shield: 0, shieldMax: 0, shieldRecharge: 0, noDamageTime: 0,
       radius: PLAYER_BASE.radius, speed: PLAYER_BASE.speed,
-      fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3,
+      fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, waterWalkTimer: 0,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
       hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0, secondWindUsed: false,
-      weaponCds: {}, droneState: [], sawState: [], flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
+      weaponCds: {}, droneState: [], mortarTimer: 1.4, flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
       scatterTimer: .2, laserTimer: .45, missileTimer: .8, frostTimer: .9, toxinTimer: .8, gravityTimer: 1.1, sentryTimer: 1.2, meteorTimer: 1.3, railTimer: .65,
       bodyColor: p2 ? pal.body : pal.body,
       bodyLight: p2 ? pal.light : pal.light,
@@ -261,6 +264,7 @@
     G.player = p1;
     buildSeals(index);
     buildWeather();
+    buildSpawnPoints();
     buildGroundCache();
     buildFlows();
   }
@@ -284,7 +288,7 @@
     return dist2(cx, cy, nx, ny) < r * r;
   }
 
-  function collidesWorld(x, y, r, includeCore = true) {
+  function collidesWorld(x, y, r, includeCore = true, ignoreWater = false) {
     if (x - r < 0 || y - r < 0 || x + r > W || y + r > H) return true;
     const minX = Math.floor((x - r) / TILE), maxX = Math.floor((x + r) / TILE);
     const minY = Math.floor((y - r) / TILE), maxY = Math.floor((y + r) / TILE);
@@ -292,7 +296,7 @@
       for (let tx = minX; tx <= maxX; tx++) {
         const t = G.tiles[ty] && G.tiles[ty][tx];
         if (!t) continue;
-        if (t.type === 'brick' || t.type === 'steel' || t.type === 'water') return true;
+        if (t.type === 'brick' || t.type === 'steel' || (t.type === 'water' && !ignoreWater)) return true;
       }
     }
     if (includeCore && G.core && circleHitsRect(x, y, r, G.core.x, G.core.y, G.core.w, G.core.h)) return true;
@@ -447,12 +451,26 @@
       ctx.fillRect(G.core.x + G.core.w + 35 - i * 14, G.core.y + 6, 9, 3);
     }
     ctx.restore();
-    // spawn plates
-    for (const sp of SPAWN_POINTS) {
+    // spawn plates: top hatches plus left/right pressure lanes.
+    const plates = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
+    for (const sp of plates) {
       const x = (sp.cx + .5) * TILE, y = (sp.cy + .5) * TILE;
-      ctx.strokeStyle = hexA(p.accent, .22); ctx.lineWidth = 1;
+      const sideLane = sp.side === 'left' || sp.side === 'right';
+      const plateColor = sideLane ? '#ff8a5a' : p.accent;
+      ctx.strokeStyle = hexA(plateColor, sideLane ? .38 : .22); ctx.lineWidth = sideLane ? 1.4 : 1;
       ctx.strokeRect(x - 11.5, y - 11.5, 23, 23);
-      ctx.fillStyle = hexA(p.accent, .08); ctx.fillRect(x - 9, y - 9, 18, 18);
+      ctx.fillStyle = hexA(plateColor, sideLane ? .14 : .08); ctx.fillRect(x - 9, y - 9, 18, 18);
+      if (sideLane) {
+        // Chevron points inward: a lane marker, not a pickup.
+        const dir = sp.side === 'left' ? 1 : -1;
+        ctx.fillStyle = hexA(plateColor, .72);
+        ctx.beginPath();
+        ctx.moveTo(x + dir * 6, y);
+        ctx.lineTo(x - dir * 4, y - 6);
+        ctx.lineTo(x - dir * 4, y + 6);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
     // large floor markings
     ctx.save();
@@ -535,6 +553,41 @@
     G.flowPlayers = G.players.map(p => (p.alive && !p.downed) ? buildFlow(p.x, p.y, false) : null);
     G.flowPlayer = G.flowPlayers[0] || null;
     G.flowBase = G.core.alive ? buildFlow(G.core.cx, G.core.cy, true) : null;
+  }
+
+  function buildSpawnPoints() {
+    const points = [];
+    const add = (cx, cy, side) => {
+      if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return;
+      const tile = G.tiles[cy] && G.tiles[cy][cx];
+      if (!tile || tile.type === 'brick' || tile.type === 'steel' || tile.type === 'water' || tile.type === 'core') return;
+      if (G.core && dist((cx + .5) * TILE, (cy + .5) * TILE, G.core.cx, G.core.cy) < TILE * 5.5) return;
+      if (points.some(p => p.cx === cx && p.cy === cy)) return;
+      points.push({ cx, cy, side });
+    };
+    // Top deployment hatches.
+    for (let x = 2; x <= COLS - 3; x += 5) add(x, 0, 'top');
+    // Left and right edge lanes. These are the pressure lanes that force repositioning.
+    for (let y = 2; y <= ROWS - 4; y += 3) {
+      add(1, y, 'left');
+      add(COLS - 2, y, 'right');
+    }
+    // Bottom corner lanes, kept away from the core.
+    add(1, ROWS - 3, 'left');
+    add(COLS - 2, ROWS - 3, 'right');
+    G.spawnPoints = points.length ? points : FALLBACK_SPAWN_POINTS.slice();
+  }
+
+  function spawnPoolSides() {
+    const points = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
+    return points.filter(sp => sp.side === 'left' || sp.side === 'right');
+  }
+
+  function chooseSpawnPoint(pool) {
+    const points = pool && pool.length ? pool : FALLBACK_SPAWN_POINTS;
+    const ps = G.players && G.players.length ? G.players : [G.player];
+    const safe = points.filter(sp => !ps.some(p => p && dist((sp.cx + .5) * TILE, (sp.cy + .5) * TILE, p.x, p.y) < 130));
+    return pick(safe.length ? safe : points);
   }
 
   function flowDirection(flow, px, py, currentDir) {
@@ -1589,7 +1642,6 @@
     units.sort((a, b) => a.y - b.y);
     for (const u of units) u.draw();
     drawDrones(t);
-    drawSaws(t);
     drawBullets(t);
     drawEffects(t);
     drawParticles();
@@ -1969,6 +2021,9 @@
     G.revives = 0;
     G.progressRecorded = false;
     G.spawnTimer = 1.1;
+    G.sideSpawnTimer = 5.5;
+    G.sideWarned = false;
+    G.spawnPoints = [];
     G.eliteFlags = {};
     G.boss = null;
     G.bossSpawned = false;
@@ -2099,6 +2154,8 @@
     const frostbiteLvl = G.passives.frostbite || 0;
     const persistLvl = G.passives.persist || 0;
     const guardianLvl = G.passives.guardian || 0;
+    const amphibiousLvl = G.passives.amphibious || 0;
+    const phaseLvl = G.passives.phase || 0;
     const base = {
       damage: 1 + overdriveLvl * .08 + warheadLvl * .04,
       attackSpeed: 1 + loaderLvl * .07,
@@ -2111,7 +2168,10 @@
       dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
       regen: regenLvl * 1.1,
       damageTaken: Math.max(.55, 1 - platingLvl * .04),
-      pierceAdd: pierceLvl,
+      pierceAdd: pierceLvl + (phaseLvl > 1 ? 1 : 0),
+      waterWalk: amphibiousLvl > 0 ? 1 : 0,
+      waterSpeed: 1 + amphibiousLvl * .12,
+      steelPierce: phaseLvl > 0 ? 1 : 0,
       execute: executeLvl * .08,
       venom: venomLvl,
       frostbite: frostbiteLvl,
@@ -2133,6 +2193,9 @@
         regen: base.regen,
         damageTaken: base.damageTaken,
         pierceAdd: base.pierceAdd,
+        waterWalk: base.waterWalk,
+        waterSpeed: base.waterSpeed,
+        steelPierce: base.steelPierce,
         execute: base.execute,
         venom: base.venom,
         frostbite: base.frostbite,
@@ -2207,13 +2270,13 @@
     return best;
   }
 
-  function autoLineClear(x1, y1, x2, y2) {
+  function autoLineClear(x1, y1, x2, y2, phaseSteel) {
     const len = Math.hypot(x2 - x1, y2 - y1);
     const steps = Math.max(2, Math.ceil(len / 10));
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const tile = tileAt(lerp(x1, x2, t), lerp(y1, y2, t));
-      if (tile.type === 'brick' || tile.type === 'steel') return false;
+      if (tile.type === 'brick' || (tile.type === 'steel' && !phaseSteel)) return false;
     }
     return true;
   }
@@ -2241,11 +2304,12 @@
   // Seals are objectives, so auto-fire prioritizes an exposed seal over nearby trash.
   function nearestAutoEnemy(p, range) {
     const r2 = range * range;
+    const phaseSteel = !!statsFor(p).steelPierce;
     let sealTarget = null, sealDist = Infinity;
     for (const s of G.seals || []) {
       if (s.dead) continue;
       const d = dist2(p.x, p.y, s.x, s.y);
-      if (d < r2 && d < sealDist && autoLineClear(p.x, p.y, s.x, s.y)) { sealDist = d; sealTarget = s; }
+      if (d < r2 && d < sealDist && autoLineClear(p.x, p.y, s.x, s.y, phaseSteel)) { sealDist = d; sealTarget = s; }
     }
     if (sealTarget) return sealTarget;
     const candidates = [];
@@ -2256,7 +2320,7 @@
     }
     candidates.sort((a, b) => a.d - b.d);
     for (const c of candidates) {
-      if (autoLineClear(p.x, p.y, c.e.x, c.e.y)) return c.e;
+      if (autoLineClear(p.x, p.y, c.e.x, c.e.y, phaseSteel)) return c.e;
     }
     return null;
   }
@@ -2277,21 +2341,22 @@
   function tryMovePlayer(p, vx, vy, dt) {
     // Slightly smaller collision body than the sprite: avoids invisible corner snags.
     const moveR = Math.max(8, p.radius - 3);
+    const canCrossWater = p.waterWalkTimer > 0 || !!statsFor(p).waterWalk;
     const oldX = p.x, oldY = p.y;
     const nx = p.x + vx * dt;
-    if (!collidesWorld(nx, p.y, moveR)) p.x = nx;
+    if (!collidesWorld(nx, p.y, moveR, true, canCrossWater)) p.x = nx;
     else p.vx = 0;
     const ny = p.y + vy * dt;
-    if (!collidesWorld(p.x, ny, moveR)) p.y = ny;
+    if (!collidesWorld(p.x, ny, moveR, true, canCrossWater)) p.y = ny;
     else p.vy = 0;
     // Corner assist: when a diagonal input jams on a corner, nudge along the open axis.
     if (p.x === oldX && p.y === oldY && Math.abs(vx) > 8 && Math.abs(vy) > 8) {
       const sx = Math.sign(vx), sy = Math.sign(vy);
       for (let step = 2; step <= 6; step += 2) {
-        if (!collidesWorld(p.x + sx * step, p.y, moveR) && !collidesWorld(p.x + sx * step, p.y + sy * step, moveR)) {
+        if (!collidesWorld(p.x + sx * step, p.y, moveR, true, canCrossWater) && !collidesWorld(p.x + sx * step, p.y + sy * step, moveR, true, canCrossWater)) {
           p.x += sx * step; break;
         }
-        if (!collidesWorld(p.x, p.y + sy * step, moveR) && !collidesWorld(p.x + sx * step, p.y + sy * step, moveR)) {
+        if (!collidesWorld(p.x, p.y + sy * step, moveR, true, canCrossWater) && !collidesWorld(p.x + sx * step, p.y + sy * step, moveR, true, canCrossWater)) {
           p.y += sy * step; break;
         }
       }
@@ -2342,6 +2407,7 @@
     p.fireCd -= dt;
     p.dashCd = Math.max(0, p.dashCd - dt);
     p.dashTimer = Math.max(0, p.dashTimer - dt);
+    p.waterWalkTimer = Math.max(0, (p.waterWalkTimer || 0) - dt);
     p.invincible = Math.max(0, p.invincible - dt);
     p.hitFlash = Math.max(0, p.hitFlash - dt * 5);
     p.recoil = Math.max(0, p.recoil - dt * 8);
@@ -2392,7 +2458,9 @@
       if (Input.gamepad.connected) { ix += Input.gamepad.x; iy += Input.gamepad.y; }
     }
     const mag = Math.hypot(ix, iy);
-    const sp = p.speed * (p.dashTimer > 0 ? 2.35 : 1);
+    const onWater = tileAt(p.x, p.y).type === 'water';
+    const waterSpeed = onWater && (p.waterWalkTimer > 0 || statsFor(p).waterWalk) ? (statsFor(p).waterSpeed || 1.15) : 1;
+    const sp = p.speed * (p.dashTimer > 0 ? 2.35 : 1) * waterSpeed;
     if (mag > .08) {
       ix /= Math.max(1, mag); iy /= Math.max(1, mag);
     } else {
@@ -2426,6 +2494,7 @@
       p.bodyAngle = angleLerp(p.bodyAngle, Math.atan2(p.vy, p.vx), dt * 13);
       p.trackPhase += dt * (8 + actualSpeed / sp * (p.dashTimer > 0 ? 18 : 8));
       p.moving = true;
+      if (onWater && chance(dt * 16)) addParticle(p.x + rand(12, -12), p.y + rand(8, -8), rand(-18, 18), rand(-6, 10), '#8fffe6', 'spark', .35, 1.5);
       p.moveX = p.vx / actualSpeed; p.moveY = p.vy / actualSpeed;
       if (chance(dt * 6)) {
         addParticle(p.x - p.moveX * 12 + rand(4, -4), p.y + 7, rand(-12, 12), rand(2, -12), hexA(G.arena.palette.steelLight, .55), 'smoke', .5, 2);
@@ -2485,8 +2554,8 @@
       const mx = p.x + Math.cos(a) * 25, my = p.y + Math.sin(a) * 25;
       G.bullets.push({
         x: mx, y: my, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed,
-        radius: 3, damage: dmg, crit, pierce, explode, owner: p,
-        life: 1.6, maxLife: 1.6, color: '#ffd15c', trail: 15, enemy: false, hit: new Set()
+        radius: 3, damage: dmg, crit, pierce, explode, owner: p, steelPierce: !!st.steelPierce,
+        life: 1.6, maxLife: 1.6, color: st.steelPierce ? '#b896ff' : '#ffd15c', trail: 15, enemy: false, hit: new Set()
       });
     }
     p.fireCd = Math.max(.09, w.interval / st.attackSpeed * st.cdr);
@@ -2503,8 +2572,8 @@
     const crit = chance(st.crit);
     G.bullets.push({
       x: ds.x, y: ds.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, radius: 2.3,
-      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone') ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p,
-      life: .9, maxLife: .9, color: '#5ff0ce', trail: 10, enemy: false, hit: new Set()
+      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone') ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p, steelPierce: !!st.steelPierce,
+      life: .9, maxLife: .9, color: st.steelPierce ? '#b896ff' : '#5ff0ce', trail: 10, enemy: false, hit: new Set()
     });
     addEffect({ type: 'muzzle', x: ds.x, y: ds.y, life: .08, maxLife: .08, color: '#5ff0ce' });
   }
@@ -2534,8 +2603,10 @@
       damage, crit,
       pierce: (opts.pierce || 0) + (st.pierceAdd || 0),
       explode: opts.explode || 0,
+      slow: opts.slow || 0,
+      steelPierce: opts.steelPierce !== undefined ? !!opts.steelPierce : !!st.steelPierce,
       owner, life: opts.life || 1.4, maxLife: opts.life || 1.4,
-      color: opts.color || '#ffd15c', trail: opts.trail || 12,
+      color: opts.color || (st.steelPierce ? '#b896ff' : '#ffd15c'), trail: opts.trail || 12,
       enemy: false, hit: new Set(), homing: !!opts.homing, target: opts.target || null,
       turn: opts.turn || 0, laser: !!opts.laser
     };
@@ -2819,38 +2890,31 @@
         } else p.gravityTimer = .3;
       }
     }
-    // orbiting saws
-    const sawLvl = G.weapons.saw || 0;
-    if (sawLvl) {
-      const w = WEAPONS.saw.levels[Math.min(7, sawLvl - 1)];
-      const count = w.count + (fused('saw') ? 1 : 0);
-      if (!p.sawState) p.sawState = [];
-      while (p.sawState.length < count) p.sawState.push({ phase: (p.sawState.length / count) * TAU, x: p.x, y: p.y, hit: new Set(), hitCd: 0 });
-      if (p.sawState.length > count) p.sawState.length = count;
-      for (let i = 0; i < p.sawState.length; i++) {
-        const s = p.sawState[i];
-        s.hitCd = Math.max(0, s.hitCd - dt);
-        if (s.hitCd <= 0) { s.hit.clear(); s.hitCd = w.tick * (fused('saw') ? .82 : 1); }
-        const angle = G.animTime * 2.3 + s.phase;
-        s.x = p.x + Math.cos(angle) * w.radius * (fused('saw') ? 1.15 : 1);
-        s.y = p.y + Math.sin(angle) * w.radius * .82 * (fused('saw') ? 1.15 : 1);
-        for (const e of G.enemies) {
-          if (e.dead || e.spawnTimer > 0 || s.hit.has(e.id)) continue;
-          if (dist2(s.x, s.y, e.x, e.y) < (13 + e.radius * e.size * .7) ** 2) {
-            s.hit.add(e.id);
-            damageEnemy(e, w.damage * st.damage, false, 'saw', p);
-            addParticle(e.x, e.y, rand(35, -35), rand(35, -35), '#ffcf5a', 'spark', .25, 1.7);
+    // plasma mortar: ranged arcing shells with a short electromagnetic slow.
+    const mortarLvl = G.weapons.mortar || 0;
+    if (mortarLvl) {
+      const w = WEAPONS.mortar.levels[Math.min(7, mortarLvl - 1)];
+      p.mortarTimer -= dt;
+      if (p.mortarTimer <= 0) {
+        const target = nearestAttackable(p.x, p.y, 650);
+        if (target) {
+          const shells = w.count + (fused('mortar') ? 1 : 0);
+          const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0 && dist2(p.x, p.y, e.x, e.y) < 650 * 650);
+          for (let i = 0; i < shells; i++) {
+            const t = i === 0 ? target : (candidates.length ? pick(candidates) : target);
+            const a = Math.atan2(t.y - p.y, t.x - p.x) + rand(.09, -.09);
+            spawnPlayerBullet(p.x + Math.cos(a) * 28, p.y + Math.sin(a) * 28, a, w.speed, w.damage, p, {
+              radius: 4.4, life: 2.2, color: '#b896ff', trail: 22,
+              explode: w.radius * st.area * (fused('mortar') ? 1.25 : 1),
+              slow: w.slow, damageMul: fused('mortar') ? 1.25 : 1
+            });
           }
-        }
-        for (const seal of G.seals || []) {
-          const key = 'seal:' + seal.tankId;
-          if (!seal.dead && !s.hit.has(key) && dist2(s.x, s.y, seal.x, seal.y) < (15 + seal.radius) ** 2) {
-            s.hit.add(key);
-            damageSeal(seal, w.damage * st.damage * .45);
-          }
-        }
+          addEffect({ type: 'muzzle', x: p.x + Math.cos(p.turretAngle) * 28, y: p.y + Math.sin(p.turretAngle) * 28, angle: p.turretAngle, life: .14, maxLife: .14, color: '#b896ff', radius: 12 });
+          AUDIO.tone(150, .22, 'sine', .022, 420);
+          p.mortarTimer = Math.max(.85, w.interval / st.attackSpeed * st.cdr);
+        } else p.mortarTimer = .25;
       }
-    } else if (p.sawState) p.sawState.length = 0;
+    }
     // deploy sentry
     const sentryLvl = G.weapons.sentry || 0;
     if (sentryLvl) {
@@ -3079,6 +3143,21 @@
           if (G.mode === 'playing' && G.enemies.length < cap && G.elapsed < TOTAL_TIME) spawnEnemy(pick(wave.types));
         }, 220);
       }
+      // Dedicated left/right assault lanes create a second, continuous front.
+      G.sideSpawnTimer -= dt;
+      if (G.sideSpawnTimer <= 0) {
+        const sidePoints = spawnPoolSides();
+        if (G.enemies.length < cap && sidePoints.length) {
+          if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼突击 // 地图左右边缘持续入场', 'red'); }
+          const squad = G.elapsed >= 180 ? 2 : 1;
+          for (let i = 0; i < squad && G.enemies.length < cap; i++) {
+            spawnEnemy(pick(wave.types), { spawn: chooseSpawnPoint(sidePoints) });
+          }
+          G.sideSpawnTimer = Math.max(2.4, 5.6 - G.elapsed / TOTAL_TIME * 2.6) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
+        } else {
+          G.sideSpawnTimer = 1.2;
+        }
+      }
     }
   }
 
@@ -3087,11 +3166,12 @@
     const cfg = ENEMIES[type];
     if (!cfg) return null;
     if (G.enemies.length > 110) return null;
-    let sp = opts.spawn || pick(SPAWN_POINTS);
+    const spawnPool = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
+    let sp = opts.spawn || chooseSpawnPoint(spawnPool);
     if (!opts.spawn) {
       let tries = 0;
       const ps = G.players && G.players.length ? G.players : [G.player];
-      while (tries++ < 8 && ps.some(p => p && dist((sp.cx + .5) * TILE, (sp.cy + .5) * TILE, p.x, p.y) < 130)) sp = pick(SPAWN_POINTS);
+      while (tries++ < 8 && ps.some(p => p && dist((sp.cx + .5) * TILE, (sp.cy + .5) * TILE, p.x, p.y) < 130)) sp = chooseSpawnPoint(spawnPool);
     }
     const x = (sp.cx + .5) * TILE, y = (sp.cy + .5) * TILE;
     const mod = G.runMod || {};
@@ -3524,14 +3604,18 @@
       if (b.life <= 0 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) { b.dead = true; continue; }
       const tile = tileAt(b.x, b.y);
       if (!b.baseShot && (tile.type === 'brick' || tile.type === 'steel')) {
-        const broken = hitTile(tile, b.x, b.y, b.damage * .4, '#c45e3d');
-        if (b.explode > 0) {
-          explodeAt(b.x, b.y, b.explode, b.damage * .48, '#ffb15a', { source: 'cannon', silent: true, owner: b.owner });
-          b.dead = true;
-        } else if (broken) {
-          b.dead = true;
+        if (tile.type === 'steel' && b.steelPierce) {
+          // Phase core: pass through steel cover without damaging it.
+        } else {
+          const broken = hitTile(tile, b.x, b.y, b.damage * .4, '#c45e3d');
+          if (b.explode > 0) {
+            explodeAt(b.x, b.y, b.explode, b.damage * .48, '#ffb15a', { source: 'cannon', silent: true, owner: b.owner, slow: b.slow });
+            b.dead = true;
+          } else if (broken) {
+            b.dead = true;
+          }
+          continue;
         }
-        continue;
       }
       if (!b.enemy && !b.baseShot) {
         const seal = G.seals.find(s => !s.dead && dist2(b.x, b.y, s.x, s.y) < (s.radius + b.radius) ** 2);
@@ -3551,7 +3635,7 @@
           damageEnemy(e, b.damage, b.crit, 'bullet', b.owner);
           addParticle(b.x, b.y, rand(50, -50), rand(50, -50), b.color, 'spark', .2, 1.5);
           if (b.explode > 0) {
-            explodeAt(b.x, b.y, b.explode, b.damage * .6, b.color, { source: 'cannon', owner: b.owner });
+            explodeAt(b.x, b.y, b.explode, b.damage * .6, b.color, { source: 'cannon', owner: b.owner, slow: b.slow });
             b.dead = true;
           } else if (b.pierce <= 0 || (b.hit && b.hit.size > b.pierce)) {
             b.dead = true;
@@ -3600,6 +3684,7 @@
       if (d2 < rr * rr) {
         const fall = 1 - .35 * Math.sqrt(d2) / rr;
         damageEnemy(e, damage * fall, false, opts.source || 'explosion', opts.owner);
+        if (opts.slow) e.slowTimer = Math.max(e.slowTimer || 0, opts.slow);
       }
     }
     if (opts.owner) {
@@ -3698,7 +3783,9 @@
       if (chance(dropChance)) {
         const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank', 'turret'];
         const weights = [15, 15, 15, 13, 15, 20, 10];
-        let r = Math.random() * 103, item = 'star';
+        if (G.elapsed >= 60) { itemKeys.push('hover'); weights.push(12); }
+        const totalWeight = weights.reduce((sum, n) => sum + n, 0);
+        let r = Math.random() * totalWeight, item = 'star';
         for (let i = 0; i < itemKeys.length; i++) { r -= weights[i]; if (r <= 0) { item = itemKeys[i]; break; } }
         spawnPickup(item, e.x, e.y, 0);
       }
@@ -3988,6 +4075,11 @@
       p.bonusHp = (p.bonusHp || 0) + 5;
       recalcStats(false);
       healPlayer(p.maxHp * .45, p);
+    } else if (pk.type === 'hover') {
+      p.waterWalkTimer = Math.max(p.waterWalkTimer || 0, 15);
+      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 38, life: .55, maxLife: .55, color: '#5ff0ce' });
+      addParticles(p.x, p.y, 12, '#8fffe6', 'spark', .9);
+      AUDIO.tone(420, .3, 'sine', .025, 220);
     }
     G.loadoutDirty = true;
     AUDIO.item();
@@ -4098,29 +4190,6 @@
     }
   }
 
-  function drawSaws(t) {
-    const ctx = gameCtx;
-    for (const p of G.players || []) {
-      if (!p.sawState || !p.sawState.length || p.downed) continue;
-      const accent = p.index === 1 ? '#ffb52d' : '#ffcf5a';
-      for (const s of p.sawState) {
-        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(t * 9);
-        ctx.globalCompositeOperation = 'lighter';
-        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 17);
-        g.addColorStop(0, hexA(accent, .38)); g.addColorStop(1, hexA(accent, 0));
-        ctx.fillStyle = g; ctx.fillRect(-17, -17, 34, 34);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = '#070c0a'; ctx.fillRect(-9, -9, 18, 18);
-        ctx.strokeStyle = accent; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
-        ctx.fillStyle = '#d8fff6';
-        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; ctx.fillRect(Math.cos(a) * 7 - 1, Math.sin(a) * 7 - 1, 2, 2); }
-        ctx.fillStyle = '#08120e'; ctx.fillRect(-2, -2, 4, 4);
-        ctx.restore();
-      }
-    }
-  }
-
   /* ---------------- upgrades ---------------- */
   const UTILITY_CARDS = [
     { id: 'field_repair', name: '战地维修', en: 'FIELD REPAIR', icon: 'nano', color: '#a9e56e', desc: '立即修复车体 <b>35%</b> 最大装甲。', type: 'utility' },
@@ -4160,6 +4229,7 @@
       const data = PASSIVES[id];
       const lvl = G.passives[id] || 0;
       if (lvl >= data.max) continue;
+      if (lvl === 0 && data.minLevel && G.level < data.minLevel) continue;
       if (lvl === 0 && passiveCount >= 6) continue;
       passiveCandidates.push({
         kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: data.max,

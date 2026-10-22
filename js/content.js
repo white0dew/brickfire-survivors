@@ -429,12 +429,12 @@
   };
 
   const WAVES = [
-    { at: 0, label: '侦察潮', sub: 'SCOUT TIDE', spawn: 1.58, types: ['scout', 'scout', 'grunt'], max: 8 },
-    { at: 55, label: '装甲楔', sub: 'ARMORED WEDGE', spawn: 1.30, types: ['grunt', 'scout', 'scout', 'heavy'], max: 13 },
-    { at: 110, label: '蜂群突袭', sub: 'SWARM SURGE', spawn: 1.08, types: ['scout', 'bomber', 'grunt', 'scout'], max: 18 },
-    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.94, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 22, elite: true },
-    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.80, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 27, elite: true },
-    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.68, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 31, boss: true }
+    { at: 0, label: '侦察潮', sub: 'SCOUT TIDE', spawn: 1.35, types: ['scout', 'scout', 'grunt'], max: 10 },
+    { at: 55, label: '装甲楔', sub: 'ARMORED WEDGE', spawn: 1.10, types: ['grunt', 'scout', 'scout', 'heavy'], max: 15 },
+    { at: 110, label: '蜂群突袭', sub: 'SWARM SURGE', spawn: 0.88, types: ['scout', 'bomber', 'grunt', 'scout'], max: 21 },
+    { at: 165, label: '精英猎杀', sub: 'ELITE HUNT', spawn: 0.74, types: ['grunt', 'sniper', 'heavy', 'scout'], max: 27, elite: true },
+    { at: 225, label: '铁幕推进', sub: 'IRON CURTAIN', spawn: 0.62, types: ['heavy', 'sniper', 'grunt', 'bomber'], max: 33, elite: true },
+    { at: 285, label: '泰坦降临', sub: 'TITANFALL', spawn: 0.52, types: ['grunt', 'heavy', 'sniper', 'bomber'], max: 39, boss: true }
   ];
 
   const ITEMS = {
@@ -445,7 +445,8 @@
     shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', glyph: '✚', desc: '修复车体 25%，并获得 2 秒无敌', detail: '立即回复最大装甲的 25%，短暂无敌便于脱离包围。' },
     tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', glyph: '▣', desc: '修复车体 45%，并提升 5 最大装甲', detail: '永久增加 5 点最大装甲，并按新上限修复 45%。' },
     basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', glyph: '⌂', desc: '修复基地装甲 24%', detail: '只对基地生效；基地装甲归零会立即失守。' },
-    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', glyph: '⌖', desc: '在基地周围部署防御塔', detail: '最多部署 4 座；基地本身不攻击。塔满后拾取改为修复基地 10% 装甲。' }
+    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', glyph: '⌖', desc: '在基地周围部署防御塔', detail: '最多部署 4 座；基地本身不攻击。塔满后拾取改为修复基地 10% 装甲。' },
+    hover: { name: '两栖浮渡', en: 'PONTOON', color: '#5ff0ce', glyph: '≈', desc: '15 秒内可穿越水面', detail: '临时展开浮筒，直接碾过水域；期间仍可正常开火和冲刺。' }
   };
 
   const WEAPONS = {
@@ -617,18 +618,18 @@
         { damage: 102, interval: 2.65, radius: 160, life: 2.8, pull: 118, text: '<b>事件视界</b>：把整片敌群拖进湮灭。' }
       ]
     },
-    saw: {
-      name: '回旋锯刃', en: 'ORBIT SAWS', short: '锯刃', icon: 'drone', color: '#ffcf5a', type: 'weapon',
-      desc: '锯刃环绕车体旋转，持续切割近身敌人。',
+    mortar: {
+      name: '电浆迫击炮', en: 'PLASMA MORTAR', short: '迫击', icon: 'orbital', color: '#b896ff', type: 'weapon',
+      desc: '远程抛射电浆弹，落点爆炸并短暂瘫痪敌群。',
       levels: [
-        { damage: 14, count: 1, radius: 36, tick: .32, text: '召唤 <b>1</b> 枚环绕锯刃。' },
-        { damage: 18, count: 1, radius: 39, tick: .30, text: '锯刃伤害提升。' },
-        { damage: 23, count: 2, radius: 42, tick: .29, text: '环绕锯刃 <b>2</b> 枚。' },
-        { damage: 29, count: 2, radius: 46, tick: .27, text: '切割频率提升。' },
-        { damage: 36, count: 2, radius: 50, tick: .25, text: '锯刃转速与伤害提升。' },
-        { damage: 44, count: 3, radius: 54, tick: .23, text: '环绕锯刃 <b>3</b> 枚。' },
-        { damage: 54, count: 3, radius: 58, tick: .21, text: '高硬度合金刀刃。' },
-        { damage: 68, count: 4, radius: 64, tick: .18, text: '<b>切割风暴</b>：四枚锯刃形成绞肉机。' }
+        { damage: 34, interval: 2.5, speed: 360, radius: 52, slow: 1.2, count: 1, text: '向最近目标抛射 <b>1</b> 枚电浆弹。' },
+        { damage: 44, interval: 2.35, speed: 378, radius: 58, slow: 1.3, count: 1, text: '电浆伤害与爆炸范围提升。' },
+        { damage: 55, interval: 2.2, speed: 396, radius: 64, slow: 1.4, count: 1, text: '落点形成短暂的电磁迟滞。' },
+        { damage: 70, interval: 2.04, speed: 414, radius: 70, slow: 1.5, count: 2, text: '每轮抛射 <b>2</b> 枚电浆弹。' },
+        { damage: 88, interval: 1.88, speed: 432, radius: 76, slow: 1.6, count: 2, text: '弹体装药强化，瘫痪时间延长。' },
+        { damage: 110, interval: 1.72, speed: 450, radius: 82, slow: 1.7, count: 2, text: '双联电浆覆盖敌群。' },
+        { damage: 138, interval: 1.56, speed: 470, radius: 90, slow: 1.8, count: 3, text: '每轮抛射 <b>3</b> 枚电浆弹。' },
+        { damage: 175, interval: 1.38, speed: 500, radius: 100, slow: 2.0, count: 3, text: '<b>雷暴迫击</b>：三轮电浆把战场变成禁行区。' }
       ]
     },
     sentry: {
@@ -776,6 +777,16 @@
       desc: '强化基地装甲与自动维修。', max: 5,
       stats: ['基地减伤 +5%'], text: '基地受到伤害 <b>-5%</b>，维修速度提升。'
     },
+    amphibious: {
+      name: '两栖履带', en: 'AMPHIBIOUS TRACKS', short: '渡水', icon: 'engine', color: '#5ff0ce',
+      desc: '高压浮筒让车体直接碾过水面。', max: 2, minLevel: 8,
+      stats: ['解锁水面通行'], text: '解锁 <b>水面通行</b>；升级提升水中移动速度。'
+    },
+    phase: {
+      name: '相位弹芯', en: 'PHASE CORE', short: '穿钢', icon: 'warhead', color: '#b896ff',
+      desc: '炮弹穿过钢板但不破坏钢板，可隔墙射击。', max: 2, minLevel: 12,
+      stats: ['炮弹穿过钢板'], text: '炮弹可穿过 <b>钢板</b>且不损伤钢板；升级追加弹丸穿透。'
+    },
   };
 
 
@@ -815,7 +826,7 @@
     frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
     toxin: { id:'toxin', weapon:'toxin', passive:'salvage', weaponLevel:6, passiveLevel:2, name:'腐化生态', en:'CORROSIVE BIOSPHERE', color:'#a9e56e', icon:'flame', desc:'毒池 +1 层，范围与持续时间大幅提升。' },
     gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
-    saw: { id:'saw', weapon:'saw', passive:'engine', weaponLevel:6, passiveLevel:2, name:'切割风暴', en:'BLADE STORM', color:'#ffcf5a', icon:'drone', desc:'锯刃 +1，环绕半径扩大，切割频率提升。' },
+    mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'雷暴迫击', en:'STORM MORTAR', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
     sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，炮塔射程与耐久提升，形成交叉火力。' },
     meteor: { id:'meteor', weapon:'meteor', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'流星风暴', en:'METEOR STORM', color:'#ff7a2a', icon:'flame', desc:'流星 +1，撞击半径与伤害提升，火雨覆盖全场。' },
     rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
@@ -834,7 +845,7 @@
   Object.assign(WEAPONS.frost, { role:'范围控场', focus:'减速 / 近身防御' });
   Object.assign(WEAPONS.toxin, { role:'区域封锁', focus:'毒池 / 持续伤害' });
   Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
-  Object.assign(WEAPONS.saw, { role:'环绕切割', focus:'近身 / 持续输出' });
+  Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
   Object.assign(WEAPONS.sentry, { role:'阵地部署', focus:'自动炮塔 / 守区' });
   Object.assign(WEAPONS.meteor, { role:'范围轰炸', focus:'流星 / 大范围爆发' });
   Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
@@ -858,6 +869,8 @@
   Object.assign(PASSIVES.frostbite, { role:'控制' });
   Object.assign(PASSIVES.persist, { role:'区域延长' });
   Object.assign(PASSIVES.guardian, { role:'基地防御' });
+  Object.assign(PASSIVES.amphibious, { role:'地形通行' });
+  Object.assign(PASSIVES.phase, { role:'穿墙火力' });
 
   // Progression: each sealed chassis has a seal core placed in its stage.
   // Break the core, defeat the summoned seal guard, and the chassis is permanently unlocked.
