@@ -231,6 +231,72 @@
   let menuSelectedPulse = 0;
   let lastHudSignature = '';
 
+  /* ---------------- first-stage AI art layer ---------------- */
+  // These are deliberately small, pre-cut PNGs. The game still owns movement,
+  // collision and animation; art only replaces the visual hull/fx layer.
+  const ART_SOURCES = {
+    bossSiege: 'assets/game/furnace/boss-siege.png',
+    floorFurnace: 'assets/game/furnace/floor-tiles.png',
+    enemyScout: 'assets/game/furnace/enemy-scout.png',
+    enemyGrunt: 'assets/game/furnace/enemy-grunt.png',
+    enemyHeavy: 'assets/game/furnace/enemy-heavy.png',
+    enemyBomber: 'assets/game/furnace/enemy-bomber.png',
+    enemySniper: 'assets/game/furnace/enemy-sniper.png',
+    enemyElite: 'assets/game/furnace/enemy-elite.png',
+    enemyMortar: 'assets/game/furnace/enemy-mortar.png',
+    enemyBulwark: 'assets/game/furnace/enemy-bulwark.png',
+    enemyMinelayer: 'assets/game/furnace/enemy-minelayer.png',
+    enemyDrone: 'assets/game/furnace/enemy-drone.png',
+    vfxMuzzle: 'assets/game/furnace/vfx-muzzle.png',
+    vfxImpact: 'assets/game/furnace/vfx-impact.png',
+    vfxExplosion: 'assets/game/furnace/vfx-explosion.png',
+    vfxSmoke: 'assets/game/furnace/vfx-smoke.png',
+    vfxShock: 'assets/game/furnace/vfx-shock.png',
+    vfxIce: 'assets/game/furnace/vfx-ice.png',
+    vfxAcid: 'assets/game/furnace/vfx-acid.png',
+    vfxVoid: 'assets/game/furnace/vfx-void.png',
+    vfxSolar: 'assets/game/furnace/vfx-solar.png'
+  };
+  const ART = { images: {}, loading: false };
+  const ART_FLOOR_SAFE = [0, 4, 5, 6, 8, 10, 11, 13, 14];
+
+  function artImage(key) {
+    const img = ART.images[key];
+    return img && img.complete && img.naturalWidth ? img : null;
+  }
+
+  function loadArtAssets() {
+    if (ART.loading) return;
+    ART.loading = true;
+    for (const [key, src] of Object.entries(ART_SOURCES)) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        ART.images[key] = img;
+        // The floor texture can arrive after startRun; rebuild once it is ready.
+        if (key === 'floorFurnace' && G.mode === 'playing' && G.arena && G.arena.id === 'furnace') buildGroundCache();
+      };
+      img.onerror = () => { console.warn('[art] missing', src); };
+      img.src = `${src}?v=20261023-09`;
+    }
+  }
+
+  function drawSpriteArt(ctx, img, x, y, size, angle, flash) {
+    if (!img) return false;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle || 0);
+    if (flash) ctx.filter = 'brightness(1.9) saturate(.8)';
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+    return true;
+  }
+
+  function floorArtIndex(x, y) {
+    const i = Math.abs((x * 37 + y * 71 + G.arenaIndex * 13) % ART_FLOOR_SAFE.length);
+    return ART_FLOOR_SAFE[i];
+  }
+
   /* ---------------- map ---------------- */
   function createPlayer(x, y, index) {
     const p2 = index === 1;
@@ -456,12 +522,29 @@
     const grad = ctx.createLinearGradient(0, 0, W * .3, H);
     grad.addColorStop(0, hexA(p.sky, .55)); grad.addColorStop(.5, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(255,120,40,.035)');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-    // checker slabs
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
-        if ((x + y) % 2 === 0) {
-          ctx.fillStyle = hexA(p.groundAlt, .5);
-          ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+    // first-stage factory floor: AI-painted 32px plates, tinted into the map palette.
+    const floorArt = G.arena.id === 'furnace' ? artImage('floorFurnace') : null;
+    if (floorArt) {
+      ctx.save();
+      ctx.globalAlpha = .58;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          const tile = G.tiles[y] && G.tiles[y][x];
+          if (!tile || tile.type !== 'ground') continue;
+          const fi = floorArtIndex(x, y);
+          const sx = (fi % 4) * 32, sy = Math.floor(fi / 4) * 32;
+          ctx.drawImage(floorArt, sx, sy, 32, 32, x * TILE, y * TILE, TILE, TILE);
+        }
+      }
+      ctx.restore();
+    } else {
+      // checker slabs (fallback while art is loading)
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if ((x + y) % 2 === 0) {
+            ctx.fillStyle = hexA(p.groundAlt, .5);
+            ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+          }
         }
       }
     }
@@ -1317,14 +1400,20 @@
     drawTankShadow(ctx, e.x, e.y, 4.8);
     const s = e.bossScale || 1.45;
     const lift = e.domain === 'air' ? 18 : e.domain === 'hover' ? 8 : 0;
-    ctx.save();
-    ctx.translate(e.x, e.y - lift);
-    ctx.rotate(e.bodyAngle + Math.PI / 2);
-    ctx.scale(s, s);
-    drawBossBody(ctx, e, t);
-    ctx.restore();
+    const bossArt = e.bossKind === 'siege' ? artImage('bossSiege') : null;
+    if (bossArt) {
+      const artSize = 180 * s / 1.45;
+      drawSpriteArt(ctx, bossArt, e.x, e.y - lift, artSize, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+    } else {
+      ctx.save();
+      ctx.translate(e.x, e.y - lift);
+      ctx.rotate(e.bodyAngle + Math.PI / 2);
+      ctx.scale(s, s);
+      drawBossBody(ctx, e, t);
+      ctx.restore();
+    }
     // some bosses expose an independently rotating main turret
-    if (e.bossKind === 'siege' || e.bossKind === 'dread' || e.bossKind === 'warlord' || e.bossKind === 'sentinel') {
+    if (!bossArt && (e.bossKind === 'siege' || e.bossKind === 'dread' || e.bossKind === 'warlord' || e.bossKind === 'sentinel')) {
       ctx.save();
       ctx.translate(e.x, e.y - lift);
       ctx.rotate(e.turretAngle);
@@ -1372,7 +1461,13 @@
     ctx.rotate(e.bodyAngle + Math.PI / 2);
     ctx.lineWidth = 1;
 
-    if (e.type === 'drone') {
+    const droneArt = e.type === 'drone' && G.arena && G.arena.id === 'furnace' ? artImage('enemyDrone') : null;
+    if (droneArt) {
+      const ds = e.radius * 7.0;
+      if (e.hitFlash > 0) ctx.filter = 'brightness(1.9) saturate(.8)';
+      ctx.drawImage(droneArt, -ds / 2, -ds / 2, ds, ds);
+      ctx.filter = 'none';
+    } else if (e.type === 'drone') {
       // four rotor pods, one central recon body
       ctx.fillStyle = dark;
       for (const [ox, oy] of [[-17, -15], [17, -15], [-17, 15], [17, 15]]) {
@@ -1502,6 +1597,27 @@
     ctx.restore();
   }
 
+  function groundEnemyArt(e) {
+    if (!G.arena || G.arena.id !== 'furnace') return null;
+    // Seal guards carry a specific chassis identity; keep their procedural hull.
+    if (e.sealTankId) return null;
+    const key = {
+      scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy',
+      bomber: 'enemyBomber', sniper: 'enemySniper', elite: 'enemyElite',
+      mortar: 'enemyMortar', bulwark: 'enemyBulwark', minelayer: 'enemyMinelayer'
+    }[e.type];
+    return key ? artImage(key) : null;
+  }
+
+  function drawGroundEnemyArt(e, t) {
+    const img = groundEnemyArt(e);
+    if (!img) return false;
+    const size = e.radius * 4.0;
+    drawTankShadow(gameCtx, e.x, e.y, e.radius / 14);
+    drawSpriteArt(gameCtx, img, e.x, e.y, size, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+    return true;
+  }
+
   function drawEnemy(e, t) {
     const ctx = gameCtx;
     if (e.spawnTimer > 0) {
@@ -1527,17 +1643,20 @@
     ctx.fillStyle = e.elite ? 'rgba(255,181,45,.035)' : 'rgba(255,88,72,.025)';
     ctx.beginPath(); ctx.ellipse(e.x, e.y + 3, (e.elite ? 20 : 14) * size, (e.elite ? 12 : 8) * size, 0, 0, TAU); ctx.fill();
     ctx.restore();
-    const colors = {
-      body: e.hitFlash > 0 ? '#ffffff' : e.color,
-      light: e.hitFlash > 0 ? '#ffffff' : e.light,
-      dark: e.dark, core: e.coreColor
-    };
-    drawTankAt(ctx, e.x, e.y, e.bodyAngle, e.turretAngle, colors, size, e.trackPhase, {
-      recoil: e.recoil, heavy: e.type === 'heavy', elite: e.elite, bomber: e.type === 'bomber', enemyType: e.type,
-      barrelLen: e.type === 'sniper' ? 23 : e.elite ? 21 : 16,
-      barrelWide: e.type === 'heavy' || e.elite,
-      twin: e.elite
-    });
+    const artEnemy = drawGroundEnemyArt(e, t);
+    if (!artEnemy) {
+      const colors = {
+        body: e.hitFlash > 0 ? '#ffffff' : e.color,
+        light: e.hitFlash > 0 ? '#ffffff' : e.light,
+        dark: e.dark, core: e.coreColor
+      };
+      drawTankAt(ctx, e.x, e.y, e.bodyAngle, e.turretAngle, colors, size, e.trackPhase, {
+        recoil: e.recoil, heavy: e.type === 'heavy', elite: e.elite, bomber: e.type === 'bomber', enemyType: e.type,
+        barrelLen: e.type === 'sniper' ? 23 : e.elite ? 21 : 16,
+        barrelWide: e.type === 'heavy' || e.elite,
+        twin: e.elite
+      });
+    }
     if (e.freeze > 0) {
       ctx.save();
       ctx.globalAlpha = .3;
@@ -1804,6 +1923,7 @@
 
   function drawEffects(t) {
     const ctx = gameCtx;
+    const firstStageArt = G.arena && G.arena.id === 'furnace';
     for (const fx of G.effects) {
       const k = fx.life / fx.maxLife;
       if (fx.type === 'explosion') {
@@ -1817,6 +1937,14 @@
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx.x, fx.y, r, 0, TAU); ctx.fill();
         ctx.strokeStyle = hexA('#fff4d0', .35 * k); ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(fx.x, fx.y, r * .8, 0, TAU); ctx.stroke();
+        const explosionArt = firstStageArt ? artImage('vfxExplosion') : null;
+        if (explosionArt) {
+          const es = clamp(fx.radius * 2.15, 24, 220);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = clamp(k * 1.2, 0, 1);
+          ctx.drawImage(explosionArt, fx.x - es / 2, fx.y - es / 2, es, es);
+          ctx.globalAlpha = 1;
+        }
         ctx.restore();
       } else if (fx.type === 'ring') {
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -1860,7 +1988,17 @@
         const r = 8 + (1 - k) * 14;
         const g = ctx.createRadialGradient(fx.x, fx.y, 0, fx.x, fx.y, r);
         g.addColorStop(0, `rgba(255,255,220,${.85 * k})`); g.addColorStop(.3, hexA(fx.color || '#ffcf5a', .5 * k)); g.addColorStop(1, hexA(fx.color || '#ffcf5a', 0));
-        ctx.fillStyle = g; ctx.fillRect(fx.x - r, fx.y - r, r * 2, r * 2); ctx.restore();
+        ctx.fillStyle = g; ctx.fillRect(fx.x - r, fx.y - r, r * 2, r * 2);
+        const muzzleArt = firstStageArt ? artImage('vfxMuzzle') : null;
+        if (muzzleArt) {
+          const ms = 38 + (1 - k) * 14;
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = clamp(k * 1.4, 0, 1);
+          ctx.translate(fx.x, fx.y); ctx.rotate(fx.angle || 0);
+          ctx.drawImage(muzzleArt, -ms / 2, -ms / 2, ms, ms);
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
       }
     }
   }
@@ -6248,9 +6386,19 @@
       : { body: c.body || c.color || '#555', light: c.light || '#ccc', dark: c.dark || '#222', core: c.core || c.coreColor || '#5ff0ce' };
     const isBoss = entry.cls === 'boss';
     const scale = isBoss ? 2.9 : entry.cls === 'elite' ? 2.25 : 1.95;
-    ctx.save();
-    ctx.translate(w / 2, h / 2 + 4);
-    if (isBoss) {
+    const artKey = entry.key === 'boss' ? 'bossSiege' : {
+      scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy', bomber: 'enemyBomber',
+      sniper: 'enemySniper', elite: 'enemyElite', mortar: 'enemyMortar', bulwark: 'enemyBulwark',
+      minelayer: 'enemyMinelayer'
+    }[entry.key];
+    const codexArt = !locked && artKey ? artImage(artKey) : null;
+    if (codexArt) {
+      const size = isBoss ? 104 : 76;
+      ctx.drawImage(codexArt, (w - size) / 2, (h - size) / 2, size, size);
+    } else {
+      ctx.save();
+      ctx.translate(w / 2, h / 2 + 4);
+      if (isBoss) {
       const fake = {
         id: entry.key.length + 7, bossKind: entry.bossKind, bossScale: entry.size || 1.5,
         hitFlash: 0, color: colors.body, light: colors.light, dark: colors.dark, coreColor: colors.core
@@ -6273,7 +6421,8 @@
         barrelWide: entry.type === 'heavy' || entry.cls === 'elite' || isBoss
       });
     }
-    ctx.restore();
+      ctx.restore();
+    }
     if (isBoss) {
       ctx.save();
       ctx.fillStyle = locked ? 'rgba(92,116,106,.4)' : 'rgba(255,79,88,.08)';
@@ -6988,6 +7137,7 @@
 
   function init() {
     cacheUI();
+    loadArtAssets();
     gameCtx = U.gameCanvas.getContext('2d');
     menuCtx = U.menuCanvas.getContext('2d');
     [gameCtx, menuCtx].forEach(ctx => { if (ctx) ctx.imageSmoothingEnabled = false; });
@@ -7045,7 +7195,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
