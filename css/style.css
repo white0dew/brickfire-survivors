@@ -1503,3 +1503,13 @@ body.ai-art #menuScreen > * { position: relative; z-index: 1; }
   .art-card--wide .art-card__frame { aspect-ratio: 16 / 9; }
   .art-card figcaption small { font-size: 8px; }
 }
+
+
+/* Co-op independent XP + build readout */
+.coop-unit__xp { display: flex; justify-content: space-between; align-items: center; margin: 2px 0 3px; font-family: var(--font-display); font-size: 7px; letter-spacing: .06em; color: var(--muted-2); }
+.coop-unit__xp b { color: var(--cyan); font-weight: 400; }
+.coop-unit__xp .meter { flex: 1; }
+.coop-build { margin-top: 4px; font-family: var(--font-cn); font-size: 8px; line-height: 1.45; color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coop-build b { color: var(--paper-dim); font-weight: 500; }
+.levelup__player.is-active { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(95,240,206,.25); }
+.levelup__player.is-active em { color: var(--cyan); }

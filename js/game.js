@@ -212,6 +212,7 @@
     entityId: 1,
     lastEnemySound: 0,
     resolvingUpgrade: false,
+    levelupPlayer: null,
     stats: { damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8, pickup: 58, xpGain: 1, dropChance: .032, pierceAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0 }
   };
 
@@ -324,6 +325,7 @@
     return {
       index,
       label: p2 ? 'P2' : 'P1',
+      tank,
       tankId: tank.id,
       x, y,
       bodyAngle: -Math.PI / 2, turretAngle: -Math.PI / 2,
@@ -333,6 +335,10 @@
       fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, waterWalkTimer: 0,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
       hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0, secondWindUsed: false,
+      level: 1, xp: 0, xpNext: xpNeeded(1), pendingLevels: 0, rerolls: 2,
+      weapons: Object.assign({ cannon: 1 }, (tank.start && tank.start.weapons) || {}),
+      passives: Object.assign({}, (tank.start && tank.start.passives) || {}),
+      fusions: {},
       weaponCds: {}, droneState: [], mortarTimer: 1.4, flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
       scatterTimer: .2, laserTimer: .45, missileTimer: .8, frostTimer: .9, toxinTimer: .8, gravityTimer: 1.1, sentryTimer: 1.2, meteorTimer: 1.3, railTimer: .65,
       bodyColor: p2 ? pal.body : pal.body,
@@ -1840,7 +1846,7 @@
     if (!drawPlayerArt(p, colors)) {
       drawTankAt(ctx, p.x, p.y, p.bodyAngle, p.turretAngle, colors, 1.12, p.trackPhase, {
         recoil: p.recoil, barrelLen: tankId === 'railgun' ? 27 : tankId === 'twin' ? 19 : 21,
-        barrelWide: G.weapons.cannon >= 4, twin: G.weapons.cannon >= 6 || tankId === 'twin',
+        barrelWide: weaponsFor(p).cannon >= 4, twin: weaponsFor(p).cannon >= 6 || tankId === 'twin',
         heavy: tankId === 'bastion' || tankId === 'juggernaut', player: true
       });
     }
@@ -2660,6 +2666,27 @@
     Input.gamepad.levelupNeedsNeutral = false;
     Input.mobile = { active: false, x: 0, y: 0 };
     loadArena(index);
+    // Co-op builds are independent: each pilot owns their XP, level, weapons,
+    // passives and fusions. Keep P1 as the legacy global alias for HUD/results.
+    for (const p of G.players) {
+      p.level = 1;
+      p.xp = 0;
+      p.xpNext = xpNeeded(1);
+      p.pendingLevels = 0;
+      p.rerolls = 2;
+      p.weaponCds = {};
+      p.droneState = [];
+      p.flameTimer = 0; p.mineTimer = 0; p.arcTimer = 1.3; p.orbitalTimer = 2.2;
+    }
+    G.weapons = G.player.weapons;
+    G.passives = G.player.passives;
+    G.fusions = G.player.fusions;
+    G.level = G.player.level;
+    G.xp = G.player.xp;
+    G.xpNext = G.player.xpNext;
+    G.pendingLevels = 0;
+    G.rerolls = 2;
+    G.levelupPlayer = null;
     // Give the player one nearby sentry pickup so the base has a clear
     // defensive choice from the first minute instead of firing for free.
     if (G.player) spawnPickup('turret', clamp(G.player.x + 110, 24, W - 24), clamp(G.player.y + 20, 24, H - 24), 0);
@@ -2719,52 +2746,51 @@
   }
 
   function recalcStats(fullHeal) {
-    const armorLvl = G.passives.armor || 0;
-    const engineLvl = G.passives.engine || 0;
-    const loaderLvl = G.passives.loader || 0;
-    const magnetLvl = G.passives.magnet || 0;
-    const warheadLvl = G.passives.warhead || 0;
-    const coolingLvl = G.passives.cooling || 0;
-    const critLvl = G.passives.crit || 0;
-    const salvageLvl = G.passives.salvage || 0;
-    const overdriveLvl = G.passives.overdrive || 0;
-    const shieldLvl = G.passives.shield || 0;
-    const regenLvl = G.passives.regen || 0;
-    const platingLvl = G.passives.plating || 0;
-    const pierceLvl = G.passives.pierce || 0;
-    const dashLvl = G.passives.dash || 0;
-    const fortuneLvl = G.passives.fortune || 0;
-    const executeLvl = G.passives.execute || 0;
-    const venomLvl = G.passives.venom || 0;
-    const frostbiteLvl = G.passives.frostbite || 0;
-    const persistLvl = G.passives.persist || 0;
-    const guardianLvl = G.passives.guardian || 0;
-    const amphibiousLvl = G.passives.amphibious || 0;
-    const phaseLvl = G.passives.phase || 0;
-    const base = {
-      damage: 1 + overdriveLvl * .08 + warheadLvl * .04,
-      attackSpeed: 1 + loaderLvl * .07,
-      cdr: Math.max(.45, 1 - coolingLvl * .07),
-      area: 1 + warheadLvl * .1,
-      crit: .05 + critLvl * .06,
-      critMult: 1.8,
-      pickup: PLAYER_BASE.pickupRadius * (1 + magnetLvl * .22),
-      xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
-      dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
-      regen: regenLvl * 1.1,
-      damageTaken: Math.max(.55, 1 - platingLvl * .04),
-      pierceAdd: pierceLvl + (phaseLvl > 1 ? 1 : 0),
-      waterWalk: amphibiousLvl > 0 ? 1 : 0,
-      waterSpeed: 1 + amphibiousLvl * .12,
-      steelPierce: phaseLvl > 0 ? 1 : 0,
-      execute: executeLvl * .08,
-      venom: venomLvl,
-      frostbite: frostbiteLvl,
-      duration: 1 + persistLvl * .1
-    };
     for (const p of G.players || []) {
-      const tank = p.tank || (p.index === 1 ? TANKS.find(t => t.id === G.tankIds[1]) : G.tank) || TANKS[0];
-      p.tank = tank;
+      const pass = passivesFor(p);
+      const armorLvl = pass.armor || 0;
+      const engineLvl = pass.engine || 0;
+      const loaderLvl = pass.loader || 0;
+      const magnetLvl = pass.magnet || 0;
+      const warheadLvl = pass.warhead || 0;
+      const coolingLvl = pass.cooling || 0;
+      const critLvl = pass.crit || 0;
+      const salvageLvl = pass.salvage || 0;
+      const overdriveLvl = pass.overdrive || 0;
+      const shieldLvl = pass.shield || 0;
+      const regenLvl = pass.regen || 0;
+      const platingLvl = pass.plating || 0;
+      const pierceLvl = pass.pierce || 0;
+      const dashLvl = pass.dash || 0;
+      const fortuneLvl = pass.fortune || 0;
+      const executeLvl = pass.execute || 0;
+      const venomLvl = pass.venom || 0;
+      const frostbiteLvl = pass.frostbite || 0;
+      const persistLvl = pass.persist || 0;
+      const amphibiousLvl = pass.amphibious || 0;
+      const phaseLvl = pass.phase || 0;
+      const base = {
+        damage: 1 + overdriveLvl * .08 + warheadLvl * .04,
+        attackSpeed: 1 + loaderLvl * .07,
+        cdr: Math.max(.45, 1 - coolingLvl * .07),
+        area: 1 + warheadLvl * .1,
+        crit: .05 + critLvl * .06,
+        critMult: 1.8,
+        pickup: PLAYER_BASE.pickupRadius * (1 + magnetLvl * .22),
+        xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
+        dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
+        regen: regenLvl * 1.1,
+        damageTaken: Math.max(.55, 1 - platingLvl * .04),
+        pierceAdd: pierceLvl + (phaseLvl > 1 ? 1 : 0),
+        waterWalk: amphibiousLvl > 0 ? 1 : 0,
+        waterSpeed: 1 + amphibiousLvl * .12,
+        steelPierce: phaseLvl > 0 ? 1 : 0,
+        execute: executeLvl * .08,
+        venom: venomLvl,
+        frostbite: frostbiteLvl,
+        duration: 1 + persistLvl * .1
+      };
+      const tank = tankData(p);
       const st = {
         damage: base.damage * (tank.damageMul || 1),
         attackSpeed: base.attackSpeed * (tank.attackSpeedMul || 1),
@@ -2802,11 +2828,22 @@
       p.bodyDark = tank.colors.dark;
       p.coreColor = tank.colors.core;
     }
+    const firstPass = passivesFor(G.players && G.players[0]);
+    const guardianLvl = firstPass.guardian || 0;
     G.coreArmor = guardianLvl * .05;
     if (G.core) G.core.repairRate = 6 + guardianLvl * 1.2;
     const first = (G.players || [])[0];
-    G.stats = first && first.stats ? first.stats : base;
+    G.stats = first && first.stats ? first.stats : {
+      damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8,
+      pickup: PLAYER_BASE.pickupRadius, xpGain: 1, dropChance: .025, regen: 0,
+      damageTaken: 1, pierceAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0,
+      execute: 0, venom: 0, frostbite: 0, duration: 1
+    };
   }
+
+  function weaponsFor(p) { return (p && p.weapons) || (G.player && G.player.weapons) || G.weapons || { cannon: 1 }; }
+  function passivesFor(p) { return (p && p.passives) || (G.player && G.player.passives) || G.passives || {}; }
+  function fusionsFor(p) { return (p && p.fusions) || (G.player && G.player.fusions) || G.fusions || {}; }
 
   function statsFor(p) {
     return (p && p.stats) || G.stats;
@@ -2910,8 +2947,9 @@
     return null;
   }
 
-  function fused(id) {
-    return !!(G.fusions && G.fusions[id]);
+  function fused(id, p) {
+    const fusions = fusionsFor(p);
+    return !!(fusions && fusions[id]);
   }
 
   function tankData(p) {
@@ -3017,7 +3055,7 @@
         AUDIO.dash(); rumble(.3, 70);
         addShake(2.5, .12);
         for (let i = 0; i < 9; i++) addParticle(p.x + rand(10, -10), p.y + rand(10, -10), rand(120, -120), rand(120, -120), '#5ff0ce', 'spark', .4, 1.5);
-        if (G.weapons.flame) addFlamePool(p.x, p.y, true, p);
+        if (weaponsFor(p).flame) addFlamePool(p.x, p.y, true, p);
       }
     }
     let ix = 0, iy = 0;
@@ -3124,10 +3162,10 @@
     if (!p) p = G.player;
     const tank = tankData(p);
     const st = statsFor(p);
-    const lvl = G.weapons.cannon || 1;
+    const lvl = weaponsFor(p).cannon || 1;
     const w = WEAPONS.cannon.levels[Math.min(7, lvl - 1)];
     const angle = Math.atan2(ty - p.y, tx - p.x);
-    const fusion = fused('cannon');
+    const fusion = fused('cannon', p);
     const shots = (w.shots || 1) + (tank.extraShots || 0) + (fusion ? 1 : 0);
     const spread = shots > 1 ? .055 : 0;
     const pierce = (w.pierce || 0) + (tank.pierceAdd || 0) + (st.pierceAdd || 0) + (fusion ? 2 : 0);
@@ -3158,19 +3196,19 @@
     const crit = chance(st.crit);
     G.bullets.push({
       x: ds.x, y: ds.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, radius: 2.3,
-      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone') ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p, steelPierce: !!st.steelPierce,
+      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone', p) ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p, steelPierce: !!st.steelPierce,
       life: .9, maxLife: .9, color: st.steelPierce ? '#b896ff' : '#5ff0ce', trail: 10, enemy: false, hit: new Set()
     });
     addEffect({ type: 'muzzle', x: ds.x, y: ds.y, life: .08, maxLife: .08, color: '#5ff0ce' });
   }
 
   function addFlamePool(x, y, force, p) {
-    const lvl = G.weapons.flame || 0;
+    const lvl = weaponsFor(p).flame || 0;
     if (!lvl) return;
     const w = WEAPONS.flame.levels[Math.min(7, lvl - 1)];
     const st = statsFor(p);
     const tank = tankData(p);
-    const fusion = fused('flame');
+    const fusion = fused('flame', p);
     if (G.hazards.length > 90) G.hazards.shift();
     G.hazards.push({
       x, y, radius: w.radius * st.area * (fusion ? 1.3 : 1), damage: w.damage * st.damage * (fusion ? 1.3 : 1),
@@ -3217,10 +3255,10 @@
   function updateWeaponsFor(p, dt) {
     const st = statsFor(p);
     // drone swarm
-    const droneLvl = G.weapons.drone || 0;
+    const droneLvl = weaponsFor(p).drone || 0;
     if (droneLvl) {
       const w = WEAPONS.drone.levels[Math.min(7, droneLvl - 1)];
-      const count = w.count + (tankData(p).droneAdd || 0) + (fused('drone') ? 1 : 0);
+      const count = w.count + (tankData(p).droneAdd || 0) + (fused('drone', p) ? 1 : 0);
       while (p.droneState.length < count) p.droneState.push({ phase: (p.droneState.length / count) * TAU, cd: .25 + p.droneState.length * .16, x: p.x, y: p.y, fireFlash: 0 });
       if (p.droneState.length > count) p.droneState.length = count;
       for (let i = 0; i < p.droneState.length; i++) {
@@ -3241,11 +3279,11 @@
       }
     } else p.droneState = [];
     // arc coil
-    const arcLvl = G.weapons.arc || 0;
+    const arcLvl = weaponsFor(p).arc || 0;
     if (arcLvl) {
       const w = WEAPONS.arc.levels[Math.min(7, arcLvl - 1)];
-      const arcChains = w.chains + (tankData(p).arcAdd || 0) + (fused('arc') ? 2 : 0);
-      const arcDamage = w.damage * (fused('arc') ? 1.25 : 1);
+      const arcChains = w.chains + (tankData(p).arcAdd || 0) + (fused('arc', p) ? 2 : 0);
+      const arcDamage = w.damage * (fused('arc', p) ? 1.25 : 1);
       p.arcTimer -= dt;
       if (p.arcTimer <= 0) {
         const first = nearestEnemy(p.x, p.y, w.range);
@@ -3282,12 +3320,12 @@
           }
           addEffect({ type: 'lightning', points, life: .2, maxLife: .2, color: '#79b9ff' });
           AUDIO.tone(520, .08, 'sawtooth', .02, 1200);
-          p.arcTimer = Math.max(.5, w.interval / st.attackSpeed * st.cdr * (fused('arc') ? .8 : 1));
+          p.arcTimer = Math.max(.5, w.interval / st.attackSpeed * st.cdr * (fused('arc', p) ? .8 : 1));
         } else p.arcTimer = .2;
       }
     }
     // flame trail
-    const flameLvl = G.weapons.flame || 0;
+    const flameLvl = weaponsFor(p).flame || 0;
     if (flameLvl && p.moving) {
       const w = WEAPONS.flame.levels[Math.min(7, flameLvl - 1)];
       p.flameTimer -= dt;
@@ -3302,11 +3340,11 @@
       }
     }
     // mines
-    const mineLvl = G.weapons.mine || 0;
+    const mineLvl = weaponsFor(p).mine || 0;
     if (mineLvl) {
       const w = WEAPONS.mine.levels[Math.min(7, mineLvl - 1)];
-      const mineCount = w.count + (tankData(p).mineAdd || 0) + (fused('mine') ? 1 : 0);
-      const mineFusion = fused('mine');
+      const mineCount = w.count + (tankData(p).mineAdd || 0) + (fused('mine', p) ? 1 : 0);
+      const mineFusion = fused('mine', p);
       p.mineTimer -= dt;
       if (p.mineTimer <= 0) {
         for (let i = 0; i < mineCount; i++) {
@@ -3322,11 +3360,11 @@
       }
     }
     // orbital
-    const orbLvl = G.weapons.orbital || 0;
+    const orbLvl = weaponsFor(p).orbital || 0;
     if (orbLvl) {
       const w = WEAPONS.orbital.levels[Math.min(7, orbLvl - 1)];
-      const orbitalCount = w.count + (tankData(p).orbitalAdd || 0) + (fused('orbital') ? 1 : 0);
-      const orbitalFusion = fused('orbital');
+      const orbitalCount = w.count + (tankData(p).orbitalAdd || 0) + (fused('orbital', p) ? 1 : 0);
+      const orbitalFusion = fused('orbital', p);
       p.orbitalTimer -= dt;
       if (p.orbitalTimer <= 0) {
         const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
@@ -3345,7 +3383,7 @@
       }
     }
     // scatter shotgun
-    const scatterLvl = G.weapons.scatter || 0;
+    const scatterLvl = weaponsFor(p).scatter || 0;
     if (scatterLvl) {
       const w = WEAPONS.scatter.levels[Math.min(7, scatterLvl - 1)];
       p.scatterTimer -= dt;
@@ -3353,13 +3391,13 @@
         const target = nearestAttackable(p.x, p.y, 560);
         if (target) {
           const baseA = Math.atan2(target.y - p.y, target.x - p.x);
-          const pellets = w.pellets + (fused('scatter') ? 3 : 0);
-          const spread = w.spread * (fused('scatter') ? 1.12 : 1);
+          const pellets = w.pellets + (fused('scatter', p) ? 3 : 0);
+          const spread = w.spread * (fused('scatter', p) ? 1.12 : 1);
           for (let i = 0; i < pellets; i++) {
             const a = baseA + (i - (pellets - 1) / 2) * (spread / Math.max(1, pellets - 1));
             spawnPlayerBullet(p.x + Math.cos(a) * 22, p.y + Math.sin(a) * 22, a, w.speed, w.damage, p, {
               pierce: w.pierce || 0, radius: 2.4, life: .9, color: '#ff9a4a', trail: 9,
-              explode: fused('scatter') ? 26 * st.area : 0
+              explode: fused('scatter', p) ? 26 * st.area : 0
             });
           }
           addEffect({ type: 'muzzle', x: p.x + Math.cos(baseA) * 25, y: p.y + Math.sin(baseA) * 25, angle: baseA, life: .12, maxLife: .12, color: '#ff9a4a', radius: 9 });
@@ -3369,7 +3407,7 @@
       }
     }
     // prism laser
-    const laserLvl = G.weapons.laser || 0;
+    const laserLvl = weaponsFor(p).laser || 0;
     if (laserLvl) {
       const w = WEAPONS.laser.levels[Math.min(7, laserLvl - 1)];
       p.laserTimer -= dt;
@@ -3377,8 +3415,8 @@
         const target = nearestAttackable(p.x, p.y, 600);
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
-          spawnPlayerBullet(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, a, w.speed, w.damage * (fused('laser') ? 1.55 : 1), p, {
-            pierce: w.pierce, radius: fused('laser') ? 3.6 : 2.6, life: .95, color: '#ff6b8a', trail: 54, laser: true
+          spawnPlayerBullet(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, a, w.speed, w.damage * (fused('laser', p) ? 1.55 : 1), p, {
+            pierce: w.pierce, radius: fused('laser', p) ? 3.6 : 2.6, life: .95, color: '#ff6b8a', trail: 54, laser: true
           });
           addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 25, y: p.y + Math.sin(a) * 25, angle: a, life: .1, maxLife: .1, color: '#ff6b8a', radius: 12 });
           AUDIO.tone(880, .08, 'sawtooth', .018, 1600);
@@ -3387,18 +3425,18 @@
       }
     }
     // homing missile pod
-    const missileLvl = G.weapons.missile || 0;
+    const missileLvl = weaponsFor(p).missile || 0;
     if (missileLvl) {
       const w = WEAPONS.missile.levels[Math.min(7, missileLvl - 1)];
       p.missileTimer -= dt;
       if (p.missileTimer <= 0) {
         const target = nearestAttackable(p.x, p.y, 600);
         if (target) {
-          const count = w.count + (fused('missile') ? 2 : 0);
+          const count = w.count + (fused('missile', p) ? 2 : 0);
           for (let i = 0; i < count; i++) {
             const a = Math.atan2(target.y - p.y, target.x - p.x) + rand(.25, -.25);
             spawnPlayerBullet(p.x + Math.cos(a) * 18, p.y + Math.sin(a) * 18, a, w.speed, w.damage, p, {
-              homing: true, target, turn: w.turn * (fused('missile') ? 1.25 : 1), explode: w.explode * st.area * (fused('missile') ? 1.3 : 1),
+              homing: true, target, turn: w.turn * (fused('missile', p) ? 1.25 : 1), explode: w.explode * st.area * (fused('missile', p) ? 1.3 : 1),
               radius: 2.8, life: 3.2, color: '#ffd05a', trail: 16
             });
           }
@@ -3409,23 +3447,23 @@
       }
     }
     // cryo pulse
-    const frostLvl = G.weapons.frost || 0;
+    const frostLvl = weaponsFor(p).frost || 0;
     if (frostLvl) {
       const w = WEAPONS.frost.levels[Math.min(7, frostLvl - 1)];
       p.frostTimer -= dt;
       if (p.frostTimer <= 0) {
-        const radius = w.radius * st.area * (fused('frost') ? 1.3 : 1);
+        const radius = w.radius * st.area * (fused('frost', p) ? 1.3 : 1);
         let hitAny = false;
         for (const e of G.enemies) {
           if (e.dead || e.spawnTimer > 0) continue;
           if (dist2(p.x, p.y, e.x, e.y) > (radius + e.radius * e.size) ** 2) continue;
-          damageEnemy(e, w.damage * st.damage * (fused('frost') ? 1.3 : 1), false, 'frost', p);
-          e.slowTimer = Math.max(e.slowTimer || 0, w.slow + (fused('frost') ? .8 : 0));
+          damageEnemy(e, w.damage * st.damage * (fused('frost', p) ? 1.3 : 1), false, 'frost', p);
+          e.slowTimer = Math.max(e.slowTimer || 0, w.slow + (fused('frost', p) ? .8 : 0));
           hitAny = true;
         }
         for (const seal of G.seals || []) {
           if (!seal.dead && dist2(p.x, p.y, seal.x, seal.y) < (radius + seal.radius) ** 2) {
-            damageSeal(seal, w.damage * st.damage * .7 * (fused('frost') ? 1.3 : 1));
+            damageSeal(seal, w.damage * st.damage * .7 * (fused('frost', p) ? 1.3 : 1));
             hitAny = true;
           }
         }
@@ -3438,17 +3476,17 @@
       }
     }
     // toxin pool
-    const toxinLvl = G.weapons.toxin || 0;
+    const toxinLvl = weaponsFor(p).toxin || 0;
     if (toxinLvl) {
       const w = WEAPONS.toxin.levels[Math.min(7, toxinLvl - 1)];
       p.toxinTimer -= dt;
       if (p.toxinTimer <= 0) {
         const target = nearestAttackable(p.x, p.y, 600);
         if (target) {
-          const radius = w.radius * st.area * (fused('toxin') ? 1.25 : 1);
-          const life = w.life * st.duration * (fused('toxin') ? 1.25 : 1);
-          addToxinPool(target.x, target.y, w.damage * st.damage * (fused('toxin') ? 1.35 : 1), radius, p, life, w.tick);
-          if (fused('toxin')) addToxinPool(target.x + rand(34, -34), target.y + rand(34, -34), w.damage * st.damage, radius * .8, p, life * .8, w.tick);
+          const radius = w.radius * st.area * (fused('toxin', p) ? 1.25 : 1);
+          const life = w.life * st.duration * (fused('toxin', p) ? 1.25 : 1);
+          addToxinPool(target.x, target.y, w.damage * st.damage * (fused('toxin', p) ? 1.35 : 1), radius, p, life, w.tick);
+          if (fused('toxin', p)) addToxinPool(target.x + rand(34, -34), target.y + rand(34, -34), w.damage * st.damage, radius * .8, p, life * .8, w.tick);
           addEffect({ type: 'ring', x: target.x, y: target.y, radius, life: .4, maxLife: .4, color: '#a9e56e' });
           AUDIO.tone(150, .25, 'sine', .015, 280);
           p.toxinTimer = Math.max(.6, w.interval / st.attackSpeed * st.cdr);
@@ -3456,7 +3494,7 @@
       }
     }
     // gravity well
-    const gravityLvl = G.weapons.gravity || 0;
+    const gravityLvl = weaponsFor(p).gravity || 0;
     if (gravityLvl) {
       const w = WEAPONS.gravity.levels[Math.min(7, gravityLvl - 1)];
       p.gravityTimer -= dt;
@@ -3465,10 +3503,10 @@
         if (target) {
           if (G.vortices.length > 8) G.vortices.shift();
           G.vortices.push({
-            x: target.x, y: target.y, radius: w.radius * st.area * (fused('gravity') ? 1.3 : 1),
+            x: target.x, y: target.y, radius: w.radius * st.area * (fused('gravity', p) ? 1.3 : 1),
             life: w.life * st.duration, maxLife: w.life * st.duration,
-            damage: w.damage * st.damage * (fused('gravity') ? 1.35 : 1),
-            pull: w.pull * (fused('gravity') ? 2 : 1), tick: .45, owner: p, seed: rand(TAU)
+            damage: w.damage * st.damage * (fused('gravity', p) ? 1.35 : 1),
+            pull: w.pull * (fused('gravity', p) ? 2 : 1), tick: .45, owner: p, seed: rand(TAU)
           });
           addEffect({ type: 'ring', x: target.x, y: target.y, radius: w.radius * .7, life: .6, maxLife: .6, color: '#b896ff' });
           AUDIO.tone(90, .55, 'sine', .02, 180);
@@ -3477,22 +3515,22 @@
       }
     }
     // plasma mortar: ranged arcing shells with a short electromagnetic slow.
-    const mortarLvl = G.weapons.mortar || 0;
+    const mortarLvl = weaponsFor(p).mortar || 0;
     if (mortarLvl) {
       const w = WEAPONS.mortar.levels[Math.min(7, mortarLvl - 1)];
       p.mortarTimer -= dt;
       if (p.mortarTimer <= 0) {
         const target = nearestAttackable(p.x, p.y, 650);
         if (target) {
-          const shells = w.count + (fused('mortar') ? 1 : 0);
+          const shells = w.count + (fused('mortar', p) ? 1 : 0);
           const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0 && dist2(p.x, p.y, e.x, e.y) < 650 * 650);
           for (let i = 0; i < shells; i++) {
             const t = i === 0 ? target : (candidates.length ? pick(candidates) : target);
             const a = Math.atan2(t.y - p.y, t.x - p.x) + rand(.09, -.09);
             spawnPlayerBullet(p.x + Math.cos(a) * 28, p.y + Math.sin(a) * 28, a, w.speed, w.damage, p, {
               radius: 4.4, life: 2.2, color: '#b896ff', trail: 22,
-              explode: w.radius * st.area * (fused('mortar') ? 1.25 : 1),
-              slow: w.slow, damageMul: fused('mortar') ? 1.25 : 1
+              explode: w.radius * st.area * (fused('mortar', p) ? 1.25 : 1),
+              slow: w.slow, damageMul: fused('mortar', p) ? 1.25 : 1
             });
           }
           addEffect({ type: 'muzzle', x: p.x + Math.cos(p.turretAngle) * 28, y: p.y + Math.sin(p.turretAngle) * 28, angle: p.turretAngle, life: .14, maxLife: .14, color: '#b896ff', radius: 12 });
@@ -3502,37 +3540,37 @@
       }
     }
     // deploy sentry
-    const sentryLvl = G.weapons.sentry || 0;
+    const sentryLvl = weaponsFor(p).sentry || 0;
     if (sentryLvl) {
       const w = WEAPONS.sentry.levels[Math.min(7, sentryLvl - 1)];
-      const count = w.count + (fused('sentry') ? 1 : 0);
+      const count = w.count + (fused('sentry', p) ? 1 : 0);
       p.sentryTimer -= dt;
       const owned = G.sentries.filter(s => s.owner === p && s.life > 0).length;
       if (p.sentryTimer <= 0 && owned < count) {
         G.sentries.push({
           x: clamp(p.x + rand(34, -34), 28, W - 28), y: clamp(p.y + rand(30, -30), 28, H - 28),
-          owner: p, life: w.life * (fused('sentry') ? 1.25 : 1), maxLife: w.life * (fused('sentry') ? 1.25 : 1),
-          range: w.range * (fused('sentry') ? 1.15 : 1), fire: w.fire * .85,
-          damage: w.damage * (fused('sentry') ? 1.25 : 1), fireCd: .3, angle: -Math.PI / 2, seed: rand(TAU)
+          owner: p, life: w.life * (fused('sentry', p) ? 1.25 : 1), maxLife: w.life * (fused('sentry', p) ? 1.25 : 1),
+          range: w.range * (fused('sentry', p) ? 1.15 : 1), fire: w.fire * .85,
+          damage: w.damage * (fused('sentry', p) ? 1.25 : 1), fireCd: .3, angle: -Math.PI / 2, seed: rand(TAU)
         });
         addEffect({ type: 'ring', x: p.x, y: p.y, radius: 24, life: .3, maxLife: .3, color: '#8fffe6' });
         p.sentryTimer = Math.max(.8, w.interval / st.attackSpeed * st.cdr);
       } else if (p.sentryTimer <= 0) p.sentryTimer = .4;
     }
     // meteor rain
-    const meteorLvl = G.weapons.meteor || 0;
+    const meteorLvl = weaponsFor(p).meteor || 0;
     if (meteorLvl) {
       const w = WEAPONS.meteor.levels[Math.min(7, meteorLvl - 1)];
       p.meteorTimer -= dt;
       if (p.meteorTimer <= 0) {
         const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
         if (candidates.length) {
-          const count = w.count + (fused('meteor') ? 1 : 0);
+          const count = w.count + (fused('meteor', p) ? 1 : 0);
           for (let i = 0; i < count; i++) {
             const target = candidates[(Math.random() * candidates.length) | 0];
             G.strikes.push({
               x: clamp(target.x + rand(42, -42), 30, W - 30), y: clamp(target.y + rand(42, -42), 30, H - 30),
-              radius: w.radius * st.area * (fused('meteor') ? 1.2 : 1), damage: w.damage * st.damage * (fused('meteor') ? 1.25 : 1), owner: p,
+              radius: w.radius * st.area * (fused('meteor', p) ? 1.2 : 1), damage: w.damage * st.damage * (fused('meteor', p) ? 1.25 : 1), owner: p,
               delay: w.delay, timer: w.delay, state: 'warn', color: '#ff7a2a'
             });
           }
@@ -3542,7 +3580,7 @@
       }
     }
     // rail cannon
-    const railLvl = G.weapons.rail || 0;
+    const railLvl = weaponsFor(p).rail || 0;
     if (railLvl) {
       const w = WEAPONS.rail.levels[Math.min(7, railLvl - 1)];
       p.railTimer -= dt;
@@ -3550,8 +3588,8 @@
         const target = nearestAttackable(p.x, p.y, 650);
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
-          spawnPlayerBullet(p.x + Math.cos(a) * 26, p.y + Math.sin(a) * 26, a, w.speed, w.damage * (fused('rail') ? 1.35 : 1), p, {
-            pierce: w.pierce, explode: w.explode * st.area * (fused('rail') ? 1.3 : 1), radius: 4.2, life: 1.15, color: '#9dbbff', trail: 42
+          spawnPlayerBullet(p.x + Math.cos(a) * 26, p.y + Math.sin(a) * 26, a, w.speed, w.damage * (fused('rail', p) ? 1.35 : 1), p, {
+            pierce: w.pierce, explode: w.explode * st.area * (fused('rail', p) ? 1.3 : 1), radius: 4.2, life: 1.15, color: '#9dbbff', trail: 42
           });
           addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 28, y: p.y + Math.sin(a) * 28, angle: a, life: .16, maxLife: .16, color: '#9dbbff', radius: 16 });
           addShake(2.5, .15); AUDIO.tone(70, .3, 'square', .025, 160);
@@ -5334,10 +5372,11 @@
       return;
     }
     if (pk.type === 'star') {
-      if ((G.weapons.cannon || 1) < 8) G.weapons.cannon = (G.weapons.cannon || 1) + 1;
+      const wset = weaponsFor(p);
+      if ((wset.cannon || 1) < 8) wset.cannon = (wset.cannon || 1) + 1;
       else {
-        const upgradable = Object.keys(G.weapons).filter(k => G.weapons[k] < 8);
-        if (upgradable.length) G.weapons[pick(upgradable)] += 1;
+        const upgradable = Object.keys(wset).filter(k => wset[k] < 8);
+        if (upgradable.length) wset[pick(upgradable)] += 1;
         else healPlayer(25, p);
       }
       recalcStats(false);
@@ -5374,21 +5413,38 @@
     addEffect({ type: 'ring', x: pk.x, y: pk.y, radius: 26, life: .4, maxLife: .4, color: item.color });
   }
   function addXp(amount, sourceP) {
-    G.xp += Math.max(1, amount * statsFor(sourceP).xpGain * ((G.runMod && G.runMod.xpMul) || 1));
+    const p = sourceP || G.player || (G.players && G.players[0]);
+    if (!p) return;
+    p.xp += Math.max(1, amount * statsFor(p).xpGain * ((G.runMod && G.runMod.xpMul) || 1));
     let leveled = false;
-    while (G.xp >= G.xpNext) {
-      G.xp -= G.xpNext;
-      G.level += 1;
-      G.pendingLevels += 1;
-      G.xpNext = xpNeeded(G.level);
+    while (p.xp >= p.xpNext) {
+      p.xp -= p.xpNext;
+      p.level += 1;
+      p.pendingLevels += 1;
+      p.xpNext = xpNeeded(p.level);
       leveled = true;
     }
+    if (p.index === 0) {
+      G.xp = p.xp;
+      G.xpNext = p.xpNext;
+      G.level = p.level;
+    }
     if (leveled) {
-      const p = sourceP || G.player;
       addEffect({ type: 'ring', x: p.x, y: p.y, radius: 42, life: .45, maxLife: .45, color: '#ffb52d' });
       addParticles(p.x, p.y, 14, '#ffd36b', 'spark', .8);
       G.loadoutDirty = true;
     }
+  }
+
+  function nextPendingPlayer() {
+    const players = G.players || [];
+    return players.find(p => p.pendingLevels > 0) || null;
+  }
+
+  function maybeOpenLevelUp() {
+    if (G.mode !== 'playing' || G.levelupPlayer) return;
+    const p = nextPendingPlayer();
+    if (p) openLevelUp(p);
   }
 
   /* ---------------- particles / updates ---------------- */
@@ -5484,24 +5540,28 @@
     { id: 'emergency_shield', name: '应急护盾', en: 'EMERGENCY BARRIER', icon: 'shield', color: '#79b9ff', desc: '立即获得 <b>40</b> 点护盾。', type: 'utility' }
   ];
 
-  function getUpgradeChoices() {
-    const tank = tankData();
-    const affinity = Array.from(new Set((G.twoPlayer ? [tankData(G.players[0]), tankData(G.players[1])] : [tank]).flatMap(t => t.affinity || [])));
+  function getUpgradeChoices(p) {
+    p = p || G.levelupPlayer || G.player || (G.players && G.players[0]);
+    const tank = tankData(p);
+    const affinity = tank.affinity || [];
+    const wset = weaponsFor(p);
+    const pset = passivesFor(p);
+    const fset = fusionsFor(p);
     const fusionCandidates = [];
     for (const f of Object.values(FUSIONS)) {
-      if (G.fusions[f.id]) continue;
-      if ((G.weapons[f.weapon] || 0) < f.weaponLevel) continue;
-      if ((G.passives[f.passive] || 0) < f.passiveLevel) continue;
+      if (fset[f.id]) continue;
+      if ((wset[f.weapon] || 0) < f.weaponLevel) continue;
+      if ((pset[f.passive] || 0) < f.passiveLevel) continue;
       fusionCandidates.push({
         kind: 'fusion', id: f.id, data: f, fusion: f, level: 0, nextLevel: 0, max: 0,
         accent: f.color, weight: 8
       });
     }
     const weaponCandidates = [];
-    const weaponCount = Object.keys(G.weapons).length;
+    const weaponCount = Object.keys(wset).length;
     for (const id of Object.keys(WEAPONS)) {
       const data = WEAPONS[id];
-      const lvl = G.weapons[id] || 0;
+      const lvl = wset[id] || 0;
       if (lvl >= 8) continue;
       if (lvl === 0 && weaponCount >= 6) continue;
       weaponCandidates.push({
@@ -5511,12 +5571,12 @@
       });
     }
     const passiveCandidates = [];
-    const passiveCount = Object.keys(G.passives).length;
+    const passiveCount = Object.keys(pset).length;
     for (const id of Object.keys(PASSIVES)) {
       const data = PASSIVES[id];
-      const lvl = G.passives[id] || 0;
+      const lvl = pset[id] || 0;
       if (lvl >= data.max) continue;
-      if (lvl === 0 && data.minLevel && G.level < data.minLevel) continue;
+      if (lvl === 0 && data.minLevel && p.level < data.minLevel) continue;
       if (lvl === 0 && passiveCount >= 6) continue;
       passiveCandidates.push({
         kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: data.max,
@@ -5542,12 +5602,12 @@
       if (!take(pool)) break;
     }
     if (picked.length && !picked.some(c => c.kind === 'passive') && passiveCandidates.length && picked.length >= 3) {
-      const p = weightedPick(passiveCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
-      if (p) picked[picked.length - 1] = p;
+      const alt = weightedPick(passiveCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
+      if (alt) picked[picked.length - 1] = alt;
     }
     if (picked.length && !picked.some(c => c.kind === 'weapon') && weaponCandidates.length && picked.length >= 3) {
-      const w = weightedPick(weaponCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
-      if (w) picked[picked.length - 1] = w;
+      const alt = weightedPick(weaponCandidates.filter(c => !picked.some(x => x.kind === c.kind && x.id === c.id)));
+      if (alt) picked[picked.length - 1] = alt;
     }
     const utilityPool = UTILITY_CARDS.slice();
     while (picked.length < 3 && utilityPool.length) {
@@ -5560,19 +5620,29 @@
   function syncLevelupFocus() {
     const g = Input.gamepad;
     const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
+    const owner = G.levelupPlayer;
+    const padOwner = G.twoPlayer ? 1 : 0;
+    if (!owner || owner.index !== padOwner) {
+      cards.forEach(card => card.classList.remove('is-pad'));
+      clearPadFocus();
+      return;
+    }
     cards.forEach((card, i) => {
       card.classList.toggle('is-pad', i === g.selectedCard);
       const tag = card.querySelector('.upgrade-card__pad');
-      if (tag) tag.textContent = g.levelupOwner || 'P1';
+      if (tag) tag.textContent = owner.label;
     });
     if (g.selectedCard >= 0 && cards[g.selectedCard]) setPadFocus(cards[g.selectedCard]);
     else clearPadFocus();
   }
 
   function moveLevelupSelection(dir, owner) {
+    const p = G.levelupPlayer;
+    const required = G.twoPlayer ? 'P2' : 'P1';
+    if (!p || p.label !== required || (owner && owner !== required)) { AUDIO.deny(); return; }
     const g = Input.gamepad;
     const count = Math.max(1, (G.currentChoices || []).length);
-    g.levelupOwner = owner || (G.twoPlayer ? 'P2' : 'P1');
+    g.levelupOwner = p.label;
     if (g.selectedCard < 0) g.selectedCard = dir > 0 ? 0 : count - 1;
     else g.selectedCard = (g.selectedCard + dir + count) % count;
     syncLevelupFocus();
@@ -5581,39 +5651,55 @@
 
   function updateLevelupPrompt() {
     const coop = !!G.twoPlayer;
-    if (U.levelupP1) U.levelupP1.innerHTML = coop
-      ? '<b>P1</b><em>键盘 1 / 2 / 3 直接选择</em>'
-      : '<b>P1</b><em>键盘 1 / 2 / 3 · 手柄 摇杆 + A</em>';
-    if (U.levelupP2) U.levelupP2.classList.toggle('is-hidden', !coop);
-    if (U.levelupCoopNote) U.levelupCoopNote.classList.toggle('is-hidden', !coop);
-    if (U.levelupKeyHint) U.levelupKeyHint.innerHTML = coop
-      ? '<kbd>P1</kbd> 1 / 2 / 3 直接选择'
-      : '<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择';
-    if (U.levelupPadHint) U.levelupPadHint.textContent = coop
+    const p = G.levelupPlayer || G.player;
+    const isP2 = !!(p && p.index === 1);
+    if (U.levelupP1) {
+      U.levelupP1.classList.toggle('is-active', !isP2);
+      U.levelupP1.innerHTML = coop
+        ? `<b>P1</b><em>${isP2 ? '等待 P2 选择' : '键盘 1 / 2 / 3 直接选择'}</em>`
+        : '<b>P1</b><em>键盘 1 / 2 / 3 · 手柄 摇杆 + A</em>';
+    }
+    if (U.levelupP2) {
+      U.levelupP2.classList.toggle('is-hidden', !coop);
+      U.levelupP2.classList.toggle('is-active', isP2);
+      U.levelupP2.innerHTML = `<b>P2</b><em>${isP2 ? '十字键 / 左摇杆 切换 · A 确认 · B 重掷' : '等待 P1 选择'}</em>`;
+    }
+    if (U.levelupCoopNote) {
+      U.levelupCoopNote.classList.toggle('is-hidden', !coop);
+      U.levelupCoopNote.textContent = `独立升级 // 仅 ${isP2 ? 'P2' : 'P1'} 可选择，另一名驾驶员等待`;
+    }
+    if (U.levelupKeyHint) U.levelupKeyHint.innerHTML = isP2
+      ? '<kbd>P2</kbd> 手柄选择'
+      : (coop ? '<kbd>P1</kbd> 1 / 2 / 3 直接选择' : '<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择');
+    if (U.levelupPadHint) U.levelupPadHint.textContent = isP2
       ? 'P2 手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷'
-      : '手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷';
+      : (coop ? 'P2 手柄将在自己的升级窗口启用' : '手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷');
+    if (U.rerollBtn) U.rerollBtn.disabled = isP2 || !p || p.rerolls <= 0;
+    if (U.rerollCount) U.rerollCount.textContent = String((p && p.rerolls) || 0);
   }
 
-  function openLevelUp() {
+  function openLevelUp(p) {
     if (G.mode !== 'playing' && G.mode !== 'levelup') return;
+    p = p || nextPendingPlayer();
+    if (!p) return;
     G.mode = 'levelup';
+    G.levelupPlayer = p;
     G.resolvingUpgrade = false;
     Input.gamepad.selectedCard = -1;
     Input.gamepad.levelupNeedsNeutral = true;
-    Input.gamepad.levelupOwner = G.twoPlayer ? 'P2' : 'P1';
+    Input.gamepad.levelupOwner = p.label;
     clearPadFocus();
-    G.currentChoices = getUpgradeChoices();
-    U.newLevel.textContent = String(G.level).padStart(2, '0');
+    G.currentChoices = getUpgradeChoices(p);
+    U.newLevel.textContent = String(p.level).padStart(2, '0');
     renderUpgradeCards(G.currentChoices);
     U.levelupScreen.classList.remove('hidden');
     updateLevelupPrompt();
-    U.rerollBtn.disabled = G.rerolls <= 0;
-    U.rerollCount.textContent = String(G.rerolls);
     G.lastFrame = performance.now();
     AUDIO.levelUp();
   }
 
   function renderUpgradeCards(choices) {
+    const ownerTag = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
     const cards = choices.map((c, i) => {
       const data = c.data;
       let typeLabel = c.kind === 'fusion' ? '合成协议 // FUSION' : c.kind === 'weapon' ? '武器模块 // WEAPON' : c.kind === 'passive' ? '被动协议 // PASSIVE' : '战地补给 // SUPPLY';
@@ -5624,7 +5710,7 @@
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       } else if (c.kind !== 'utility') {
         const count = c.kind === 'weapon' ? 8 : c.max;
-        for (let p = 0; p < count; p++) pips += `<i class="${p < c.nextLevel ? 'is-on' : ''}"></i>`;
+        for (let n = 0; n < count; n++) pips += `<i class="${n < c.nextLevel ? 'is-on' : ''}"></i>`;
       } else {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       }
@@ -5633,7 +5719,7 @@
       const icon = c.kind === 'utility' ? c.utility.icon : data.icon;
       const color = c.kind === 'utility' ? c.utility.color : data.color;
       const role = c.kind === 'utility' ? '即时补给' : c.kind === 'fusion' ? '武器进化' : (data.role || '') + (data.focus ? ' · ' + data.focus : '');
-      return `<button class="upgrade-card" type="button" data-index="${i}" style="--accent:${color}" aria-label="选择 ${name}">
+      return `<button class="upgrade-card" type="button" data-index="${i}" style="--accent:${color}" aria-label="${ownerTag} 选择 ${name}">
         <span class="upgrade-card__corner" aria-hidden="true"></span>
         <div class="upgrade-card__top"><span class="upgrade-card__type">${typeLabel}</span><span class="upgrade-card__level">${levelLabel}</span></div>
         <div class="upgrade-card__icon"><canvas data-icon="${icon}" data-color="${color}" data-size="82"></canvas></div>
@@ -5644,7 +5730,7 @@
           <p class="upgrade-card__desc">${desc}</p>
         </div>
         <div class="upgrade-card__pips">${pips}</div>
-        <span class="upgrade-card__pad" aria-hidden="true">${G.twoPlayer ? 'P2' : 'P1'}</span>
+        <span class="upgrade-card__pad" aria-hidden="true">${ownerTag}</span>
         <span class="upgrade-card__key">${i + 1}</span>
       </button>`;
     }).join('');
@@ -5652,64 +5738,71 @@
     ICONS.applyAll(U.upgradeCards);
   }
 
-  function chooseUpgrade(index) {
+  function chooseUpgrade(index, owner) {
     if (G.mode !== 'levelup' || G.resolvingUpgrade) return;
+    const p = G.levelupPlayer;
+    if (!p) return;
+    if (owner && ((owner === 'P2' && p.index !== 1) || (owner === 'P1' && p.index !== 0))) {
+      AUDIO.deny();
+      return;
+    }
     const c = G.currentChoices[index];
     if (!c) return;
     G.resolvingUpgrade = true;
     AUDIO.confirm();
     if (c.kind === 'fusion') {
-      G.fusions[c.id] = true;
-      showToast(`合成完成 // ${c.fusion.name}`, 'gold');
-      addEffect({ type: 'ring', x: G.player.x, y: G.player.y, radius: 90, life: .8, maxLife: .8, color: c.fusion.color });
-      addParticles(G.player.x, G.player.y, 28, c.fusion.color, 'spark', 1.6);
+      p.fusions[c.id] = true;
+      showToast(`${p.label} 合成完成 // ${c.fusion.name}`, 'gold');
+      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 90, life: .8, maxLife: .8, color: c.fusion.color });
+      addParticles(p.x, p.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
-      const cur = G.weapons[c.id] || 0;
-      G.weapons[c.id] = Math.min(8, cur + 1);
-      if (cur === 0) G.weaponCds[c.id] = .5;
-      showToast(`武器解锁 // ${c.data.name}`, 'cyan');
+      const cur = p.weapons[c.id] || 0;
+      p.weapons[c.id] = Math.min(8, cur + 1);
+      if (cur === 0) p.weaponCds[c.id] = .5;
+      showToast(`${p.label} 武器解锁 // ${c.data.name}`, 'cyan');
     } else if (c.kind === 'passive') {
-      const cur = G.passives[c.id] || 0;
-      G.passives[c.id] = Math.min(c.data.max, cur + 1);
-      if (c.id === 'armor') for (const p of G.players) healPlayer(18, p);
-      showToast(`协议升级 // ${c.data.name}`, 'cyan');
+      const cur = p.passives[c.id] || 0;
+      p.passives[c.id] = Math.min(c.data.max, cur + 1);
+      if (c.id === 'armor') healPlayer(18, p);
+      showToast(`${p.label} 协议升级 // ${c.data.name}`, 'cyan');
     } else if (c.kind === 'utility') {
-      if (c.id === 'field_repair') for (const p of G.players) healPlayer(p.maxHp * .35, p);
+      if (c.id === 'field_repair') healPlayer(p.maxHp * .35, p);
       else if (c.id === 'pulse') {
         G.enemyBullets = [];
         for (const e of G.enemies) {
           if (e.dead) continue;
-          if (G.players.some(p => dist(e.x, e.y, p.x, p.y) < 240)) damageEnemy(e, 90 * G.stats.damage, false, 'pulse');
+          if (dist(e.x, e.y, p.x, p.y) < 240) damageEnemy(e, 90 * statsFor(p).damage, false, 'pulse', p);
         }
-      } else if (c.id === 'emergency_shield') for (const p of G.players) p.shield = Math.max(p.shield, 40);
-      showToast(`补给到位 // ${c.utility.name}`, 'cyan');
+      } else if (c.id === 'emergency_shield') p.shield = Math.max(p.shield, 40);
+      showToast(`${p.label} 补给到位 // ${c.utility.name}`, 'cyan');
     }
     recalcStats(false);
-    G.pendingLevels = Math.max(0, G.pendingLevels - 1);
+    p.pendingLevels = Math.max(0, p.pendingLevels - 1);
     G.loadoutDirty = true;
-    for (const p of G.players) {
-      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 50, life: .55, maxLife: .55, color: c.accent });
-      addParticles(p.x, p.y, 10, c.accent, 'spark', .9);
-    }
+    addEffect({ type: 'ring', x: p.x, y: p.y, radius: 50, life: .55, maxLife: .55, color: c.accent });
+    addParticles(p.x, p.y, 10, c.accent, 'spark', .9);
     updateHUD();
-    if (G.pendingLevels > 0) {
-      setTimeout(() => {
-        if (G.mode === 'levelup') { openLevelUp(); }
-      }, 180);
-    } else {
+    setTimeout(() => {
+      if (G.mode !== 'levelup') return;
+      if (p.pendingLevels > 0) { openLevelUp(p); return; }
+      const next = nextPendingPlayer();
+      if (next) { openLevelUp(next); return; }
       G.mode = 'playing';
+      G.levelupPlayer = null;
       U.levelupScreen.classList.add('hidden');
       G.lastFrame = performance.now();
       G.resolvingUpgrade = false;
-    }
+    }, 180);
   }
 
-  function rerollUpgrades() {
-    if (G.mode !== 'levelup' || G.rerolls <= 0 || G.resolvingUpgrade) { AUDIO.deny(); return; }
-    G.rerolls -= 1;
-    U.rerollCount.textContent = String(G.rerolls);
-    U.rerollBtn.disabled = G.rerolls <= 0;
-    G.currentChoices = getUpgradeChoices();
+  function rerollUpgrades(owner) {
+    const p = G.levelupPlayer;
+    if (!p || G.mode !== 'levelup' || p.rerolls <= 0 || G.resolvingUpgrade) { AUDIO.deny(); return; }
+    if (owner && ((owner === 'P2' && p.index !== 1) || (owner === 'P1' && p.index !== 0))) { AUDIO.deny(); return; }
+    p.rerolls -= 1;
+    U.rerollCount.textContent = String(p.rerolls);
+    U.rerollBtn.disabled = p.index === 1 || p.rerolls <= 0;
+    G.currentChoices = getUpgradeChoices(p);
     Input.gamepad.selectedCard = -1;
     Input.gamepad.levelupNeedsNeutral = true;
     clearPadFocus();
@@ -5734,12 +5827,24 @@
     const hpPct = clamp(p.hp / p.maxHp * 100, 0, 100);
     const progress = clamp(G.elapsed / TOTAL_TIME * 100, 0, 100);
     const remain = Math.max(0, TOTAL_TIME - G.elapsed);
-    const xpPct = clamp(G.xp / G.xpNext * 100, 0, 100);
+    const xpPct = clamp(p.xp / p.xpNext * 100, 0, 100);
     U.hpMeter.style.width = `${hpPct}%`;
     U.xpMeter.style.width = `${xpPct}%`;
     U.hpText.textContent = `${Math.ceil(p.hp)} / ${Math.ceil(p.maxHp)}`;
-    U.xpText.textContent = `${Math.floor(G.xp)} / ${Math.ceil(G.xpNext)}`;
-    U.levelLabel.textContent = String(G.level).padStart(2, '0');
+    U.xpText.textContent = `${Math.floor(p.xp)} / ${Math.ceil(p.xpNext)}`;
+    U.levelLabel.textContent = String(p.level).padStart(2, '0');
+    const p2 = G.players && G.players[1];
+    if (p2 && U.coopXpMeter2) {
+      U.coopLv2.textContent = String(p2.level).padStart(2, '0');
+      U.coopXp2.textContent = `${Math.floor(p2.xp)} / ${Math.ceil(p2.xpNext)}`;
+      U.coopXpMeter2.style.width = `${clamp(p2.xp / p2.xpNext * 100, 0, 100)}%`;
+      const build = Object.entries(p2.weapons)
+        .filter(([id, lvl]) => lvl > 0 && WEAPONS[id])
+        .map(([id, lvl]) => `${WEAPONS[id].short} ${lvl}`)
+        .slice(0, 4).join(' / ') || '主炮 1';
+      U.coopBuild2.innerHTML = `<b>P2</b> // ${build}`;
+    }
+    G.xp = p.xp; G.xpNext = p.xpNext; G.level = p.level;
     U.statAtk.textContent = `${Math.round(G.stats.damage * 100)}`;
     U.statSpd.textContent = `${Math.round(p.speed / PLAYER_BASE.speed * 100)}`;
     U.statCrit.textContent = `${Math.round(G.stats.crit * 100)}%`;
@@ -5774,7 +5879,7 @@
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 // 拉开距离，先吃维修包。';
       else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 // 手动瞄准可拆墙。';
       else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 // 保持移动，别被包夹。';
-      else if (G.weapons.flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
+      else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
       else U.sideTip.textContent = '提示 // 砖墙可打碎，钢板不可。';
     }
     U.clockLabel.textContent = fmtTime(Math.max(0, TOTAL_TIME - G.elapsed));
@@ -5783,7 +5888,7 @@
       U.mCoreBar.style.width = `${progress}%`;
       if (U.mBaseBar) U.mBaseBar.style.width = `${basePct}%`;
       U.mHpBar.style.width = `${hpPct}%`;
-      U.mLevel.textContent = String(G.level).padStart(2, '0');
+      U.mLevel.textContent = String(p.level).padStart(2, '0');
       U.mCoreBar.parentElement.parentElement.classList.toggle('is-low', false);
       if (U.mBaseBar) U.mBaseBar.parentElement.parentElement.classList.toggle('is-low', basePct < 30);
       U.mHpBar.parentElement.parentElement.classList.toggle('is-low', hpPct < 30);
@@ -6687,7 +6792,7 @@
       'gameLayout', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'slotCount', 'loadoutList',
-      'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
+      'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
@@ -6806,10 +6911,10 @@
     U.nextBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.nextStageIndex, G.lastCoop); });
     U.againBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); });
     U.backBtn.addEventListener('click', returnToMenu);
-    U.rerollBtn.addEventListener('click', rerollUpgrades);
+    U.rerollBtn.addEventListener('click', () => rerollUpgrades('P1'));
     U.upgradeCards.addEventListener('click', e => {
       const card = e.target.closest('.upgrade-card');
-      if (card) chooseUpgrade(parseInt(card.dataset.index, 10));
+      if (card) chooseUpgrade(parseInt(card.dataset.index, 10), 'P1');
     });
     U.pauseScreen.addEventListener('click', e => { if (e.target.classList.contains('overlay__backdrop')) resumeGame(); });
     U.levelupScreen.addEventListener('click', e => { if (e.target.classList.contains('overlay__backdrop')) { /* must choose */ } });
@@ -6853,16 +6958,18 @@
       }
       if (G.mode === 'levelup') {
         const g = Input.gamepad;
-        if (e.code === 'Digit1' || e.code === 'Numpad1') chooseUpgrade(0);
-        else if (e.code === 'Digit2' || e.code === 'Numpad2') chooseUpgrade(1);
-        else if (e.code === 'Digit3' || e.code === 'Numpad3') chooseUpgrade(2);
-        else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') { e.preventDefault(); moveLevelupSelection(-1, 'P1'); }
-        else if (e.code === 'ArrowRight' || e.code === 'ArrowDown') { e.preventDefault(); moveLevelupSelection(1, 'P1'); }
-        else if (e.code === 'Enter' || e.code === 'Space') {
-          e.preventDefault();
-          if (g.selectedCard < 0) { AUDIO.deny(); return; }
-          chooseUpgrade(g.selectedCard);
-        } else if (e.code === 'KeyR') rerollUpgrades();
+        if (G.levelupPlayer && G.levelupPlayer.index === 0) {
+          if (e.code === 'Digit1' || e.code === 'Numpad1') chooseUpgrade(0, 'P1');
+          else if (e.code === 'Digit2' || e.code === 'Numpad2') chooseUpgrade(1, 'P1');
+          else if (e.code === 'Digit3' || e.code === 'Numpad3') chooseUpgrade(2, 'P1');
+          else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') { e.preventDefault(); moveLevelupSelection(-1, 'P1'); }
+          else if (e.code === 'ArrowRight' || e.code === 'ArrowDown') { e.preventDefault(); moveLevelupSelection(1, 'P1'); }
+          else if (e.code === 'Enter' || e.code === 'Space') {
+            e.preventDefault();
+            if (g.selectedCard < 0) { AUDIO.deny(); return; }
+            chooseUpgrade(g.selectedCard, 'P1');
+          } else if (e.code === 'KeyR') rerollUpgrades('P1');
+        }
         return;
       }
       if (G.mode === 'menu') {
@@ -7187,14 +7294,15 @@
         // Do not auto-select the first card: wait for a neutral stick/d-pad state,
         // then require an explicit direction before showing the selection frame.
         if (g.levelupNeedsNeutral && Math.hypot(g.x, g.y) < .24) g.levelupNeedsNeutral = false;
-        if (!g.levelupNeedsNeutral) {
+        const padOwnerLabel = G.twoPlayer ? 'P2' : 'P1';
+        if (!g.levelupNeedsNeutral && G.levelupPlayer && G.levelupPlayer.label === padOwnerLabel) {
           const left = just(14) || just(12) || just(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
           const right = just(15) || just(13) || just(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
-          if (left) moveLevelupSelection(-1, 'P2');
-          if (right) moveLevelupSelection(1, 'P2');
-          if (just(0) && g.selectedCard >= 0) { AUDIO.init(); chooseUpgrade(g.selectedCard); }
+          if (left) moveLevelupSelection(-1, padOwnerLabel);
+          if (right) moveLevelupSelection(1, padOwnerLabel);
+          if (just(0) && g.selectedCard >= 0) { AUDIO.init(); chooseUpgrade(g.selectedCard, padOwnerLabel); }
         }
-        if (just(1)) rerollUpgrades();
+        if (just(1)) rerollUpgrades(padOwnerLabel);
         if (g.selectedCard < 0) syncLevelupFocus();
       } else if (ctx) {
         if (padStep) movePadFocus(padStep.dx, padStep.dy);
@@ -7321,7 +7429,7 @@
     updateBullets(dt);
     updatePickups(dt);
     updateEffects(dt);
-    if (G.mode === 'playing' && G.pendingLevels > 0) openLevelUp();
+    if (G.mode === 'playing') maybeOpenLevelUp();
   }
 
   function drawGame(t) {
