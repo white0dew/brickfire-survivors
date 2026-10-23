@@ -425,6 +425,158 @@
       name: '泰坦·攻城型', en: 'SIEGE TITAN', hp: 18000, speed: 19, damage: 38, fire: 1.45, bulletSpeed: 235,
       xp: 280, radius: 26, color: '#9a5b65', dark: '#241317', light: '#ffd8ca', core: '#ff4f58', class: 'boss', boss: true,
       codex: '泰坦级攻城平台。重炮、弹幕和召唤编队，会同时威胁车体与基地。'
+    },
+
+    // ---- PER-MAP BOSS ROSTER ----
+    bossHive: {
+      name: '巢母·感染型', en: 'HIVE MATRON', hp: 16000, speed: 16, damage: 30, fire: 2.2, bulletSpeed: 190,
+      xp: 280, radius: 30, color: '#6f7f3a', dark: '#1c2411', light: '#d8ff9a', core: '#a9e56e', class: 'boss', boss: true,
+      bossKind: 'hive', bossScale: 1.38, tag: 'HIVE // MATRON', domain: 'ground',
+      codex: '霓虹沼泽的巢母。不断产出分裂运输车与毒素池；先清幼体，别在毒池里和它换血。'
+    },
+    bossCryo: {
+      name: '冰棺·堡垒型', en: 'CRYO BASTION', hp: 21000, speed: 12, damage: 34, fire: 2.0, bulletSpeed: 220,
+      xp: 300, radius: 28, color: '#5c7f96', dark: '#17232c', light: '#c8f4ff', core: '#7fe8ff', class: 'boss', boss: true,
+      bossKind: 'cryo', bossScale: 1.42, tag: 'CRYO // BASTION', domain: 'ground',
+      codex: '霜蚀边陲的冰棺堡垒。晶体护甲周期性展开，发射减速冰锥；护甲展开时绕后或用爆炸破甲。'
+    },
+    bossDread: {
+      name: '赤潮·无畏舰', en: 'REDTIDE DREADNOUGHT', hp: 24000, speed: 14, damage: 36, fire: 1.8, bulletSpeed: 250,
+      xp: 320, radius: 32, color: '#7a3440', dark: '#201016', light: '#ffb0a0', core: '#ff5b4a', class: 'boss', boss: true,
+      bossKind: 'dread', bossScale: 1.5, tag: 'DREAD // REDTIDE', domain: 'ground',
+      codex: '赤潮港的无畏舰。舷侧齐射与鱼雷扇面覆盖大片水域，保持斜向移动，别正对它的侧舷。'
+    },
+    bossBurrower: {
+      name: '熔渣·掘地虫', en: 'SLAG BURROWER', hp: 22000, speed: 22, damage: 40, fire: 2.4, bulletSpeed: 200,
+      xp: 300, radius: 30, color: '#8a4b2c', dark: '#24130c', light: '#ffbe7a', core: '#ff8a3a', class: 'boss', boss: true,
+      bossKind: 'burrower', bossScale: 1.45, tag: 'BURROW // SLAG', domain: 'ground',
+      codex: '余烬高架下的巨虫。会潜地突进并留下熔渣喷发；听到钻头震动就离开落点。'
+    },
+    bossSkycarrier: {
+      name: '苍穹·航母', en: 'SKY CARRIER', hp: 23000, speed: 18, damage: 32, fire: 1.7, bulletSpeed: 240,
+      xp: 320, radius: 34, color: '#6f5540', dark: '#201811', light: '#ffd7a4', core: '#5ff0ce', class: 'boss', boss: true,
+      bossKind: 'skycarrier', bossScale: 1.55, tag: 'SKY // CARRIER', domain: 'air',
+      codex: '轨道墓场上空的无人机母舰。持续放出侦察无人机与俯冲翼，并用扫射航线封锁地面。'
+    },
+    bossXenarch: {
+      name: '异星·执政官', en: 'XENARCH', hp: 26000, speed: 20, damage: 38, fire: 1.6, bulletSpeed: 270,
+      xp: 360, radius: 30, color: '#59458f', dark: '#1a1230', light: '#cbb8ff', core: '#9b7bff', class: 'boss', boss: true,
+      bossKind: 'xenarch', bossScale: 1.5, tag: 'XENARCH // ZERO', domain: 'hover',
+      codex: '零号反应堆的异星执政官。瞬移、交叉光束与护盾节点同时出现；先拆节点再集火本体。'
+    },
+    bossSentinel: {
+      name: '终焉·穹顶哨兵', en: 'DOME SENTINEL', hp: 28000, speed: 10, damage: 42, fire: 2.0, bulletSpeed: 230,
+      xp: 380, radius: 34, color: '#6e6250', dark: '#211c15', light: '#ffe6a8', core: '#ffcf5a', class: 'boss', boss: true,
+      bossKind: 'sentinel', bossScale: 1.55, tag: 'SENTINEL // DOME', domain: 'ground',
+      codex: '终焉穹顶的旋转护盾核心。护盾展开时正面减伤，旋转结束后露出核心；抓窗口输出。'
+    },
+    bossSkyfortress: {
+      name: '天穹·要塞', en: 'SKY FORTRESS', hp: 30000, speed: 12, damage: 40, fire: 1.8, bulletSpeed: 220,
+      xp: 400, radius: 38, color: '#5b6570', dark: '#1a2025', light: '#d8e8f0', core: '#7fe8ff', class: 'boss', boss: true,
+      bossKind: 'skyfortress', bossScale: 1.65, tag: 'FORTRESS // CITADEL', domain: 'air',
+      codex: '天穹堡垒的悬浮要塞。四角炮塔轮转轰炸，并释放炮艇；优先击破角部炮塔减少弹幕。'
+    },
+    bossLeviathan: {
+      name: '深渊·利维坦', en: 'ABYSS LEVIATHAN', hp: 32000, speed: 14, damage: 44, fire: 2.1, bulletSpeed: 210,
+      xp: 420, radius: 36, color: '#3f6f70', dark: '#102324', light: '#a8f0e0', core: '#5ff0ce', class: 'boss', boss: true,
+      bossKind: 'leviathan', bossScale: 1.6, tag: 'LEVIATHAN // ABYSS', domain: 'hover',
+      codex: '深渊泵站深处的触手巨兽。触手拍击与毒潮会封锁走位，攻击间隙集中在核心。'
+    },
+    bossSeraph: {
+      name: '日冕·炽天使', en: 'SOLAR SERAPH', hp: 34000, speed: 16, damage: 46, fire: 1.9, bulletSpeed: 260,
+      xp: 440, radius: 34, color: '#8a5a2f', dark: '#2a1710', light: '#ffe0a0', core: '#ffb52d', class: 'boss', boss: true,
+      bossKind: 'seraph', bossScale: 1.55, tag: 'SERAPH // SOLAR', domain: 'hover',
+      codex: '日冕裂谷的恒星守卫。环绕日珥球与放射状耀斑交替出现，利用间隙靠近。'
+    },
+    bossWarlord: {
+      name: '边境·霸主', en: 'BORDER WARLORD', hp: 36000, speed: 18, damage: 48, fire: 1.5, bulletSpeed: 250,
+      xp: 480, radius: 34, color: '#7b2f2f', dark: '#241010', light: '#ffb18a', core: '#ff4f58', class: 'boss', boss: true,
+      bossKind: 'warlord', bossScale: 1.6, tag: 'WARLORD // THRONE', domain: 'ground',
+      codex: '边境王座的主人。召唤封印守卫、冲锋与重炮轮换；最后一战没有安全角落。'
+    },
+
+    // ---- EXPANSION PILOT: Rust Legion ground units ----
+    mortar: {
+      name: '炉膛迫击车', en: 'FURNACE MORTAR', hp: 95, speed: 26, damage: 18, fire: 3.8, bulletSpeed: 0,
+      xp: 6, radius: 14, color: '#b76038', dark: '#4a2318', light: '#ffb279', core: '#ffcf5a', class: 'medium',
+      domain: 'ground', ai: 'artillery', role: 'artillery', tier: 1, size: 1.02,
+      codex: '曲射单位。会预判车体位置，延迟后落下燃烧弹；看到地面红圈就离开。'
+    },
+    bulwark: {
+      name: '盾墙车', en: 'BULWARK', hp: 420, speed: 20, damage: 16, fire: 2.8, bulletSpeed: 210,
+      xp: 26, radius: 18, color: '#a85a32', dark: '#3a1c12', light: '#ffb87a', core: '#ffb52d', class: 'heavy',
+      domain: 'ground', ai: 'shield', role: 'tank', tier: 2, size: 1.25,
+      codex: '正面装有推土铲的重装单位。正面减伤极高，绕后、电弧和曲射能有效处理。'
+    },
+    minelayer: {
+      name: '布雷履带', en: 'MINELAYER', hp: 90, speed: 32, damage: 12, fire: 0, bulletSpeed: 0,
+      xp: 5, radius: 12, color: '#9a7b3e', dark: '#3c3117', light: '#ffdd8a', core: '#ffcf5a', class: 'light',
+      domain: 'ground', ai: 'minelayer', role: 'trapper', tier: 1, size: .95,
+      codex: '移动时在身后布设感应雷。不要沿着它的旧路线追击；远程打掉地雷。'
+    },
+    splitter: {
+      name: '分裂运输车', en: 'SPLITTER', hp: 300, speed: 26, damage: 15, fire: 2.5, bulletSpeed: 220,
+      xp: 18, radius: 16, color: '#a66a42', dark: '#42251a', light: '#e9a878', core: '#ff9d5a', class: 'medium',
+      domain: 'ground', ai: 'splitter', role: 'carrier', tier: 2, size: 1.12,
+      codex: '死亡时分裂成三只小型履带。尽量用范围伤害一次清干净，避免被碎片包围。'
+    },
+    scrap: {
+      name: '碎片履带', en: 'SCRAP RUNNER', hp: 18, speed: 62, damage: 6, fire: 0, bulletSpeed: 0,
+      xp: 1, radius: 7, color: '#b3774b', dark: '#3a2418', light: '#ffc08a', core: '#ff8a4a', class: 'light',
+      domain: 'ground', ai: 'rusher', role: 'rusher', tier: 1, size: .7,
+      codex: '分裂运输车死亡后掉出的高速碎片。血少、速度快，优先用范围武器清掉。'
+    },
+
+    // ---- EXPANSION PILOT: Sky Swarm air units ----
+    drone: {
+      name: '侦察无人机', en: 'RECON DRONE', hp: 48, speed: 70, damage: 6, fire: 2.2, bulletSpeed: 280,
+      xp: 3, radius: 8, color: '#b8753e', dark: '#3b2416', light: '#ffcf8a', core: '#5ff0ce', class: 'light',
+      domain: 'air', ai: 'airOrbit', role: 'rusher', tier: 1, size: .8,
+      codex: '四旋翼侦察机。会绕着目标盘旋点射，完全无视地面墙体和水域；看它的地面影子。'
+    },
+    strafer: {
+      name: '俯冲翼', en: 'STRAFER', hp: 160, speed: 62, damage: 14, fire: 3.2, bulletSpeed: 300,
+      xp: 9, radius: 11, color: '#b97945', dark: '#3b2418', light: '#ffd19a', core: '#5ff0ce', class: 'medium',
+      domain: 'air', ai: 'airStrafe', role: 'bomber', tier: 2, size: .9,
+      codex: '会先锁定一条扫射路线，再俯冲扫过。红线出现后立刻离开，别和它比直线速度。'
+    },
+    skybomber: {
+      name: '轰炸机', en: 'SKY BOMBER', hp: 230, speed: 38, damage: 20, fire: 4.2, bulletSpeed: 0,
+      xp: 13, radius: 15, color: '#a9693d', dark: '#352215', light: '#ffd7a4', core: '#ffcf5a', class: 'heavy',
+      domain: 'air', ai: 'airBomber', role: 'artillery', tier: 2, size: 1.15,
+      codex: '重型空中平台。沿航线投放三枚炸弹，落点会提前标记；优先在投弹前打掉。'
+    },
+    gunship: {
+      name: '炮艇', en: 'GUNSHIP', hp: 360, speed: 26, damage: 12, fire: 1.9, bulletSpeed: 250,
+      xp: 16, radius: 17, color: '#9e6c45', dark: '#322116', light: '#e8c49b', core: '#ffcf5a', class: 'heavy',
+      domain: 'air', ai: 'airGunship', role: 'tank', tier: 2, size: 1.2,
+      codex: '悬停炮艇。会在中距离持续压制，逼迫车体离开掩体；用对空爆发或绕到侧后方。'
+    },
+
+    // ---- EXPANSION PILOT: Xeno Fleet hover units ----
+    saucer: {
+      name: '侦察飞碟', en: 'XENO SAUCER', hp: 72, speed: 54, damage: 8, fire: 2.6, bulletSpeed: 260,
+      xp: 5, radius: 11, color: '#6f5a9c', dark: '#241c39', light: '#c8b8ff', core: '#5ff0ce', class: 'light',
+      domain: 'hover', ai: 'xenoHover', role: 'ranged', tier: 1, size: .95,
+      codex: '异星侦察飞碟。悬浮移动、无视水域，会横向拉扯并发射青色光束。'
+    },
+    beamfrigate: {
+      name: '光束护卫舰', en: 'BEAM FRIGATE', hp: 320, speed: 24, damage: 24, fire: 4.5, bulletSpeed: 0,
+      xp: 16, radius: 15, color: '#614c91', dark: '#211832', light: '#c4a9ff', core: '#7fe8ff', class: 'heavy',
+      domain: 'hover', ai: 'xenoBeam', role: 'artillery', tier: 2, size: 1.15,
+      codex: '异星光束舰。蓄能后沿直线投射三段光束，先出现紫色警示线；离开射线。'
+    },
+    warper: {
+      name: '跃迁者', en: 'WARPER', hp: 240, speed: 46, damage: 18, fire: 2.8, bulletSpeed: 280,
+      xp: 14, radius: 13, color: '#5b4f99', dark: '#1d1734', light: '#b9a8ff', core: '#5ff0ce', class: 'medium',
+      domain: 'hover', ai: 'xenoWarper', role: 'ambusher', tier: 2, size: 1.0,
+      codex: '会周期性传送到目标侧后方。传送前有空间扭曲，保持移动并准备近身爆发。'
+    },
+    warden: {
+      name: '异星守卫', en: 'XENO WARDEN', hp: 380, speed: 22, damage: 0, fire: 0, bulletSpeed: 0,
+      xp: 18, radius: 16, color: '#55458c', dark: '#1b1533', light: '#b9a8ff', core: '#9b7bff', class: 'elite',
+      domain: 'hover', ai: 'xenoWarden', role: 'support', tier: 2, size: 1.1,
+      codex: '异星护盾节点。会给周围敌人提供减伤护盾，自己不攻击；优先集火破盾。'
     }
   };
 

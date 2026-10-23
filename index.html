@@ -7,7 +7,7 @@
   <title>钢铁余烬 // STEEL EMBERS</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261023-03">
+  <link rel="stylesheet" href="css/style.css?v=20261023-07">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -101,6 +101,7 @@
             <button id="fusionBtn" class="text-btn" type="button">合成表 <span>⌁</span></button>
             <button id="codexBtn" class="text-btn" type="button">敌人图鉴 <span>▦</span></button>
             <button id="itemBtn" class="text-btn" type="button">道具说明 <span>▤</span></button>
+            <button id="artBtn" class="text-btn art-test-btn is-hidden" type="button">视觉试验 <span>◈</span></button>
             <button id="saveBtn" class="text-btn" type="button">存档管理 <span>⇅</span></button>
           </div>
 
@@ -176,7 +177,7 @@
             <div id="dangerTint" class="danger-tint" aria-hidden="true"></div>
             <div id="toastStack" class="toast-stack" aria-live="polite"></div>
             <div id="bossHud" class="boss-hud is-hidden">
-              <div class="boss-hud__meta"><span>BOSS // 泰坦·攻城型</span><b id="bossHpLabel">100%</b></div>
+              <div class="boss-hud__meta"><span>BOSS // 未知单位</span><b id="bossHpLabel">100%</b></div>
               <div class="boss-hud__bar"><i id="bossHpBar"></i></div>
             </div>
             <div id="mobileHud" class="mobile-hud" aria-hidden="true">
@@ -281,12 +282,17 @@
           <div class="levelup__eyebrow"><span class="spark"></span> EMBER RESONANCE / 余烬共鸣</div>
           <h2 id="levelupTitle"><span>LEVEL</span> <strong id="newLevel">02</strong> <em>战术升级</em></h2>
           <p>选择一项协议，装进这具钢铁棺材。</p>
+          <div id="levelupPlayers" class="levelup__players">
+            <span id="levelupP1" class="levelup__player levelup__player--p1"><b>P1</b><em>1 / 2 / 3 直接选择</em></span>
+            <span id="levelupP2" class="levelup__player levelup__player--p2 is-hidden"><b>P2</b><em>十字键 / 左摇杆 切换 · A 确认</em></span>
+          </div>
+          <div id="levelupCoopNote" class="levelup__coop-note is-hidden">共享升级 // 任一人确认，双方同时获得同一套模块</div>
         </div>
         <div id="upgradeCards" class="upgrade-cards"></div>
         <div class="levelup__foot">
-          <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择</span>
+          <span id="levelupKeyHint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择</span>
           <button id="rerollBtn" class="reroll-btn" type="button"><span>↻</span> 重掷协议 <b id="rerollCount">2</b></button>
-          <span class="levelup__hint">每次升级暂停战场</span>
+          <span id="levelupPadHint" class="levelup__hint">手柄：十字键 / 左摇杆切换 · A 确认</span>
         </div>
       </div>
     </section>
@@ -343,12 +349,12 @@
         <div class="how__grid">
           <article><span class="how__num">01</span><h3>驾驶</h3><p><kbd>WASD</kbd> / 方向键 / 左摇杆移动。主炮自动索敌，封印核心优先于普通敌人；鼠标或右摇杆可改写瞄准方向。RT 可强制补火，<kbd>B</kbd> / 手柄 <kbd>Y</kbd> 回程。</p></article>
           <article><span class="how__num">02</span><h3>生存</h3><p>敌人只追最近的存活车体。按 <kbd>SPACE</kbd> / <kbd>A</kbd> 点火冲刺，短暂无敌。活到 <b>06:00</b> 即撤离；双人时一人倒地可靠近救援，两人都倒下才失败。攻击封印会弹出增援小兵，击破后唤醒守卫。基地本身不攻击，拾取「哨戒炮塔」后才会部署防御塔。</p></article>
-          <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；两人都会获得同一套模块。战场共有 <b>38 种</b>升级协议（16 武器 + 22 被动）、<b>16 条</b>进化路线，机库的 20 台底盘各有不同开局。</p></article>
+          <article><span class="how__num">03</span><h3>成长</h3><p>拾取敌人掉落的青色余烬。双人共享等级与武器构筑，升级时从三项协议中选择；P1 用 <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>，P2 用手柄十字键/左摇杆切换、<kbd>A</kbd> 确认，任一人确认后两人同时获得同一套模块。手柄升级不会默认选第一项，先推动方向才会出现选择框。战场共有 <b>38 种</b>升级协议（16 武器 + 22 被动）、<b>16 条</b>进化路线，机库的 20 台底盘各有不同开局。</p></article>
           <article><span class="how__num">04</span><h3>破坏 / 合成</h3><p>砖墙可被炮弹击碎，钢板不可。水系默认阻挡履带，但可通过「两栖履带」或「两栖浮渡」通行；「相位弹芯」可让炮弹穿过钢板而不损伤钢板。武器 Lv.6 且对应被动 Lv.2 后，升级卡会出现合成协议；<b>16 条</b>进化路线可在「合成表」查看。</p></article>
         </div>
         <div class="how__legend"><span><i class="chip chip--star"></i> 星星：立即升级主炮</span><span><i class="chip chip--bomb"></i> 手雷：清屏爆破</span><span><i class="chip chip--shield"></i> 头盔：无敌护盾</span><span><i class="chip chip--time"></i> 时钟：冻结敌军</span><span><i class="chip chip--shovel"></i> 维修：修复车体</span></div>
         <div class="how__pad" style="margin-top:8px;opacity:.9">完整道具效果与基地道具说明，请在机库打开「道具说明」。</div>
-        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · Y 回程 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回；主页、星图、坦克库、简报、图鉴和道具说明均可用手柄操作<br>双人同屏 // P1 键鼠 · P2 手柄；P2 也可用方向键移动、Enter 冲刺</div>
+        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · Y 回程 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回；升级界面先推方向才会出现选择框，避免误触<br>双人同屏 // P1 键鼠 · P2 手柄；升级时 P1 按 1/2/3，P2 用十字键/左摇杆 + A，任一人确认即可，双方共享模块</div>
         <button id="howStart" class="cta cta--small" type="button"><span class="cta__copy"><strong>明白了，出击</strong><small>DEPLOY NOW</small></span><span class="cta__arrow">↗</span></button>
       </div>
     </section>
@@ -421,7 +427,7 @@
       <div class="tank-select__panel codex-panel">
         <button id="codexClose" class="close-btn" type="button" aria-label="关闭">×</button>
         <div class="tank-select__head">
-          <div class="how__eyebrow">HOSTILE ARCHIVE / 敌人图鉴 · <b id="codexProgress">0 / 26</b></div>
+          <div class="how__eyebrow">HOSTILE ARCHIVE / 敌人图鉴 · <b id="codexProgress">0 / 50</b></div>
           <h2 id="codexTitle">战场上的钢铁标本</h2>
           <p>遭遇过的单位会自动记录。普通、精英、Boss 分栏归档；封锁区守卫需要击破对应封印核心才会现身。</p>
         </div>
@@ -429,6 +435,60 @@
         <div class="tank-select__foot">
           <div class="codex-legend"><span class="is-normal">普通</span><span class="is-elite">精英</span><span class="is-boss">Boss</span></div>
           <button id="codexDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE ARCHIVE</small></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VISUAL LAB / AI ART PILOT ================= -->
+    <section id="artScreen" class="overlay art-screen hidden" aria-modal="true" role="dialog" aria-labelledby="artTitle">
+      <div class="overlay__backdrop"></div>
+      <div class="art-panel">
+        <button id="artClose" class="close-btn" type="button" aria-label="关闭">×</button>
+        <div class="art-head">
+          <div class="how__eyebrow">VISUAL LAB / AI ART PILOT <b>◈</b></div>
+          <h2 id="artTitle">钢与余烬的另一种画法</h2>
+          <p>三张 AI 概念素材：机库主视觉、先锋 M-01 的 3/4 透明底立绘，以及一张可替换菜单背景的空机库。这个页面只用于比较风格，不会改变战斗内单位、碰撞和数值。</p>
+        </div>
+        <div class="art-grid">
+          <figure class="art-card art-card--hero">
+            <div class="art-card__frame">
+              <img src="assets/ai/vanguard-keyart.webp" alt="先锋 M-01 在机库中的 AI 概念图">
+              <span class="art-card__tag">KEY ART // 01</span>
+            </div>
+            <figcaption>
+              <strong>先锋 M-01 · 机库主视觉</strong>
+              <span>VANGUARD / HANGAR KEY ART</span>
+              <small>3/4 视角、完整场景和光影。适合主菜单、加载页、分享图，不适合直接当俯视战斗精灵。</small>
+            </figcaption>
+          </figure>
+          <div class="art-stack">
+            <figure class="art-card art-card--portrait">
+              <div class="art-card__frame art-card__frame--portrait">
+                <img src="assets/ai/vanguard-portrait.webp" alt="先锋 M-01 透明底立绘">
+                <span class="art-card__tag">CUTOUT // 02</span>
+              </div>
+              <figcaption>
+                <strong>先锋 M-01 · 透明底立绘</strong>
+                <span>TRANSPARENT PORTRAIT</span>
+                <small>可放进坦克库、图鉴或主菜单展示位。</small>
+              </figcaption>
+            </figure>
+            <figure class="art-card art-card--wide">
+              <div class="art-card__frame">
+                <img src="assets/ai/menu-hangar-wide.webp" alt="空机库 AI 背景">
+                <span class="art-card__tag">BACKDROP // 03</span>
+              </div>
+              <figcaption>
+                <strong>机库背景</strong>
+                <span>HANGAR BACKDROP</span>
+                <small>如果只替换背景，现有 Canvas 坦克和动态效果可以保留。</small>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+        <div class="art-foot">
+          <span><i></i> PILOT ONLY / 未接入战斗单位</span>
+          <button id="artDone" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>CLOSE VISUAL LAB</small></span><span class="cta__arrow">↗</span></button>
         </div>
       </div>
     </section>
@@ -478,10 +538,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261023-03"></script>
-  <script src="js/icons.js?v=20261023-03"></script>
-  <script src="js/audio.js?v=20261023-03"></script>
-  <script src="js/game.js?v=20261023-03"></script>
-  <script src="js/main.js?v=20261023-03"></script>
+  <script src="js/content.js?v=20261023-07"></script>
+  <script src="js/icons.js?v=20261023-07"></script>
+  <script src="js/audio.js?v=20261023-07"></script>
+  <script src="js/game.js?v=20261023-07"></script>
+  <script src="js/main.js?v=20261023-07"></script>
 </body>
 </html>
