@@ -74,21 +74,21 @@
 4. 游戏内：只替换 `drawEnemy`/`drawBoss`/特效绘制的贴图层，不碰 AI、碰撞和数值。
 5. 验收：在真实地图、真实缩放、真实弹幕密度下看轮廓是否可读；不要只看白底大图。
 
-## 第一关已落地（熔炉工厂）
+## 第一关历史落地（熔炉工厂；已被下方全 12 关方案取代）
 
 已接入 `assets/game/stages/furnace/`：
 
-- `boss-siege.png`：第一关 Boss 的 AI 顶视战斗图，128px 透明底。
-- `enemy-scout/grunt/heavy/bomber/sniper/elite.png`：第一关主力敌人，96px 透明底。
-- `enemy-mortar/bulwark/minelayer/drone.png`：第一关增援单位。
-- `floor-tiles.png`：4×4 / 32px 工厂地表 atlas。
-- `vfx-muzzle.png`、`vfx-explosion.png` 等：第一关枪口/爆炸特效。
+- `boss.png`：第一关 Boss 的 AI 顶视战斗图，256px 透明底。
+- `enemies/scout/grunt/heavy/bomber/sniper/elite.png`：第一关主力敌人，96px 透明底。
+- `enemies/mortar/bulwark/minelayer/drone.png`：第一关增援单位。
+- `floor.png`：4×4 / 32px 工厂地表 atlas。
+- `vfx/muzzle.png`、`vfx/explosion.png` 等：第一关枪口/爆炸特效。
 
 接入方式：
 
 - 只替换 `js/game.js` 的绘制层：`drawBoss`、`drawEnemy`、`drawAirEnemy`、`drawEffects`、`buildGroundCache`。
 - 碰撞、AI、数值、波次、Boss 技能和原有程序化绘制全部保留，作为加载失败时的 fallback。
-- 第一关专属：其他地图继续使用原程序化外观，不会被工厂色板污染。
+- 第一关专属逻辑已在“全 12 关已落地”中替换为按关卡加载。
 - 图鉴中第一关已解锁的 Boss/敌人也会显示新的 AI 立绘。
 
 验证结果：
