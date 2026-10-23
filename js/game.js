@@ -234,30 +234,21 @@
   /* ---------------- first-stage AI art layer ---------------- */
   // These are deliberately small, pre-cut PNGs. The game still owns movement,
   // collision and animation; art only replaces the visual hull/fx layer.
-  const ART_SOURCES = {
-    bossSiege: 'assets/game/furnace/boss-siege.png',
-    floorFurnace: 'assets/game/furnace/floor-tiles.png',
-    enemyScout: 'assets/game/furnace/enemy-scout.png',
-    enemyGrunt: 'assets/game/furnace/enemy-grunt.png',
-    enemyHeavy: 'assets/game/furnace/enemy-heavy.png',
-    enemyBomber: 'assets/game/furnace/enemy-bomber.png',
-    enemySniper: 'assets/game/furnace/enemy-sniper.png',
-    enemyElite: 'assets/game/furnace/enemy-elite.png',
-    enemyMortar: 'assets/game/furnace/enemy-mortar.png',
-    enemyBulwark: 'assets/game/furnace/enemy-bulwark.png',
-    enemyMinelayer: 'assets/game/furnace/enemy-minelayer.png',
-    enemyDrone: 'assets/game/furnace/enemy-drone.png',
-    vfxMuzzle: 'assets/game/furnace/vfx-muzzle.png',
-    vfxImpact: 'assets/game/furnace/vfx-impact.png',
-    vfxExplosion: 'assets/game/furnace/vfx-explosion.png',
-    vfxSmoke: 'assets/game/furnace/vfx-smoke.png',
-    vfxShock: 'assets/game/furnace/vfx-shock.png',
-    vfxIce: 'assets/game/furnace/vfx-ice.png',
-    vfxAcid: 'assets/game/furnace/vfx-acid.png',
-    vfxVoid: 'assets/game/furnace/vfx-void.png',
-    vfxSolar: 'assets/game/furnace/vfx-solar.png'
+  const ART_FILES = {
+    boss: 'boss.png', floor: 'floor.png',
+    playerHull: 'player/hull.png', playerTurret: 'player/turret.png',
+    enemyScout: 'enemies/scout.png', enemyGrunt: 'enemies/grunt.png', enemyHeavy: 'enemies/heavy.png',
+    enemyBomber: 'enemies/bomber.png', enemySniper: 'enemies/sniper.png', enemyElite: 'enemies/elite.png',
+    enemyMortar: 'enemies/mortar.png', enemyBulwark: 'enemies/bulwark.png', enemyMinelayer: 'enemies/minelayer.png',
+    enemySplitter: 'enemies/splitter.png', enemyScrap: 'enemies/scrap.png',
+    enemyDrone: 'enemies/drone.png', enemyStrafer: 'enemies/strafer.png', enemySkybomber: 'enemies/skybomber.png', enemyGunship: 'enemies/gunship.png',
+    enemySaucer: 'enemies/saucer.png', enemyBeamfrigate: 'enemies/beamfrigate.png', enemyWarper: 'enemies/warper.png', enemyWarden: 'enemies/warden.png',
+    enemyScoutHull: 'enemies/scout-hull.png', enemyGruntHull: 'enemies/grunt-hull.png', enemyHeavyHull: 'enemies/heavy-hull.png',
+    enemySniperHull: 'enemies/sniper-hull.png', enemyEliteHull: 'enemies/elite-hull.png', enemyMortarHull: 'enemies/mortar-hull.png',
+    vfxMuzzle: 'vfx/muzzle.png', vfxImpact: 'vfx/impact.png', vfxExplosion: 'vfx/explosion.png', vfxSmoke: 'vfx/smoke.png',
+    vfxShock: 'vfx/shock.png', vfxIce: 'vfx/ice.png', vfxAcid: 'vfx/acid.png', vfxVoid: 'vfx/void.png', vfxSolar: 'vfx/solar.png'
   };
-  const ART = { images: {}, loading: false };
+  const ART = { images: {}, stage: null, loading: false };
   const ART_FLOOR_SAFE = [0, 4, 5, 6, 8, 10, 11, 13, 14];
 
   function artImage(key) {
@@ -265,29 +256,57 @@
     return img && img.complete && img.naturalWidth ? img : null;
   }
 
-  function loadArtAssets() {
-    if (ART.loading) return;
+  function loadStageArt(stageId) {
+    if (!stageId || (ART.stage === stageId && ART.images.boss)) return;
+    ART.stage = stageId;
+    ART.images = {};
     ART.loading = true;
-    for (const [key, src] of Object.entries(ART_SOURCES)) {
+    const requestStage = stageId;
+    for (const [key, file] of Object.entries(ART_FILES)) {
       const img = new Image();
       img.decoding = 'async';
       img.onload = () => {
+        if (ART.stage !== requestStage) return;
         ART.images[key] = img;
-        // The floor texture can arrive after startRun; rebuild once it is ready.
-        if (key === 'floorFurnace' && G.mode === 'playing' && G.arena && G.arena.id === 'furnace') buildGroundCache();
+        if (key === 'floor' && G.mode === 'playing' && G.arena && G.arena.id === requestStage) buildGroundCache();
       };
-      img.onerror = () => { console.warn('[art] missing', src); };
-      img.src = `${src}?v=20261023-09`;
+      img.onerror = () => { console.warn('[art] missing', requestStage, file); };
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261023-11`;
     }
   }
 
-  function drawSpriteArt(ctx, img, x, y, size, angle, flash) {
+  function loadArtAssets() { loadStageArt((G.arena && G.arena.id) || 'furnace'); }
+
+  function drawSpriteArt(ctx, img, x, y, size, angle, flash, snap) {
     if (!img) return false;
+    const a = snap === false ? (angle || 0) : Math.round((angle || 0) / (Math.PI / 8)) * (Math.PI / 8);
+    const s = Math.max(1, Math.round(size));
     ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle || 0);
+    ctx.imageSmoothingEnabled = false;
+    // integer translation keeps nearest-neighbour sprite pixels from smearing
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.rotate(a);
     if (flash) ctx.filter = 'brightness(1.9) saturate(.8)';
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.drawImage(img, -s / 2, -s / 2, s, s);
+    ctx.restore();
+    return true;
+  }
+
+  function drawPlayerArt(p, colors, withShadow) {
+    const hull = artImage('playerHull');
+    const turret = artImage('playerTurret');
+    if (!hull || !turret) return false;
+    const ctx = gameCtx;
+    const size = 48;
+    if (withShadow !== false) drawTankShadow(ctx, p.x, p.y, .9);
+    drawSpriteArt(ctx, hull, p.x, p.y, size, p.bodyAngle + Math.PI / 2, p.hitFlash > 0);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const recoil = Math.max(0, p.recoil || 0) * 2.4;
+    ctx.translate(Math.round(p.x) - Math.cos(p.turretAngle) * recoil, Math.round(p.y) - Math.sin(p.turretAngle) * recoil);
+    ctx.rotate(p.turretAngle + Math.PI / 2);
+    if (p.hitFlash > 0) ctx.filter = 'brightness(1.9) saturate(.8)';
+    ctx.drawImage(turret, -size / 2, -size / 2, size, size);
     ctx.restore();
     return true;
   }
@@ -522,8 +541,8 @@
     const grad = ctx.createLinearGradient(0, 0, W * .3, H);
     grad.addColorStop(0, hexA(p.sky, .55)); grad.addColorStop(.5, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(255,120,40,.035)');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-    // first-stage factory floor: AI-painted 32px plates, tinted into the map palette.
-    const floorArt = G.arena.id === 'furnace' ? artImage('floorFurnace') : null;
+    // AI-painted 32px plates, tinted per stage into the map palette.
+    const floorArt = artImage('floor');
     if (floorArt) {
       ctx.save();
       ctx.globalAlpha = .58;
@@ -1400,10 +1419,11 @@
     drawTankShadow(ctx, e.x, e.y, 4.8);
     const s = e.bossScale || 1.45;
     const lift = e.domain === 'air' ? 18 : e.domain === 'hover' ? 8 : 0;
-    const bossArt = e.bossKind === 'siege' ? artImage('bossSiege') : null;
+    const bossArt = artImage('boss');
     if (bossArt) {
       const artSize = 180 * s / 1.45;
-      drawSpriteArt(ctx, bossArt, e.x, e.y - lift, artSize, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+      // The baked cannon follows the faster turret aim so it stays on the player.
+      drawSpriteArt(ctx, bossArt, e.x, e.y - lift, artSize, e.turretAngle + Math.PI / 2, e.hitFlash > 0);
     } else {
       ctx.save();
       ctx.translate(e.x, e.y - lift);
@@ -1461,11 +1481,15 @@
     ctx.rotate(e.bodyAngle + Math.PI / 2);
     ctx.lineWidth = 1;
 
-    const droneArt = e.type === 'drone' && G.arena && G.arena.id === 'furnace' ? artImage('enemyDrone') : null;
-    if (droneArt) {
-      const ds = e.radius * 7.0;
+    const airKey = {
+      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship'
+    }[e.type];
+    const airArt = airKey ? artImage(airKey) : null;
+    if (airArt) {
+      const ds = Math.round(e.radius * 5.8);
       if (e.hitFlash > 0) ctx.filter = 'brightness(1.9) saturate(.8)';
-      ctx.drawImage(droneArt, -ds / 2, -ds / 2, ds, ds);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(airArt, -ds / 2, -ds / 2, ds, ds);
       ctx.filter = 'none';
     } else if (e.type === 'drone') {
       // four rotor pods, one central recon body
@@ -1545,7 +1569,17 @@
     ctx.save();
     ctx.translate(e.x, e.y - lift);
     ctx.rotate(e.bodyAngle + Math.PI / 2);
-    if (e.type === 'saucer') {
+    const xenoKey = {
+      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden'
+    }[e.type];
+    const xenoArt = xenoKey ? artImage(xenoKey) : null;
+    if (xenoArt) {
+      const ds = Math.round(e.radius * 5.8);
+      if (e.hitFlash > 0) ctx.filter = 'brightness(1.9) saturate(.8)';
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(xenoArt, -ds / 2, -ds / 2, ds, ds);
+      ctx.filter = 'none';
+    } else if (e.type === 'saucer') {
       ctx.save(); ctx.rotate(t * .55 * e.orbitDir);
       ctx.strokeStyle = hexA(light, .7); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(0, 0, 23 * s, 12 * s, 0, 0, TAU); ctx.stroke();
@@ -1598,23 +1632,65 @@
   }
 
   function groundEnemyArt(e) {
-    if (!G.arena || G.arena.id !== 'furnace') return null;
     // Seal guards carry a specific chassis identity; keep their procedural hull.
     if (e.sealTankId) return null;
-    const key = {
+    const fullKey = {
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy',
       bomber: 'enemyBomber', sniper: 'enemySniper', elite: 'enemyElite',
-      mortar: 'enemyMortar', bulwark: 'enemyBulwark', minelayer: 'enemyMinelayer'
+      mortar: 'enemyMortar', bulwark: 'enemyBulwark', minelayer: 'enemyMinelayer',
+      splitter: 'enemySplitter', scrap: 'enemyScrap'
     }[e.type];
-    return key ? artImage(key) : null;
+    const hullKey = {
+      scout: 'enemyScoutHull', grunt: 'enemyGruntHull', heavy: 'enemyHeavyHull',
+      sniper: 'enemySniperHull', elite: 'enemyEliteHull', mortar: 'enemyMortarHull'
+    }[e.type];
+    if (hullKey) {
+      const hull = artImage(hullKey);
+      // Enemy turret crops from the single-sprite sheets carry too much hull noise.
+      // Keep the control crisp: AI hull + procedural turret that owns the aim angle.
+      if (hull) return { img: hull, split: true, turret: null };
+    }
+    const img = fullKey ? artImage(fullKey) : null;
+    return img ? { img, split: false } : null;
+  }
+
+  function drawGroundEnemyTurret(e) {
+    const ctx = gameCtx;
+    const colors = {
+      body: e.hitFlash > 0 ? '#ffffff' : e.color,
+      light: e.hitFlash > 0 ? '#ffffff' : e.light,
+      dark: e.dark, core: e.coreColor
+    };
+    const size = e.radius / 11.5;
+    ctx.save();
+    ctx.translate(Math.round(e.x), Math.round(e.y));
+    drawTurretLocal(ctx, e.turretAngle, colors, size, {
+      recoil: e.recoil, heavy: e.type === 'heavy', elite: e.elite,
+      enemyType: e.type,
+      barrelLen: e.type === 'sniper' ? 23 : e.elite ? 21 : e.type === 'heavy' ? 18 : 16,
+      barrelWide: e.type === 'heavy' || e.elite,
+      twin: e.elite
+    });
+    ctx.restore();
   }
 
   function drawGroundEnemyArt(e, t) {
-    const img = groundEnemyArt(e);
-    if (!img) return false;
-    const size = e.radius * 4.0;
+    const art = groundEnemyArt(e);
+    if (!art) return false;
+    const size = e.radius * 4.6;
     drawTankShadow(gameCtx, e.x, e.y, e.radius / 14);
-    drawSpriteArt(gameCtx, img, e.x, e.y, size, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+    drawSpriteArt(gameCtx, art.img, e.x, e.y, size, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+    if (art.turret) {
+      const recoil = Math.max(0, e.recoil || 0) * 2.2;
+      drawSpriteArt(
+        gameCtx, art.turret,
+        e.x - Math.cos(e.turretAngle) * recoil,
+        e.y - Math.sin(e.turretAngle) * recoil,
+        size, e.turretAngle + Math.PI / 2, e.hitFlash > 0, false
+      );
+    } else if (art.split) {
+      drawGroundEnemyTurret(e);
+    }
     return true;
   }
 
@@ -1694,7 +1770,8 @@
       ctx.save();
       drawTankShadow(ctx, p.x, p.y, 1.1);
       ctx.globalAlpha = .55;
-      drawTankAt(ctx, p.x, p.y, p.bodyAngle, p.turretAngle, { body: '#3a2520', light: '#8f6a53', dark: '#160d0a', core: '#ff6858' }, 1.08, p.trackPhase, { recoil: 0, barrelLen: 21, player: true });
+      const downedColors = { body: '#3a2520', light: '#8f6a53', dark: '#160d0a', core: '#ff6858' };
+      if (!drawPlayerArt(p, downedColors, false)) drawTankAt(ctx, p.x, p.y, p.bodyAngle, p.turretAngle, downedColors, 1.08, p.trackPhase, { recoil: 0, barrelLen: 21, player: true });
       ctx.globalAlpha = 1;
       ctx.strokeStyle = 'rgba(255,88,74,.55)'; ctx.lineWidth = 1;
       ctx.setLineDash([3, 5]); ctx.lineDashOffset = t * 6;
@@ -1760,17 +1837,19 @@
       ctx.restore();
     }
     const tankId = p.tankId || G.tankId;
-    drawTankAt(ctx, p.x, p.y, p.bodyAngle, p.turretAngle, colors, 1.12, p.trackPhase, {
-      recoil: p.recoil, barrelLen: tankId === 'railgun' ? 27 : tankId === 'twin' ? 19 : 21,
-      barrelWide: G.weapons.cannon >= 4, twin: G.weapons.cannon >= 6 || tankId === 'twin',
-      heavy: tankId === 'bastion' || tankId === 'juggernaut', player: true
-    });
+    if (!drawPlayerArt(p, colors)) {
+      drawTankAt(ctx, p.x, p.y, p.bodyAngle, p.turretAngle, colors, 1.12, p.trackPhase, {
+        recoil: p.recoil, barrelLen: tankId === 'railgun' ? 27 : tankId === 'twin' ? 19 : 21,
+        barrelWide: G.weapons.cannon >= 4, twin: G.weapons.cannon >= 6 || tankId === 'twin',
+        heavy: tankId === 'bastion' || tankId === 'juggernaut', player: true
+      });
+    }
     ctx.globalAlpha = 1;
     // shield bubble
     if (p.shield > 0 || p.invincible > 0) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const r = 22 + Math.sin(t * 4) * 1.5;
+      const r = 24 + Math.sin(t * 4) * 1.5;
       ctx.strokeStyle = p.invincible > 0 ? hexA('#ffb52d', .55) : hexA('#5ff0ce', .45);
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.stroke();
@@ -1923,7 +2002,7 @@
 
   function drawEffects(t) {
     const ctx = gameCtx;
-    const firstStageArt = G.arena && G.arena.id === 'furnace';
+    const firstStageArt = !!G.arena;
     for (const fx of G.effects) {
       const k = fx.life / fx.maxLife;
       if (fx.type === 'explosion') {
@@ -2486,6 +2565,7 @@
     G.tankId = G.tank.id;
     G.arenaIndex = index;
     G.arena = MAPS[index];
+    loadStageArt(G.arena.id);
     G.difficulty = stageDifficulty(G.campaign || readCampaign(), index);
     G.difficultyMod = difficultyData(G.difficulty).mod;
     G.runMod = buildRunMod(G.arena.mod, G.difficulty);
@@ -3052,11 +3132,12 @@
     const spread = shots > 1 ? .055 : 0;
     const pierce = (w.pierce || 0) + (tank.pierceAdd || 0) + (st.pierceAdd || 0) + (fusion ? 2 : 0);
     const explode = (w.explode ? w.explode * st.area : 0) + (tank.explodeAdd ? tank.explodeAdd * st.area : 0) + (fusion ? 38 * st.area : 0);
+    const muzzleDist = artImage('playerHull') ? 22 : 25;
     for (let i = 0; i < shots; i++) {
       const a = angle + (i - (shots - 1) / 2) * spread;
       const crit = chance(st.crit);
       const dmg = w.damage * st.damage * (crit ? st.critMult : 1);
-      const mx = p.x + Math.cos(a) * 25, my = p.y + Math.sin(a) * 25;
+      const mx = p.x + Math.cos(a) * muzzleDist, my = p.y + Math.sin(a) * muzzleDist;
       G.bullets.push({
         x: mx, y: my, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed,
         radius: 3, damage: dmg, crit, pierce, explode, owner: p, steelPierce: !!st.steelPierce,
@@ -3065,8 +3146,8 @@
     }
     p.fireCd = Math.max(.09, w.interval / st.attackSpeed * st.cdr);
     p.recoil = 1;
-    addEffect({ type: 'muzzle', x: p.x + Math.cos(angle) * 26, y: p.y + Math.sin(angle) * 26, life: .12, maxLife: .12, color: '#ffd56a' });
-    for (let i = 0; i < 4; i++) addParticle(p.x + Math.cos(angle) * 28 + rand(3, -3), p.y + Math.sin(angle) * 28 + rand(3, -3), Math.cos(angle) * rand(120, 30), Math.sin(angle) * rand(120, 30), '#ffcc6b', 'spark', .22, 1.6);
+    addEffect({ type: 'muzzle', x: p.x + Math.cos(angle) * muzzleDist, y: p.y + Math.sin(angle) * muzzleDist, life: .12, maxLife: .12, color: '#ffd56a' });
+    for (let i = 0; i < 4; i++) addParticle(p.x + Math.cos(angle) * (muzzleDist + 2) + rand(3, -3), p.y + Math.sin(angle) * (muzzleDist + 2) + rand(3, -3), Math.cos(angle) * rand(120, 30), Math.sin(angle) * rand(120, 30), '#ffcc6b', 'spark', .22, 1.6);
     AUDIO.shoot();
   }
 
@@ -6315,6 +6396,7 @@
     index = clamp(index | 0, 0, Math.min(MAPS.length - 1, camp.unlocked - 1));
     G.arenaIndex = index;
     G.arena = MAPS[index];
+    loadStageArt(G.arena.id);
     G.difficulty = stageDifficulty(camp, index);
     U.arenaCards.forEach((card, i) => {
       card.classList.toggle('is-active', i === index);
@@ -6386,10 +6468,12 @@
       : { body: c.body || c.color || '#555', light: c.light || '#ccc', dark: c.dark || '#222', core: c.core || c.coreColor || '#5ff0ce' };
     const isBoss = entry.cls === 'boss';
     const scale = isBoss ? 2.9 : entry.cls === 'elite' ? 2.25 : 1.95;
-    const artKey = entry.key === 'boss' ? 'bossSiege' : {
+    const artKey = entry.key === 'boss' ? 'boss' : {
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy', bomber: 'enemyBomber',
       sniper: 'enemySniper', elite: 'enemyElite', mortar: 'enemyMortar', bulwark: 'enemyBulwark',
-      minelayer: 'enemyMinelayer'
+      minelayer: 'enemyMinelayer', splitter: 'enemySplitter', scrap: 'enemyScrap',
+      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship',
+      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden'
     }[entry.key];
     const codexArt = !locked && artKey ? artImage(artKey) : null;
     if (codexArt) {

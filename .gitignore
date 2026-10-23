@@ -2,3 +2,5 @@
 .DS_Store
 *.log
 .env*
+art-src/tests/
+art-src/legacy/
