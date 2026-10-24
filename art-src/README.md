@@ -1,6 +1,6 @@
 # STEEL EMBERS art source
 
-所有 AI 生图与派生素材都在这里，按用途分目录。游戏只加载 `assets/game/stages/<stage>/` 下的最终 PNG。
+所有 AI 生图与派生素材都在这里，按用途分目录。游戏加载 `assets/game/stages/<stage>/` 的关卡素材，以及 `assets/game/tanks/<tank>/` 的玩家坦克素材。
 
 ## masters/
 
@@ -9,8 +9,10 @@
 - `boss-sheet-12.png` — 12 个 Boss 的 4×3 母版（1254×1254），顺序与 12 关一致。
 - `enemy-sheet-ground-air-xeno.png` — 12 个敌人母版（4×3：地面/空中/异星）。
 - `furnace-modular-reference.png` — 第一关 6 台模块化参考母版。
-- `player-hull-raw-1254.png` / `player-turret-raw-1254.png` — 玩家坦克车体/炮塔原始图。
-- `player-hull-48.png` / `player-turret-48.png` — 处理后 48×48 游戏版。
+- `player-hull-raw-1254.png` / `player-turret-raw-1254.png` — 先锋坦克车体/炮塔原始图。
+- `player-hull-48.png` / `player-turret-48.png` — 先锋坦克 48×48 备用版。
+- `tank-hulls-sheet-20.png` — 20 台可驾驶坦克的车体母版（5×4，顺序与 `TANKS` 一致）。
+- `tank-turrets-sheet-20.png` — 20 台可驾驶坦克的独立炮塔母版（5×4，与车体同序）。
 - `floor-tiles-128.png` — 4×4 地板母版。
 
 ## tests/
@@ -31,8 +33,16 @@
 assets/game/stages/<stage>/
   boss.png          256×256
   floor.png         128×128 (4×4 32px tiles)
-  player/hull.png    48×48
-  player/turret.png  48×48
+  player/hull.png    48×48（通用兜底）
+  player/turret.png  48×48（通用兜底）
   enemies/*.png      96×96
   vfx/*.png          64×64
+```
+
+玩家坦克按底盘存放，不复制到每一关：
+
+```
+assets/game/tanks/<tank>/
+  hull.png           48×48
+  turret.png         48×48
 ```

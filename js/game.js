@@ -252,6 +252,44 @@
   const ART = { images: {}, stage: null, loading: false };
   const ART_FLOOR_SAFE = [0, 4, 5, 6, 8, 10, 11, 13, 14];
 
+  // Playable tank art lives outside the stage folders: a chassis keeps its
+  // identity across all 12 sectors. Hull and turret are separate 48px PNGs so
+  // the turret can rotate independently of the hull.
+  const TANK_ART = { images: {}, loading: false };
+  let tankArtRedrawTimer = 0;
+
+  function tankArtImage(id, part) {
+    const img = TANK_ART.images[`${id}:${part}`];
+    return img && img.complete && img.naturalWidth ? img : null;
+  }
+
+  function scheduleTankArtRedraw() {
+    clearTimeout(tankArtRedrawTimer);
+    tankArtRedrawTimer = setTimeout(() => {
+      updatePilotCard(0);
+      updatePilotCard(1);
+      if (U.tankScreen && !U.tankScreen.classList.contains('hidden')) renderTankGrid();
+      if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) renderCodex();
+    }, 40);
+  }
+
+  function loadTankArt() {
+    if (TANK_ART.loading) return;
+    TANK_ART.loading = true;
+    for (const tank of TANKS) {
+      for (const part of ['hull', 'turret']) {
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = () => {
+          TANK_ART.images[`${tank.id}:${part}`] = img;
+          scheduleTankArtRedraw();
+        };
+        img.onerror = () => { console.warn('[tank-art] missing', tank.id, part); };
+        img.src = `assets/game/tanks/${tank.id}/${part}.png?v=20261024-2`;
+      }
+    }
+  }
+
   function artImage(key) {
     const img = ART.images[key];
     return img && img.complete && img.naturalWidth ? img : null;
@@ -294,8 +332,9 @@
   }
 
   function drawPlayerArt(p, colors, withShadow) {
-    const hull = artImage('playerHull');
-    const turret = artImage('playerTurret');
+    const tankId = (p && p.tankId) || (p && p.tank && p.tank.id) || 'vanguard';
+    const hull = tankArtImage(tankId, 'hull') || artImage('playerHull');
+    const turret = tankArtImage(tankId, 'turret') || artImage('playerTurret');
     if (!hull || !turret) return false;
     const ctx = gameCtx;
     const size = 48;
@@ -6182,7 +6221,20 @@
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = false;
-    drawTankAt(ctx, canvas.width / 2, canvas.height / 2 + 3, -Math.PI / 2, -Math.PI / 2, tank.colors, .95, 0, { barrelLen: tank.id === 'railgun' ? 24 : 18, twin: tank.id === 'twin', heavy: tank.id === 'bastion' || tank.id === 'juggernaut', player: true });
+    const x = canvas.width / 2, y = canvas.height / 2 + 2;
+    const hull = tankArtImage(tank.id, 'hull');
+    const turret = tankArtImage(tank.id, 'turret');
+    if (hull && turret) {
+      const size = 48;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.28)';
+      ctx.beginPath(); ctx.ellipse(x + 2, y + 7, 20, 7, 0, 0, TAU); ctx.fill();
+      ctx.drawImage(hull, Math.round(x - size / 2), Math.round(y - size / 2), size, size);
+      ctx.drawImage(turret, Math.round(x - size / 2), Math.round(y - size / 2), size, size);
+      ctx.restore();
+      return;
+    }
+    drawTankAt(ctx, x, y, -Math.PI / 2, -Math.PI / 2, tank.colors, .95, 0, { barrelLen: tank.id === 'railgun' ? 24 : 18, twin: tank.id === 'twin', heavy: tank.id === 'bastion' || tank.id === 'juggernaut', player: true });
   }
 
   function updateTankCount() {
@@ -6573,6 +6625,26 @@
       : { body: c.body || c.color || '#555', light: c.light || '#ccc', dark: c.dark || '#222', core: c.core || c.coreColor || '#5ff0ce' };
     const isBoss = entry.cls === 'boss';
     const scale = isBoss ? 2.9 : entry.cls === 'elite' ? 2.25 : 1.95;
+    const sealTank = entry.tank || null;
+    const sealHull = sealTank ? tankArtImage(sealTank.id, 'hull') : null;
+    const sealTurret = sealTank ? tankArtImage(sealTank.id, 'turret') : null;
+    if (sealHull && sealTurret) {
+      const size = 84;
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = locked ? 'rgba(0,0,0,.3)' : 'rgba(0,0,0,.32)';
+      ctx.beginPath(); ctx.ellipse(w / 2 + 2, h / 2 + 15, 28, 9, 0, 0, TAU); ctx.fill();
+      if (locked) ctx.filter = 'grayscale(1) brightness(.3) saturate(.35)';
+      if (!locked) {
+        ctx.strokeStyle = hexA(colors.core, .28);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(w / 2, h / 2, 43, 0, TAU); ctx.stroke();
+      }
+      ctx.drawImage(sealHull, (w - size) / 2, (h - size) / 2, size, size);
+      ctx.drawImage(sealTurret, (w - size) / 2, (h - size) / 2, size, size);
+      ctx.restore();
+      return;
+    }
     const artKey = entry.key === 'boss' ? 'boss' : {
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy', bomber: 'enemyBomber',
       sniper: 'enemySniper', elite: 'enemyElite', mortar: 'enemyMortar', bulwark: 'enemyBulwark',
@@ -7330,6 +7402,7 @@
   function init() {
     cacheUI();
     loadArtAssets();
+    loadTankArt();
     gameCtx = U.gameCanvas.getContext('2d');
     menuCtx = U.menuCanvas.getContext('2d');
     [gameCtx, menuCtx].forEach(ctx => { if (ctx) ctx.imageSmoothingEnabled = false; });
