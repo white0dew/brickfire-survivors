@@ -2044,15 +2044,23 @@
     }
     // deployed sentries
     for (const s of G.sentries) {
+      if (s.hp <= 0) continue;
+      // The faint dashed ring is the taunt radius, not a damage radius.
+      ctx.save();
+      ctx.strokeStyle = hexA('#8fffe6', .13); ctx.lineWidth = 1; ctx.setLineDash([3, 7]);
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.tauntRadius || 160, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
       ctx.save(); ctx.translate(s.x, s.y);
       ctx.fillStyle = 'rgba(4,10,8,.9)'; ctx.fillRect(-9, -9, 18, 18);
-      ctx.fillStyle = '#254a43'; ctx.fillRect(-7, -7, 14, 14);
-      ctx.fillStyle = '#8fffe6'; ctx.fillRect(-4, -4, 8, 8);
+      ctx.fillStyle = s.hitFlash > 0 ? '#ffffff' : '#254a43'; ctx.fillRect(-7, -7, 14, 14);
+      ctx.fillStyle = s.hitFlash > 0 ? '#ffffff' : '#8fffe6'; ctx.fillRect(-4, -4, 8, 8);
       ctx.fillStyle = '#07100d'; ctx.fillRect(-2, -2, 4, 4);
       ctx.rotate(s.angle || 0); ctx.fillStyle = '#c8fff5'; ctx.fillRect(4, -1, 11, 2);
       ctx.restore();
-      ctx.fillStyle = 'rgba(5,10,8,.7)'; ctx.fillRect(s.x - 9, s.y - 15, 18, 3);
-      ctx.fillStyle = '#8fffe6'; ctx.fillRect(s.x - 9, s.y - 15, 18 * clamp(s.life / s.maxLife, 0, 1), 3);
+      ctx.fillStyle = 'rgba(5,10,8,.7)'; ctx.fillRect(s.x - 12, s.y - 17, 24, 3);
+      ctx.fillStyle = (s.hp / s.maxHp) < .3 ? '#ff8a8d' : '#8fffe6';
+      ctx.fillRect(s.x - 12, s.y - 17, 24 * clamp(s.hp / s.maxHp, 0, 1), 3);
     }
     // mines
     for (const m of G.mines) drawMineShape(ctx, m, t);
@@ -2931,6 +2939,25 @@
     return best;
   }
 
+  function sentryTarget(s) {
+    return {
+      index: -2, isSentry: true, sentry: s,
+      x: s.x, y: s.y, radius: s.radius || 15,
+      alive: true, downed: false, moveX: 0, moveY: 0, speed: 0
+    };
+  }
+
+  function nearestTauntSentry(x, y) {
+    let best = null, bd = Infinity;
+    for (const s of G.sentries || []) {
+      if (!s || s.life <= 0 || s.hp <= 0) continue;
+      const d = dist2(x, y, s.x, s.y);
+      const taunt = s.tauntRadius || 0;
+      if (d < taunt * taunt && d < bd) { bd = d; best = s; }
+    }
+    return best ? sentryTarget(best) : null;
+  }
+
   function baseTarget() {
     if (!G.core || !G.core.alive || G.core.hp <= 0) return null;
     return {
@@ -2940,6 +2967,10 @@
   }
 
   function nearestTarget(x, y) {
+    // A deployed bastion is a deliberate fire magnet: enemies inside its
+    // taunt ring prefer it over the player or the base.
+    const sentry = nearestTauntSentry(x, y);
+    if (sentry) return sentry;
     let best = nearestPlayer(x, y);
     let bd = best ? dist2(x, y, best.x, best.y) : Infinity;
     const b = baseTarget();
@@ -3315,6 +3346,18 @@
     });
   }
 
+  function pickRoamerTarget(ds, p, index) {
+    const pool = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
+    if (!pool.length) return null;
+    const base = G.core && G.core.alive ? G.core : null;
+    const nearBase = base ? pool.filter(e => dist2(e.x, e.y, base.cx, base.cy) < 190 * 190) : [];
+    const nearPlayer = pool.filter(e => dist2(e.x, e.y, p.x, p.y) < 160 * 160);
+    let candidates = nearBase.length ? nearBase : nearPlayer.length ? nearPlayer : pool;
+    const ax = base ? base.cx : p.x, ay = base ? base.cy : p.y;
+    candidates = candidates.slice().sort((a, b) => dist2(a.x, a.y, ax, ay) - dist2(b.x, b.y, ax, ay));
+    return candidates[index % Math.min(4, candidates.length)];
+  }
+
   function updateWeapons(dt) {
     for (const p of G.players || []) {
       if (p.alive && !p.downed) updateWeaponsFor(p, dt);
@@ -3323,26 +3366,62 @@
 
   function updateWeaponsFor(p, dt) {
     const st = statsFor(p);
-    // drone swarm
+    // roaming drone swarm
     const droneLvl = weaponsFor(p).drone || 0;
     if (droneLvl) {
       const w = WEAPONS.drone.levels[Math.min(7, droneLvl - 1)];
       const count = w.count + (tankData(p).droneAdd || 0) + (fused('drone', p) ? 1 : 0);
-      while (p.droneState.length < count) p.droneState.push({ phase: (p.droneState.length / count) * TAU, cd: .25 + p.droneState.length * .16, x: p.x, y: p.y, fireFlash: 0 });
+      while (p.droneState.length < count) {
+        const idx = p.droneState.length;
+        p.droneState.push({
+          phase: (idx / Math.max(1, count)) * TAU, cd: .25 + idx * .16,
+          x: p.x + Math.cos(idx * 2.1) * 28, y: p.y + Math.sin(idx * 2.1) * 20,
+          fireFlash: 0, target: null, scanCd: 0
+        });
+      }
       if (p.droneState.length > count) p.droneState.length = count;
+      const droneSpeed = 235 + droneLvl * 14 + (fused('drone', p) ? 35 : 0);
       for (let i = 0; i < p.droneState.length; i++) {
         const ds = p.droneState[i];
-        const angle = G.animTime * 1.4 + ds.phase;
-        ds.x = p.x + Math.cos(angle) * 34;
-        ds.y = p.y + Math.sin(angle) * 24;
+        ds.scanCd = Math.max(0, (ds.scanCd || 0) - dt);
+        if (!ds.target || ds.target.dead || ds.target.spawnTimer > 0 || ds.scanCd <= 0) {
+          ds.target = pickRoamerTarget(ds, p, i);
+          ds.scanCd = .32;
+        }
+        const target = ds.target;
+        const base = G.core && G.core.alive ? G.core : null;
+        const ax = base ? base.cx : p.x, ay = base ? base.cy : p.y;
+        let tx = ax, ty = ay;
+        if (target) { tx = target.x; ty = target.y; }
+        else {
+          const a = G.animTime * .45 + ds.phase;
+          tx = ax + Math.cos(a) * 92;
+          ty = ay + Math.sin(a) * 62;
+        }
+        const dx = tx - ds.x, dy = ty - ds.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (target && d <= w.range * .72) {
+          // Circle the target at firing distance instead of stacking on it.
+          const orbit = G.animTime * 1.5 + ds.phase;
+          const rr = w.range * .52;
+          const ox = target.x + Math.cos(orbit) * rr;
+          const oy = target.y + Math.sin(orbit) * rr;
+          ds.x += (ox - ds.x) * Math.min(1, dt * 3.2);
+          ds.y += (oy - ds.y) * Math.min(1, dt * 3.2);
+        } else {
+          const step = Math.min(d, droneSpeed * dt);
+          ds.x += dx / d * step;
+          ds.y += dy / d * step;
+        }
+        ds.x = clamp(ds.x, 22, W - 22);
+        ds.y = clamp(ds.y, 22, H - 22);
         ds.cd -= dt;
         if (ds.cd <= 0) {
-          const target = nearestAttackable(ds.x, ds.y, w.range);
-          if (target) {
+          if (target && !target.dead && dist2(ds.x, ds.y, target.x, target.y) <= w.range * w.range) {
             spawnBulletFromDrone(ds, target, droneLvl, p);
             ds.cd = Math.max(.16, w.interval / st.attackSpeed * st.cdr);
             ds.fireFlash = .1;
-          } else ds.cd = .12;
+          } else ds.cd = .1;
         }
         ds.fireFlash = Math.max(0, ds.fireFlash - dt);
       }
@@ -3436,7 +3515,10 @@
       const orbitalFusion = fused('orbital', p);
       p.orbitalTimer -= dt;
       if (p.orbitalTimer <= 0) {
-        const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
+        let candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
+        const base = G.core && G.core.alive ? G.core : null;
+        const baseThreats = base ? candidates.filter(e => dist2(e.x, e.y, base.cx, base.cy) < 230 * 230) : [];
+        if (baseThreats.length) candidates = baseThreats;
         if (candidates.length) {
           for (let i = 0; i < orbitalCount; i++) {
             const target = candidates[(Math.random() * candidates.length) | 0];
@@ -3616,13 +3698,23 @@
       const w = WEAPONS.sentry.levels[Math.min(7, sentryLvl - 1)];
       const count = w.count + (fused('sentry', p) ? 1 : 0);
       p.sentryTimer -= dt;
-      const owned = G.sentries.filter(s => s.owner === p && s.life > 0).length;
+      const owned = G.sentries.filter(s => s.owner === p && s.life > 0 && s.hp > 0).length;
       if (p.sentryTimer <= 0 && owned < count) {
+        const sentryHp = (60 + sentryLvl * 18 + p.maxHp * .12) * (fused('sentry', p) ? 1.35 : 1);
+        const core = G.core && G.core.alive ? G.core : null;
+        const coreThreat = core ? nearestEnemy(core.cx, core.cy, 250) : null;
+        const threat = coreThreat || nearestEnemy(p.x, p.y, 460);
+        const ax = coreThreat ? core.cx : p.x, ay = coreThreat ? core.cy : p.y;
+        const deployAngle = threat ? Math.atan2(threat.y - ay, threat.x - ax) : rand(TAU);
+        const deployDist = coreThreat ? 76 : 56;
         G.sentries.push({
-          x: clamp(p.x + rand(34, -34), 28, W - 28), y: clamp(p.y + rand(30, -30), 28, H - 28),
-          owner: p, life: w.life * (fused('sentry', p) ? 1.25 : 1), maxLife: w.life * (fused('sentry', p) ? 1.25 : 1),
+          x: clamp(ax + Math.cos(deployAngle) * deployDist, 28, W - 28),
+          y: clamp(ay + Math.sin(deployAngle) * deployDist, 28, H - 28),
+          owner: p, life: w.life * 1.45 * (fused('sentry', p) ? 1.25 : 1), maxLife: w.life * 1.45 * (fused('sentry', p) ? 1.25 : 1),
           range: w.range * (fused('sentry', p) ? 1.15 : 1), fire: w.fire * .85,
-          damage: w.damage * (fused('sentry', p) ? 1.25 : 1), fireCd: .3, angle: -Math.PI / 2, seed: rand(TAU)
+          damage: w.damage * (fused('sentry', p) ? 1.25 : 1), fireCd: .3, angle: -Math.PI / 2, seed: rand(TAU),
+          hp: sentryHp, maxHp: sentryHp, radius: 15, hitFlash: 0,
+          tauntRadius: (150 + sentryLvl * 10) * (fused('sentry', p) ? 1.2 : 1)
         });
         addEffect({ type: 'ring', x: p.x, y: p.y, radius: 24, life: .3, maxLife: .3, color: '#8fffe6' });
         p.sentryTimer = Math.max(.8, w.interval / st.attackSpeed * st.cdr);
@@ -3733,7 +3825,8 @@
     // deployed sentries
     for (const s of G.sentries) {
       s.life -= dt; s.fireCd -= dt;
-      if (s.life <= 0) continue;
+      s.hitFlash = Math.max(0, (s.hitFlash || 0) - dt * 5);
+      if (s.life <= 0 || s.hp <= 0) continue;
       if (s.fireCd <= 0) {
         const target = nearestEnemy(s.x, s.y, s.range);
         if (target) {
@@ -3747,7 +3840,7 @@
         } else s.fireCd = .18;
       }
     }
-    G.sentries = G.sentries.filter(s => s.life > 0);
+    G.sentries = G.sentries.filter(s => s.life > 0 && s.hp > 0);
     for (const m of G.mines) {
       m.arm -= dt; m.life -= dt;
       if (m.life <= 0) { m.dead = true; continue; }
@@ -3755,7 +3848,8 @@
       if (m.hostile) {
         const hitPlayer = activePlayers().find(p => dist2(m.x, m.y, p.x, p.y) < (22 + p.radius) ** 2);
         const hitBase = G.core && G.core.alive && dist2(m.x, m.y, G.core.cx, G.core.cy) < (22 + G.core.radius) ** 2;
-        if (hitPlayer || hitBase) {
+        const hitSentry = (G.sentries || []).find(s => s.life > 0 && s.hp > 0 && dist2(m.x, m.y, s.x, s.y) < (22 + s.radius) ** 2);
+        if (hitPlayer || hitBase || hitSentry) {
           m.dead = true;
           explodeAt(m.x, m.y, m.radius, m.damage, '#ff8a5a', { source: 'mine', hostileOnly: true, hurtPlayer: true, hurtBase: true, hostile: true });
         }
@@ -3784,6 +3878,9 @@
           addParticles(s.x, s.y, 12, color, 'spark', 1.1);
           for (const p of activePlayers()) {
             if (dist2(s.x, s.y, p.x, p.y) < (s.radius + p.radius) ** 2) damagePlayer(s.damage, p);
+          }
+          for (const sentry of G.sentries || []) {
+            if (sentry.life > 0 && sentry.hp > 0 && dist2(s.x, s.y, sentry.x, sentry.y) < (s.radius + sentry.radius) ** 2) damageSentry(sentry, s.damage * .8, 'strike');
           }
           if (G.core && G.core.alive && dist2(s.x, s.y, G.core.cx, G.core.cy) < (s.radius + G.core.radius) ** 2) {
             damageBase(s.damage * .8, 'hazard');
@@ -4014,7 +4111,8 @@
           if (dist2(e.x, e.y, p.x, p.y) < contactR * contactR) {
             if (e.type === 'bomber') { bomberExplode(e); continue; }
             if (e.contactCd <= 0) {
-              if (p.isBase) damageBase(e.damage * .9, 'contact');
+              if (p.isSentry) damageSentry(p.sentry, e.damage * .9, 'contact');
+              else if (p.isBase) damageBase(e.damage * .9, 'contact');
               else damagePlayer(e.damage * .75, p);
               e.contactCd = 1.0;
             }
@@ -4356,7 +4454,8 @@
       e.shockCd = enraged ? 6 : 9;
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 120, life: .7, maxLife: .7, color: '#ff5f4a' });
       addParticles(e.x, e.y, 22, '#ff9b62', 'spark', 1.2);
-      if (p.isBase) damageBase(e.damage * 1.2, 'shockwave');
+      if (p.isSentry) damageSentry(p.sentry, e.damage * 1.2, 'shockwave');
+      else if (p.isBase) damageBase(e.damage * 1.2, 'shockwave');
       else damagePlayer(e.damage * .8, p);
       addShake(8, .45);
     }
@@ -4533,7 +4632,7 @@
     if (e.shockCd <= 0 && dist(e.x, e.y, p.x, p.y) < 220) {
       e.shockCd = enraged ? 5 : 7.5;
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 150, life: .8, maxLife: .8, color: '#5ff0ce' });
-      if (p.isBase) damageBase(e.damage * .6, 'tentacle'); else damagePlayer(e.damage * .55, p);
+      if (p.isSentry) damageSentry(p.sentry, e.damage * .6, 'tentacle'); else if (p.isBase) damageBase(e.damage * .6, 'tentacle'); else damagePlayer(e.damage * .55, p);
       addShake(9, .5);
     }
   }
@@ -4564,7 +4663,7 @@
       e.x = clamp(e.x + Math.cos(a) * 88, 50, W - 50);
       e.y = clamp(e.y + Math.sin(a) * 88, 50, H - 60);
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 70, life: .55, maxLife: .55, color: '#ff8a76' });
-      if (p.isBase) damageBase(e.damage * .5, 'charge'); else damagePlayer(e.damage * .45, p);
+      if (p.isSentry) damageSentry(p.sentry, e.damage * .5, 'charge'); else if (p.isBase) damageBase(e.damage * .5, 'charge'); else damagePlayer(e.damage * .45, p);
       addShake(5, .3);
     }
     if (e.fireCd <= 0) {
@@ -5035,6 +5134,12 @@
         for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(60, -60), rand(60, -60), '#ffe4ae', 'spark', .24, 1.8);
         b.dead = true; continue;
       }
+      const sentryHit = (G.sentries || []).find(s => s.life > 0 && s.hp > 0 && dist2(b.x, b.y, s.x, s.y) < (s.radius + b.radius + 1) ** 2);
+      if (sentryHit) {
+        damageSentry(sentryHit, b.damage, 'shell');
+        b.dead = true;
+        continue;
+      }
       const hit = activePlayers().find(p => dist2(b.x, b.y, p.x, p.y) < (p.radius + b.radius + 1) ** 2);
       if (hit) {
         damagePlayer(b.damage, hit);
@@ -5085,6 +5190,9 @@
     if (opts.hurtPlayer) {
       for (const p of activePlayers()) {
         if (dist(p.x, p.y, x, y) < radius) damagePlayer(damage * .75, p);
+      }
+      for (const s of G.sentries || []) {
+        if (s.life > 0 && s.hp > 0 && dist(s.x, s.y, x, y) < radius + s.radius) damageSentry(s, damage * .75, 'blast');
       }
     }
     if (opts.hurtBase && G.core && G.core.alive && dist(x, y, G.core.cx, G.core.cy) < radius + G.core.radius) {
@@ -5205,6 +5313,22 @@
     }
     if (e.type === 'bomber') explodeAt(e.x, e.y, 46, 25, '#ff5b4a', { hurtPlayer: true, hurtBase: true, hostile: true, source: 'bomber' });
     G.combo = Math.min(G.combo, 999);
+  }
+
+  function damageSentry(s, amount, source) {
+    if (!s || s.life <= 0 || s.hp <= 0) return;
+    s.hp -= amount;
+    s.hitFlash = .15;
+    addDamageNumber(s.x, s.y - 20, Math.round(amount), '#8fffe6', false);
+    addParticles(s.x, s.y, 5, '#8fffe6', 'spark', .5);
+    if (s.hp <= 0) {
+      s.hp = 0; s.life = 0;
+      addEffect({ type: 'explosion', x: s.x, y: s.y, radius: 58, life: .35, maxLife: .35, color: '#8fffe6' });
+      addEffect({ type: 'ring', x: s.x, y: s.y, radius: 62, life: .4, maxLife: .4, color: '#c8fff5' });
+      addParticles(s.x, s.y, 16, '#8fffe6', 'spark', 1.0);
+      explodeAt(s.x, s.y, 58, 36 + s.maxHp * .35, '#8fffe6', { source: 'sentry', owner: s.owner, silent: true });
+      AUDIO.explode(.8);
+    }
   }
 
   function damageBase(amount, source) {

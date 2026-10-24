@@ -619,17 +619,17 @@
       ]
     },
     drone: {
-      name: '蜂群无人机', en: 'HIVE DRONES', short: '蜂群', icon: 'drone', color: '#5ff0ce', type: 'weapon',
-      desc: '环绕车体飞行，自动向附近目标倾泻脉冲弹。',
+      name: '巡弋蜂群', en: 'ROAMING SWARM', short: '巡弋', icon: 'drone', color: '#5ff0ce', type: 'weapon',
+      desc: '无人机脱离车体，在全战场巡弋；优先回防基地，再清理远处敌群。',
       levels: [
-        { damage: 9, interval: 1.25, count: 1, range: 330, text: '部署 <b>1</b> 架环绕无人机，自动射击。' },
+        { damage: 9, interval: 1.25, count: 1, range: 330, text: '部署 <b>1</b> 架巡弋无人机，自动跨区索敌。' },
         { damage: 12, interval: 1.18, count: 1, range: 340, text: '脉冲伤害 <b>+3</b>。' },
-        { damage: 13, interval: 1.10, count: 2, range: 350, text: '无人机数量 <b>+1</b>。' },
+        { damage: 13, interval: 1.10, count: 2, range: 350, text: '巡弋机数量 <b>+1</b>。' },
         { damage: 17, interval: 1.02, count: 2, range: 360, text: '脉冲伤害 <b>+4</b>，射速提升。' },
-        { damage: 21, interval: .92, count: 3, range: 380, text: '无人机数量 <b>+1</b>。' },
+        { damage: 21, interval: .92, count: 3, range: 380, text: '巡弋机数量 <b>+1</b>。' },
         { damage: 26, interval: .84, count: 3, range: 400, text: '蜂群协议：伤害 <b>+5</b>，射速提升。' },
-        { damage: 32, interval: .74, count: 4, range: 425, text: '无人机数量 <b>+1</b>，弹药超频。' },
-        { damage: 42, interval: .62, count: 5, range: 450, text: '<b>母舰协议</b>：五机同射，覆盖全场。' }
+        { damage: 32, interval: .74, count: 4, range: 425, text: '巡弋机数量 <b>+1</b>，弹药超频。' },
+        { damage: 42, interval: .62, count: 5, range: 450, text: '<b>母舰协议</b>：五机全域巡弋，优先回防基地。' }
       ]
     },
     arc: {
@@ -787,17 +787,17 @@
       ]
     },
     sentry: {
-      name: '部署哨戒', en: 'DEPLOY SENTRY', short: '哨戒', icon: 'turret', color: '#8fffe6', type: 'weapon',
-      desc: '在战场上部署自动炮塔，替你守住一片区域。',
+      name: '哨戒壁垒', en: 'AEGIS BASTION', short: '壁垒', icon: 'turret', color: '#8fffe6', type: 'weapon',
+      desc: '部署带装甲的哨戒炮台，主动吸引周围敌军火力；被摧毁后仍会爆炸反伤。',
       levels: [
-        { damage: 12, interval: 1.6, count: 1, range: 220, life: 8, fire: .72, text: '部署 <b>1</b> 座哨戒炮塔。' },
-        { damage: 15, interval: 1.52, count: 1, range: 230, life: 8.5, fire: .68, text: '炮塔伤害与射程提升。' },
-        { damage: 19, interval: 1.44, count: 1, range: 240, life: 9.2, fire: .64, text: '炮塔持续更久。' },
+        { damage: 12, interval: 1.6, count: 1, range: 220, life: 8, fire: .72, text: '部署 <b>1</b> 座带装甲的哨戒炮台，吸引周围火力。' },
+        { damage: 15, interval: 1.52, count: 1, range: 230, life: 8.5, fire: .68, text: '炮塔伤害、射程与耐久提升。' },
+        { damage: 19, interval: 1.44, count: 1, range: 240, life: 9.2, fire: .64, text: '炮塔持续更久，嘲讽范围扩大。' },
         { damage: 24, interval: 1.34, count: 2, range: 250, life: 10, fire: .60, text: '同时部署 <b>2</b> 座炮塔。' },
-        { damage: 30, interval: 1.24, count: 2, range: 260, life: 10.8, fire: .56, text: '炮塔火力提升。' },
+        { damage: 30, interval: 1.24, count: 2, range: 260, life: 10.8, fire: .56, text: '炮塔装甲与火力提升。' },
         { damage: 37, interval: 1.14, count: 2, range: 270, life: 11.6, fire: .52, text: '自动装填机升级。' },
         { damage: 45, interval: 1.04, count: 3, range: 280, life: 12.4, fire: .48, text: '同时部署 <b>3</b> 座炮塔。' },
-        { damage: 56, interval: .92, count: 3, range: 300, life: 14, fire: .42, text: '<b>堡垒网络</b>：三座重炮哨戒全场。' }
+        { damage: 56, interval: .92, count: 3, range: 300, life: 14, fire: .42, text: '<b>堡垒网络</b>：三座重炮哨戒全场，并形成嘲讽防线。' }
       ]
     },
     emp: {
@@ -952,7 +952,7 @@
     { id:'railgun', name:'磁轨 M-05', en:'RAILGUN', role:'穿透', desc:'一条直线，穿过多层装甲。', trait:'主炮穿透 +2；暴击率 +8%', colors:{body:'#6574ad',light:'#c2d3ff',dark:'#252d55',core:'#9dbbff'}, pierceAdd:2, critAdd:.08, affinity:['cannon','crit','cooling'], start:{weapons:{cannon:1}} },
     { id:'pyro', name:'焚化 M-06', en:'PYRO', role:'火海', desc:'战场不是棋盘，是燃料。', trait:'开场携带燃迹；爆炸范围 +15%', colors:{body:'#d24a2e',light:'#ffb066',dark:'#4e170e',core:'#ff7a2a'}, areaMul:1.15, affinity:['flame','warhead','cannon'], start:{weapons:{cannon:1,flame:1},passives:{warhead:1}} },
     { id:'storm', name:'雷暴 M-07', en:'STORMCALLER', role:'连锁', desc:'让闪电在敌群里自己找路。', trait:'开场携带电弧；连锁 +2；冷却 -10%', colors:{body:'#486fc0',light:'#b8d7ff',dark:'#19294f',core:'#79b9ff'}, arcAdd:2, cdrMul:.9, affinity:['arc','cooling','cannon'], start:{weapons:{cannon:1,arc:1}} },
-    { id:'hive', name:'蜂巢 M-08', en:'HIVE', role:'无人机', desc:'你只需要移动，蜂群负责扣扳机。', trait:'开场携带蜂群；无人机 +1', colors:{body:'#b38a3e',light:'#ffe6a0',dark:'#493414',core:'#ffd15c'}, droneAdd:1, affinity:['drone','loader','cannon'], start:{weapons:{cannon:1,drone:1}} },
+    { id:'hive', name:'蜂巢 M-08', en:'HIVE', role:'无人机', desc:'你只需要移动，巡弋蜂群负责扣扳机。', trait:'开场携带巡弋蜂群；巡弋机 +1', colors:{body:'#b38a3e',light:'#ffe6a0',dark:'#493414',core:'#ffd15c'}, droneAdd:1, affinity:['drone','loader','cannon'], start:{weapons:{cannon:1,drone:1}} },
     { id:'sapper', name:'工兵 M-09', en:'SAPPER', role:'雷区', desc:'把追兵变成一片会发光的禁区。', trait:'开场携带地雷；每次布雷 +1', colors:{body:'#a87932',light:'#ffd889',dark:'#452e11',core:'#ffcf5a'}, mineAdd:1, areaMul:1.1, affinity:['mine','warhead','armor'], start:{weapons:{cannon:1,mine:1}} },
     { id:'oracle', name:'天罚 M-10', en:'ORACLE', role:'轨道', desc:'从看不见的高处，替战场做减法。', trait:'开场携带轨道；光矛 +1；冷却 -10%', colors:{body:'#8b6ac4',light:'#e0c8ff',dark:'#36254f',core:'#b896ff'}, orbitalAdd:1, cdrMul:.9, affinity:['orbital','cooling','crit'], start:{weapons:{cannon:1,orbital:1}} },
     { id:'cryo', name:'霜牙 M-11', en:'CRYO', role:'减速', desc:'先冻住，再拆掉。', trait:'炮弹命中减速 30%，持续 1.2 秒', colors:{body:'#4f9eb5',light:'#c7f5ff',dark:'#183c49',core:'#9bd8ff'}, slowOnHit:true, affinity:['cannon','cooling','armor'], start:{weapons:{cannon:1}} },
@@ -969,7 +969,7 @@
 
   const FUSIONS = {
     cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，穿透+2，命中引发 <b>轨道爆裂</b>。' },
-    drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:6, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'无人机 +1，脉冲伤害提高，蜂群覆盖全场。' },
+    drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:6, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'巡弋机 +1，脉冲伤害提高，蜂群全域清群并优先回防基地。' },
     arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'超导风暴', en:'SUPERCONDUCTING STORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，超导线圈把闪电导向更多目标。' },
     flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'热熔过载', en:'THERMAL OVERLOAD', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的热熔带。' },
     mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:6, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
@@ -981,14 +981,14 @@
     toxin: { id:'toxin', weapon:'toxin', passive:'salvage', weaponLevel:6, passiveLevel:2, name:'腐化生态', en:'CORROSIVE BIOSPHERE', color:'#a9e56e', icon:'flame', desc:'毒池 +1 层，范围与持续时间大幅提升。' },
     gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
     mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
-    sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，炮塔射程与耐久提升，形成交叉火力。' },
+    sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，耐久与嘲讽范围提升，形成会吸火的交叉防线。' },
     emp: { id:'emp', weapon:'emp', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'零域脉冲', en:'NULL FIELD', color:'#6fd8ff', icon:'emp', desc:'脉冲半径 +30%，瘫痪时间延长，零域覆盖整片近场。' },
     rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
   };
 
   // Role tags make each upgrade card's battlefield job explicit.
   Object.assign(WEAPONS.cannon, { role:'单体爆发', focus:'Boss / 直线穿透' });
-  Object.assign(WEAPONS.drone, { role:'持续火力', focus:'自动索敌 / 多目标' });
+  Object.assign(WEAPONS.drone, { role:'全域游走', focus:'跨区清群 / 回防基地' });
   Object.assign(WEAPONS.arc, { role:'连锁清场', focus:'密集敌群 / 跳跃' });
   Object.assign(WEAPONS.flame, { role:'区域封锁', focus:'走位 / 持续灼烧' });
   Object.assign(WEAPONS.mine, { role:'陷阱控场', focus:'埋伏 / 爆发' });
@@ -1000,7 +1000,7 @@
   Object.assign(WEAPONS.toxin, { role:'区域封锁', focus:'毒池 / 持续伤害' });
   Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
   Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
-  Object.assign(WEAPONS.sentry, { role:'阵地部署', focus:'自动炮塔 / 守区' });
+  Object.assign(WEAPONS.sentry, { role:'嘲讽阵地', focus:'吸引火力 / 基地守区' });
   Object.assign(WEAPONS.emp, { role:'反弹幕 / 近场控制', focus:'EMP / 瘫痪与清弹' });
   Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
   Object.assign(PASSIVES.engine, { role:'机动' });
