@@ -419,11 +419,12 @@
     const xs = G.coreCells.map(c => c.x), ys = G.coreCells.map(c => c.y);
     const coreX = Math.min(...xs) * TILE;
     const coreY = Math.min(...ys) * TILE;
+    const coreMaxHp = Math.round(BASE_MAX_HP * (arena.baseHpMul || 1));
     G.core = {
       x: coreX, y: coreY, w: CORE_W, h: CORE_H,
       cx: coreX + CORE_W / 2, cy: coreY + CORE_H / 2,
-      hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, alive: true, radius: BASE_RADIUS,
-      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, turrets: 0, repairRate: 6, repairDelay: 7
+      hp: coreMaxHp, maxHp: coreMaxHp, alive: true, radius: BASE_RADIUS,
+      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, turrets: arena.startTurrets || 0, repairRate: 6, repairDelay: 7
     };
     // The base's own defensive shell is friendly to player fire, but enemy fire can breach it.
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
@@ -2676,7 +2677,7 @@
     G.revives = 0;
     G.progressRecorded = false;
     G.spawnTimer = 1.1;
-    G.sideSpawnTimer = 5.5;
+    G.sideSpawnTimer = G.arenaIndex === 0 ? 22 : 5.5;
     G.sideWarned = false;
     G.mapHazardTimer = 3.5;
     G.mapHazardIndex = 0;
@@ -5209,7 +5210,7 @@
   function damageBase(amount, source) {
     const c = G.core;
     if (!c || !c.alive) return;
-    amount = Math.max(1, amount * (1 - (G.coreArmor || 0)));
+    amount = Math.max(1, amount * (G.arena.baseDamageMul || 1) * (1 - (G.coreArmor || 0)));
     c.hp = Math.max(0, c.hp - amount);
     c.noDamage = 0;
     c.hitFlash = .2;

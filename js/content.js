@@ -9,6 +9,8 @@
       en: 'FURNACE WORKS',
       sector: 'SECTOR 01',
       desc: '标准威胁 · 高温余烬',
+      mod: { enemyHp: .88, enemyDamage: .72, spawnMul: 1.25, bossHp: .6, xpMul: 1.15 },
+      baseHpMul: 1.5, startTurrets: 2, baseDamageMul: .55,
       palette: {
         sky: '#0b1411', ground: '#1d2b24', groundAlt: '#21332b', grid: 'rgba(208,232,211,.035)',
         fog: 'rgba(255,133,55,.055)', accent: '#ffb52d', ambient: '#ff7a2a',
