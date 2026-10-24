@@ -7960,19 +7960,26 @@
     const slots = Input.padSlots;
     const resolveSlot = (slot, exclude) => {
       if (!slot) return null;
+      const accept = (gp) => {
+        slot.ref = gp; slot.index = gp.index; slot.id = gp.id || '';
+        return gp;
+      };
       if (slot.ref) {
         const found = connected.find(p => p === slot.ref && p !== exclude);
-        if (found) return found;
+        if (found) return accept(found);
       }
       // Browsers can renumber a newly connected pad. Match the remembered
       // id before falling back to the raw array index.
       if (slot.id) {
-        const found = connected.find(p => p !== exclude && p.id === slot.id);
-        if (found) return found;
+        // Only use the id as a fallback when it uniquely identifies a pad.
+        // Two identical Xbox pads share the same id; for those, keep the
+        // remembered slot/index instead of guessing the wrong one.
+        const sameId = connected.filter(p => p !== exclude && p.id === slot.id);
+        if (sameId.length === 1) return accept(sameId[0]);
       }
       if (slot.index >= 0) {
         const found = connected.find(p => p !== exclude && p.index === slot.index && (!slot.id || p.id === slot.id));
-        if (found) return found;
+        if (found) return accept(found);
       }
       return null;
     };
