@@ -149,6 +149,7 @@
     enemies: [],
     bullets: [],
     enemyBullets: [],
+    codexPreviewAll: false,
     pickups: [],
     hazards: [],
     seals: [],
@@ -6996,7 +6997,7 @@
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
     const c = entry.colors || {};
-    const locked = !readCodex().includes(entry.key);
+    const locked = !G.codexPreviewAll && !readCodex().includes(entry.key);
     const colors = locked
       ? { body: '#1b2721', light: '#354740', dark: '#0b110e', core: '#5c746a' }
       : { body: c.body || c.color || '#555', light: c.light || '#ccc', dark: c.dark || '#222', core: c.core || c.coreColor || '#5ff0ce' };
@@ -7073,14 +7074,15 @@
     if (!U.codexGrid) return;
     const entries = codexEntries();
     const seen = new Set(readCodex());
+    const previewAll = !!G.codexPreviewAll;
     const all = entries.normal.concat(entries.elite, entries.boss);
     const total = all.length;
-    const found = all.filter(e => seen.has(e.key)).length;
+    const found = previewAll ? total : all.filter(e => seen.has(e.key)).length;
     if (U.codexProgress) U.codexProgress.textContent = `${found} / ${total}`;
     const section = (title, sub, list) => {
-      const n = list.filter(e => seen.has(e.key)).length;
+      const n = previewAll ? list.length : list.filter(e => seen.has(e.key)).length;
       const cards = list.map(e => {
-        const known = seen.has(e.key);
+        const known = previewAll || seen.has(e.key);
         return `<article class="codex-card is-${e.cls}${known ? '' : ' is-locked'}">
           <canvas width="200" height="116" data-codex-key="${e.key}"></canvas>
           <strong class="codex-card__name">${known ? e.name : '???'}</strong>
@@ -8002,6 +8004,12 @@
       }
     }
     requestAnimationFrame(loop);
+    // Local/debug-only full codex: /?debug&codex=all (never writes bf.codex).
+    const codexPreview = new URLSearchParams(location.search);
+    if (codexPreview.has('debug') && codexPreview.get('codex') === 'all') {
+      G.codexPreviewAll = true;
+      openCodexScreen();
+    }
   }
 
   function update(dt) {
