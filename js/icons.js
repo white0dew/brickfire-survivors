@@ -180,6 +180,19 @@
       glow(true); rect(9, 5, 2, 7, light); rect(8, 7, 4, 2, light); glow(false);
       rect(5, 5, 2, 1, '#fff'); rect(13, 5, 2, 1, '#fff');
     },
+    emp(ctx, p) {
+      const { rect, light, soft, dark, deep, glow, color } = p;
+      rect(4, 4, 12, 1, dark); rect(4, 15, 12, 1, dark);
+      rect(4, 5, 1, 10, dark); rect(15, 5, 1, 10, dark);
+      rect(6, 6, 8, 1, soft); rect(6, 13, 8, 1, soft);
+      rect(7, 7, 6, 6, deep); rect(8, 8, 4, 4, color); rect(9, 9, 2, 2, light);
+      glow(true);
+      rect(2, 9, 2, 2, light); rect(16, 9, 2, 2, light); rect(9, 2, 2, 2, light); rect(9, 16, 2, 2, light);
+      rect(3, 5, 2, 1, soft); rect(15, 5, 2, 1, soft); rect(3, 14, 2, 1, soft); rect(15, 14, 2, 1, soft);
+      glow(false);
+      rect(5, 10, 2, 1, dark); rect(13, 10, 2, 1, dark);
+      rect(10, 5, 1, 2, '#fff'); rect(10, 13, 1, 2, '#fff');
+    },
     turret(ctx, p) {
       const { rect, light, soft, dark, deep, glow, color } = p;
       rect(5, 13, 10, 3, dark); rect(3, 15, 14, 2, deep); rect(8, 8, 4, 6, color); rect(6, 9, 8, 4, soft);
@@ -192,7 +205,7 @@
   const BG = {
     engine: 'radial', armor: 'diag', loader: 'line', magnet: 'radial', warhead: 'radial', cooling: 'diag',
     crit: 'radial', salvage: 'diag', nano: 'radial', overdrive: 'radial', shield: 'diag', turret: 'line',
-    cannon: 'line', drone: 'radial', arc: 'radial', flame: 'radial', mine: 'diag', orbital: 'line'
+    cannon: 'line', drone: 'radial', arc: 'radial', flame: 'radial', mine: 'diag', orbital: 'line', emp: 'radial'
   };
 
   function draw(canvas, id, color, size) {

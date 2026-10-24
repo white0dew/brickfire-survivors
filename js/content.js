@@ -673,17 +673,17 @@
       ]
     },
     orbital: {
-      name: '轨道审判', en: 'ORBITAL JUDGEMENT', short: '轨道', icon: 'orbital', color: '#b896ff', type: 'weapon',
-      desc: '标记敌群，从轨道投射炽白光柱。',
+      name: '轨道光矛', en: 'ORBITAL LANCE', short: '轨道', icon: 'orbital', color: '#b896ff', type: 'weapon',
+      desc: '标记敌群，从轨道投射聚焦光矛。',
       levels: [
-        { damage: 90, interval: 5.4, radius: 56, count: 1, delay: .72, text: '每 <b>5.4</b> 秒标记敌群，降下 1 道光柱。' },
-        { damage: 116, interval: 5.2, radius: 60, count: 1, delay: .68, text: '光柱伤害 <b>+26</b>。' },
+        { damage: 90, interval: 5.4, radius: 56, count: 1, delay: .72, text: '每 <b>5.4</b> 秒标记敌群，降下 1 道光矛。' },
+        { damage: 116, interval: 5.2, radius: 60, count: 1, delay: .68, text: '光矛伤害 <b>+26</b>。' },
         { damage: 138, interval: 4.9, radius: 66, count: 1, delay: .64, text: '爆炸范围提升。' },
-        { damage: 172, interval: 4.65, radius: 70, count: 2, delay: .6, text: '每次呼叫 <b>2</b> 道光柱。' },
+        { damage: 172, interval: 4.65, radius: 70, count: 2, delay: .6, text: '每次呼叫 <b>2</b> 道光矛。' },
         { damage: 214, interval: 4.4, radius: 76, count: 2, delay: .56, text: '伤害 <b>+42</b>。' },
         { damage: 260, interval: 4.1, radius: 82, count: 2, delay: .52, text: '轨道充能加速。' },
-        { damage: 320, interval: 3.8, radius: 90, count: 3, delay: .48, text: '光柱数量 <b>3</b>。' },
-        { damage: 430, interval: 3.35, radius: 104, count: 3, delay: .42, text: '<b>天基惩戒</b>：三连审判抹除敌群。' }
+        { damage: 320, interval: 3.8, radius: 90, count: 3, delay: .48, text: '光矛数量 <b>3</b>。' },
+        { damage: 430, interval: 3.35, radius: 104, count: 3, delay: .42, text: '<b>天基惩戒</b>：三连光矛熔穿敌群。' }
       ]
     },
     scatter: {
@@ -781,7 +781,7 @@
         { damage: 88, interval: 1.88, speed: 432, radius: 76, slow: 1.6, count: 2, text: '弹体装药强化，瘫痪时间延长。' },
         { damage: 110, interval: 1.72, speed: 450, radius: 82, slow: 1.7, count: 2, text: '双联电浆覆盖敌群。' },
         { damage: 138, interval: 1.56, speed: 470, radius: 90, slow: 1.8, count: 3, text: '每轮抛射 <b>3</b> 枚电浆弹。' },
-        { damage: 175, interval: 1.38, speed: 500, radius: 100, slow: 2.0, count: 3, text: '<b>雷暴迫击</b>：三轮电浆把战场变成禁行区。' }
+        { damage: 175, interval: 1.38, speed: 500, radius: 100, slow: 2.0, count: 3, text: '<b>电浆过载</b>：三轮电浆把战场变成禁行区。' }
       ]
     },
     sentry: {
@@ -798,18 +798,18 @@
         { damage: 56, interval: .92, count: 3, range: 300, life: 14, fire: .42, text: '<b>堡垒网络</b>：三座重炮哨戒全场。' }
       ]
     },
-    meteor: {
-      name: '流星火雨', en: 'METEOR RAIN', short: '流星', icon: 'flame', color: '#ff7a2a', type: 'weapon',
-      desc: '呼叫流星砸向敌群，留下大范围爆炸。',
+    emp: {
+      name: '电磁脉冲矩阵', en: 'EMP MATRIX', short: 'EMP', icon: 'emp', color: '#6fd8ff', type: 'weapon',
+      desc: '释放环形电磁脉冲，灼伤并瘫痪周围敌军，同时清除范围内的敌方弹幕。',
       levels: [
-        { damage: 70, interval: 5.2, radius: 48, count: 1, delay: .7, text: '每 <b>5.2</b> 秒召唤 1 颗流星。' },
-        { damage: 90, interval: 5.0, radius: 52, count: 1, delay: .66, text: '流星伤害 <b>+20</b>。' },
-        { damage: 112, interval: 4.7, radius: 56, count: 1, delay: .62, text: '撞击范围提升。' },
-        { damage: 138, interval: 4.45, radius: 62, count: 2, delay: .58, text: '每次召唤 <b>2</b> 颗流星。' },
-        { damage: 170, interval: 4.15, radius: 68, count: 2, delay: .54, text: '流星质量与伤害提升。' },
-        { damage: 208, interval: 3.85, radius: 74, count: 2, delay: .50, text: '坠落速度加快。' },
-        { damage: 255, interval: 3.5, radius: 82, count: 3, delay: .46, text: '每次召唤 <b>3</b> 颗流星。' },
-        { damage: 320, interval: 3.0, radius: 94, count: 3, delay: .40, text: '<b>流星风暴</b>：火雨覆盖整片战区。' }
+        { damage: 38, interval: 5.8, radius: 132, disrupt: 1.0, text: '每 <b>5.8</b> 秒释放 EMP，瘫痪 <b>1</b> 秒并清除弹幕。' },
+        { damage: 48, interval: 5.6, radius: 142, disrupt: 1.1, text: '脉冲伤害与半径提升。' },
+        { damage: 58, interval: 5.35, radius: 152, disrupt: 1.2, text: '电磁线圈过载，瘫痪时间延长。' },
+        { damage: 72, interval: 5.1, radius: 162, disrupt: 1.35, text: '脉冲半径 <b>162</b>，反弹幕范围扩大。' },
+        { damage: 88, interval: 4.85, radius: 174, disrupt: 1.5, text: '电容阵列升级，伤害 <b>+16</b>。' },
+        { damage: 108, interval: 4.6, radius: 186, disrupt: 1.65, text: '瘫痪 <b>1.65</b> 秒，敌方火控短暂失效。' },
+        { damage: 132, interval: 4.35, radius: 200, disrupt: 1.8, text: '脉冲半径 <b>200</b>，覆盖整片近场。' },
+        { damage: 165, interval: 4.1, radius: 220, disrupt: 2.0, text: '<b>零域脉冲</b>：大范围瘫痪并抹除敌方弹幕。' }
       ]
     },
     rail: {
@@ -952,7 +952,7 @@
     { id:'storm', name:'雷暴 M-07', en:'STORMCALLER', role:'连锁', desc:'让闪电在敌群里自己找路。', trait:'开场携带电弧；连锁 +2；冷却 -10%', colors:{body:'#486fc0',light:'#b8d7ff',dark:'#19294f',core:'#79b9ff'}, arcAdd:2, cdrMul:.9, affinity:['arc','cooling','cannon'], start:{weapons:{cannon:1,arc:1}} },
     { id:'hive', name:'蜂巢 M-08', en:'HIVE', role:'无人机', desc:'你只需要移动，蜂群负责扣扳机。', trait:'开场携带蜂群；无人机 +1', colors:{body:'#b38a3e',light:'#ffe6a0',dark:'#493414',core:'#ffd15c'}, droneAdd:1, affinity:['drone','loader','cannon'], start:{weapons:{cannon:1,drone:1}} },
     { id:'sapper', name:'工兵 M-09', en:'SAPPER', role:'雷区', desc:'把追兵变成一片会发光的禁区。', trait:'开场携带地雷；每次布雷 +1', colors:{body:'#a87932',light:'#ffd889',dark:'#452e11',core:'#ffcf5a'}, mineAdd:1, areaMul:1.1, affinity:['mine','warhead','armor'], start:{weapons:{cannon:1,mine:1}} },
-    { id:'oracle', name:'天罚 M-10', en:'ORACLE', role:'轨道', desc:'从看不见的高处，替战场做减法。', trait:'开场携带轨道；光柱 +1；冷却 -10%', colors:{body:'#8b6ac4',light:'#e0c8ff',dark:'#36254f',core:'#b896ff'}, orbitalAdd:1, cdrMul:.9, affinity:['orbital','cooling','crit'], start:{weapons:{cannon:1,orbital:1}} },
+    { id:'oracle', name:'天罚 M-10', en:'ORACLE', role:'轨道', desc:'从看不见的高处，替战场做减法。', trait:'开场携带轨道；光矛 +1；冷却 -10%', colors:{body:'#8b6ac4',light:'#e0c8ff',dark:'#36254f',core:'#b896ff'}, orbitalAdd:1, cdrMul:.9, affinity:['orbital','cooling','crit'], start:{weapons:{cannon:1,orbital:1}} },
     { id:'cryo', name:'霜牙 M-11', en:'CRYO', role:'减速', desc:'先冻住，再拆掉。', trait:'炮弹命中减速 30%，持续 1.2 秒', colors:{body:'#4f9eb5',light:'#c7f5ff',dark:'#183c49',core:'#9bd8ff'}, slowOnHit:true, affinity:['cannon','cooling','armor'], start:{weapons:{cannon:1}} },
     { id:'magnet', name:'磁力 M-12', en:'MAGNET', role:'拾取', desc:'余烬会自己来找你。', trait:'拾取范围 +70%；经验 +12%', colors:{body:'#4c9e91',light:'#c8fff2',dark:'#173d38',core:'#5ff0ce'}, pickupMul:1.7, xpMul:1.12, affinity:['magnet','salvage','cannon'], start:{weapons:{cannon:1},passives:{magnet:1}} },
     { id:'scavenger', name:'拾荒 M-13', en:'SCAVENGER', role:'经验', desc:'每一块废铁，都是下一层协议。', trait:'经验 +20%；特殊掉落 +4%', colors:{body:'#9b8b4d',light:'#f1e5a0',dark:'#3a3216',core:'#f5d76e'}, xpMul:1.2, dropAdd:.04, affinity:['salvage','magnet','cannon'], start:{weapons:{cannon:1},passives:{salvage:1}} },
@@ -968,19 +968,19 @@
   const FUSIONS = {
     cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，穿透+2，命中引发 <b>轨道爆裂</b>。' },
     drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:6, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'无人机 +1，脉冲伤害提高，蜂群覆盖全场。' },
-    arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'雷神风暴', en:'THUNDERSTORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，闪电在敌群中爆裂。' },
-    flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'焚城炼狱', en:'INFERNO', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的火海。' },
+    arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'超导风暴', en:'SUPERCONDUCTING STORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，超导线圈把闪电导向更多目标。' },
+    flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'热熔过载', en:'THERMAL OVERLOAD', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的热熔带。' },
     mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:6, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
-    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:6, passiveLevel:2, name:'天基审判', en:'ORBITAL JUDGEMENT', color:'#b896ff', icon:'orbital', desc:'光柱 +1，暴击由轨道放大，审判覆盖整片战区。' },
+    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:6, passiveLevel:2, name:'天基熔断', en:'ORBITAL OVERRIDE', color:'#b896ff', icon:'orbital', desc:'光矛 +1，暴击由轨道放大，熔断覆盖整片战区。' },
     scatter: { id:'scatter', weapon:'scatter', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'超新星霰弹', en:'SUPERNOVA BUCKSHOT', color:'#ff9a4a', icon:'cannon', desc:'弹丸 +3，扇面爆炸，命中引发 <b>超新星爆裂</b>。' },
     laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:6, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
     missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:6, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
     frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
     toxin: { id:'toxin', weapon:'toxin', passive:'salvage', weaponLevel:6, passiveLevel:2, name:'腐化生态', en:'CORROSIVE BIOSPHERE', color:'#a9e56e', icon:'flame', desc:'毒池 +1 层，范围与持续时间大幅提升。' },
     gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
-    mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'雷暴迫击', en:'STORM MORTAR', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
+    mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
     sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，炮塔射程与耐久提升，形成交叉火力。' },
-    meteor: { id:'meteor', weapon:'meteor', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'流星风暴', en:'METEOR STORM', color:'#ff7a2a', icon:'flame', desc:'流星 +1，撞击半径与伤害提升，火雨覆盖全场。' },
+    emp: { id:'emp', weapon:'emp', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'零域脉冲', en:'NULL FIELD', color:'#6fd8ff', icon:'emp', desc:'脉冲半径 +30%，瘫痪时间延长，零域覆盖整片近场。' },
     rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
   };
 
@@ -999,7 +999,7 @@
   Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
   Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
   Object.assign(WEAPONS.sentry, { role:'阵地部署', focus:'自动炮塔 / 守区' });
-  Object.assign(WEAPONS.meteor, { role:'范围轰炸', focus:'流星 / 大范围爆发' });
+  Object.assign(WEAPONS.emp, { role:'反弹幕 / 近场控制', focus:'EMP / 瘫痪与清弹' });
   Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
   Object.assign(PASSIVES.engine, { role:'机动' });
   Object.assign(PASSIVES.armor, { role:'生存' });

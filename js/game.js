@@ -379,7 +379,7 @@
       passives: Object.assign({}, (tank.start && tank.start.passives) || {}),
       fusions: {},
       weaponCds: {}, droneState: [], mortarTimer: 1.4, flameTimer: 0, mineTimer: 0, arcTimer: 1.3, orbitalTimer: 2.2,
-      scatterTimer: .2, laserTimer: .45, missileTimer: .8, frostTimer: .9, toxinTimer: .8, gravityTimer: 1.1, sentryTimer: 1.2, meteorTimer: 1.3, railTimer: .65,
+      scatterTimer: .2, laserTimer: .45, missileTimer: .8, frostTimer: .9, toxinTimer: .8, gravityTimer: 1.1, sentryTimer: 1.2, empTimer: 1.3, railTimer: .65,
       bodyColor: p2 ? pal.body : pal.body,
       bodyLight: p2 ? pal.light : pal.light,
       bodyDark: p2 ? pal.dark : pal.dark,
@@ -1739,6 +1739,34 @@
     return true;
   }
 
+  function drawEmpArcs(e, t) {
+    if (!(e.empTimer > 0)) return;
+    const ctx = gameCtx;
+    const r = (e.radius || 14) * (e.size || 1) + 6;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) {
+      const a = t * 7 + i * 2.1;
+      ctx.strokeStyle = i === 0 ? 'rgba(217,251,255,.9)' : 'rgba(111,216,255,.45)';
+      ctx.lineWidth = i === 0 ? 1.2 : .8;
+      ctx.beginPath();
+      for (let j = 0; j < 4; j++) {
+        const aa = a + j * .38;
+        const rr = r * (0.55 + .12 * j);
+        const x = e.x + Math.cos(aa) * rr;
+        const y = e.y + Math.sin(aa) * rr;
+        if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(217,251,255,.85)';
+    for (let i = 0; i < 4; i++) {
+      const a = -t * 5 + i * 1.57;
+      ctx.fillRect(e.x + Math.cos(a) * r - 1, e.y + Math.sin(a) * r - 1, 2, 2);
+    }
+    ctx.restore();
+  }
+
   function drawEnemy(e, t) {
     const ctx = gameCtx;
     if (e.spawnTimer > 0) {
@@ -2027,7 +2055,7 @@
     }
     // mines
     for (const m of G.mines) drawMineShape(ctx, m, t);
-    // orbital / meteor warnings & beams
+    // orbital warnings & beams
     for (const s of G.strikes) {
       if (s.state === 'warn') {
         const k = 1 - s.timer / s.delay;
@@ -2263,7 +2291,7 @@
     drawSeals(t);
     // sort units by y
     const units = [];
-    for (const e of G.enemies) units.push({ y: e.y, draw: () => drawEnemy(e, t) });
+    for (const e of G.enemies) units.push({ y: e.y, draw: () => { drawEnemy(e, t); drawEmpArcs(e, t); } });
     for (const p of G.players || []) if (p.alive) units.push({ y: p.y, draw: () => drawPlayer(t, p) });
     units.sort((a, b) => a.y - b.y);
     for (const u of units) u.draw();
@@ -3596,26 +3624,34 @@
         p.sentryTimer = Math.max(.8, w.interval / st.attackSpeed * st.cdr);
       } else if (p.sentryTimer <= 0) p.sentryTimer = .4;
     }
-    // meteor rain
-    const meteorLvl = weaponsFor(p).meteor || 0;
-    if (meteorLvl) {
-      const w = WEAPONS.meteor.levels[Math.min(7, meteorLvl - 1)];
-      p.meteorTimer -= dt;
-      if (p.meteorTimer <= 0) {
-        const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
-        if (candidates.length) {
-          const count = w.count + (fused('meteor', p) ? 1 : 0);
-          for (let i = 0; i < count; i++) {
-            const target = candidates[(Math.random() * candidates.length) | 0];
-            G.strikes.push({
-              x: clamp(target.x + rand(42, -42), 30, W - 30), y: clamp(target.y + rand(42, -42), 30, H - 30),
-              radius: w.radius * st.area * (fused('meteor', p) ? 1.2 : 1), damage: w.damage * st.damage * (fused('meteor', p) ? 1.25 : 1), owner: p,
-              delay: w.delay, timer: w.delay, state: 'warn', color: '#ff7a2a'
-            });
-          }
-          p.meteorTimer = Math.max(1.1, w.interval / st.attackSpeed * st.cdr);
-          AUDIO.tone(120, .45, 'sawtooth', .02, 260);
-        } else p.meteorTimer = .2;
+    // electromagnetic pulse matrix
+    const empLvl = weaponsFor(p).emp || 0;
+    if (empLvl) {
+      const w = WEAPONS.emp.levels[Math.min(7, empLvl - 1)];
+      const empFusion = fused('emp', p);
+      p.empTimer -= dt;
+      if (p.empTimer <= 0) {
+        const radius = w.radius * st.area * (empFusion ? 1.3 : 1);
+        const damage = w.damage * st.damage * (empFusion ? 1.2 : 1);
+        const disrupt = w.disrupt * (empFusion ? 1.3 : 1);
+        for (const e of G.enemies) {
+          if (e.dead || e.spawnTimer > 0) continue;
+          const reach = radius + (e.radius || 14) * (e.size || 1) * .3;
+          if (dist2(p.x, p.y, e.x, e.y) > reach * reach) continue;
+          damageEnemy(e, damage, false, 'emp', p);
+          if (e.dead) continue;
+          e.empTimer = Math.max(e.empTimer || 0, disrupt * (e.boss ? .45 : 1));
+          e.slowTimer = Math.max(e.slowTimer || 0, 1.0);
+        }
+        // EMP burns out hostile projectiles inside its radius.
+        G.enemyBullets = G.enemyBullets.filter(b => dist2(b.x, b.y, p.x, p.y) > radius * radius);
+        addEffect({ type: 'ring', x: p.x, y: p.y, radius: radius * 1.02, life: .52, maxLife: .52, color: '#6fd8ff', width: 2 });
+        addEffect({ type: 'ring', x: p.x, y: p.y, radius: radius * .66, life: .36, maxLife: .36, color: '#d9fbff', width: 1 });
+        addParticles(p.x, p.y, 16, '#6fd8ff', 'spark', .85);
+        addShake(4, .16);
+        G.flash = .18; G.flashColor = '#6fd8ff';
+        AUDIO.tone(180, .22, 'square', .018, 560);
+        p.empTimer = Math.max(1.2, w.interval / st.attackSpeed * st.cdr);
       }
     }
     // rail cannon
@@ -3948,6 +3984,10 @@
         e.poisonTimer = Math.max(0, e.poisonTimer - dt);
         damageEnemy(e, (e.poisonDps || 0) * dt, false, 'poison', e.poisonOwner);
         if (e.dead) continue;
+      }
+      if (e.empTimer > 0) {
+        e.empTimer = Math.max(0, e.empTimer - dt);
+        continue;
       }
       e.freeze = G.freezeTimer;
       if (G.freezeTimer > 0) continue;
