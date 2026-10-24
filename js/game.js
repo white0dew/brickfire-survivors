@@ -2883,8 +2883,8 @@
         attackSpeed: 1 + loaderLvl * .07,
         cdr: Math.max(.45, 1 - coolingLvl * .07),
         area: 1 + warheadLvl * .1,
-        crit: .05 + critLvl * .08,
-        critMult: 1.8 + critLvl * .05,
+        crit: .05 + critLvl * .16,
+        critMult: 1.8 + critLvl * .10,
         pickup: PLAYER_BASE.pickupRadius * (1 + magnetLvl * .22),
         xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
         dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
@@ -3379,16 +3379,14 @@
     });
   }
 
-  function pickRoamerTarget(ds, p, index) {
-    const pool = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0);
-    if (!pool.length) return null;
-    const base = G.core && G.core.alive ? G.core : null;
-    const nearBase = base ? pool.filter(e => dist2(e.x, e.y, base.cx, base.cy) < 190 * 190) : [];
-    const nearPlayer = pool.filter(e => dist2(e.x, e.y, p.x, p.y) < 160 * 160);
-    let candidates = nearBase.length ? nearBase : nearPlayer.length ? nearPlayer : pool;
-    const ax = base ? base.cx : p.x, ay = base ? base.cy : p.y;
-    candidates = candidates.slice().sort((a, b) => dist2(a.x, a.y, ax, ay) - dist2(b.x, b.y, ax, ay));
-    return candidates[index % Math.min(4, candidates.length)];
+  function pickOrbitTarget(p, range) {
+    let best = null, bestD = range * range;
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      const d = dist2(e.x, e.y, p.x, p.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
   }
 
   function updateWeapons(dt) {
@@ -3399,7 +3397,8 @@
 
   function updateWeaponsFor(p, dt) {
     const st = statsFor(p);
-    // roaming drone swarm
+    // orbiting drone swarm: bodyguards rotate around the tank, fire at nearby
+    // enemies and physically intercept enemy shells.
     const droneLvl = weaponsFor(p).drone || 0;
     if (droneLvl) {
       const w = WEAPONS.drone.levels[Math.min(7, droneLvl - 1)];
@@ -3408,46 +3407,27 @@
         const idx = p.droneState.length;
         p.droneState.push({
           phase: (idx / Math.max(1, count)) * TAU, cd: .25 + idx * .16,
-          x: p.x + Math.cos(idx * 2.1) * 28, y: p.y + Math.sin(idx * 2.1) * 20,
-          fireFlash: 0, target: null, scanCd: 0
+          x: p.x + Math.cos(idx * 2.1) * 40, y: p.y + Math.sin(idx * 2.1) * 30,
+          fireFlash: 0, blockFlash: 0, target: null, scanCd: 0
         });
       }
       if (p.droneState.length > count) p.droneState.length = count;
-      const droneSpeed = 235 + droneLvl * 14 + (fused('drone', p) ? 35 : 0);
+      const orbitR = 42 + Math.min(16, count * 3) + (fused('drone', p) ? 4 : 0);
+      const orbitSpeed = 1.05 + droneLvl * .045;
       for (let i = 0; i < p.droneState.length; i++) {
         const ds = p.droneState[i];
         ds.scanCd = Math.max(0, (ds.scanCd || 0) - dt);
         if (!ds.target || ds.target.dead || ds.target.spawnTimer > 0 || ds.scanCd <= 0) {
-          ds.target = pickRoamerTarget(ds, p, i);
-          ds.scanCd = .32;
+          ds.target = pickOrbitTarget(p, w.range);
+          ds.scanCd = .25;
         }
-        const target = ds.target;
-        const base = G.core && G.core.alive ? G.core : null;
-        const ax = base ? base.cx : p.x, ay = base ? base.cy : p.y;
-        let tx = ax, ty = ay;
-        if (target) { tx = target.x; ty = target.y; }
-        else {
-          const a = G.animTime * .45 + ds.phase;
-          tx = ax + Math.cos(a) * 92;
-          ty = ay + Math.sin(a) * 62;
-        }
-        const dx = tx - ds.x, dy = ty - ds.y;
-        const d = Math.hypot(dx, dy) || 1;
-        if (target && d <= w.range * .72) {
-          // Circle the target at firing distance instead of stacking on it.
-          const orbit = G.animTime * 1.5 + ds.phase;
-          const rr = w.range * .52;
-          const ox = target.x + Math.cos(orbit) * rr;
-          const oy = target.y + Math.sin(orbit) * rr;
-          ds.x += (ox - ds.x) * Math.min(1, dt * 3.2);
-          ds.y += (oy - ds.y) * Math.min(1, dt * 3.2);
-        } else {
-          const step = Math.min(d, droneSpeed * dt);
-          ds.x += dx / d * step;
-          ds.y += dy / d * step;
-        }
+        // Rotate around the hull; the elliptical orbit reads as a guard screen.
+        const angle = G.animTime * orbitSpeed + ds.phase;
+        ds.x = p.x + Math.cos(angle) * orbitR;
+        ds.y = p.y + Math.sin(angle) * orbitR * .82;
         ds.x = clamp(ds.x, 22, W - 22);
         ds.y = clamp(ds.y, 22, H - 22);
+        const target = ds.target;
         ds.cd -= dt;
         if (ds.cd <= 0) {
           if (target && !target.dead && dist2(ds.x, ds.y, target.x, target.y) <= w.range * w.range) {
@@ -3457,6 +3437,7 @@
           } else ds.cd = .1;
         }
         ds.fireFlash = Math.max(0, ds.fireFlash - dt);
+        ds.blockFlash = Math.max(0, (ds.blockFlash || 0) - dt);
       }
     } else p.droneState = [];
     // arc coil
@@ -5205,6 +5186,21 @@
         for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(60, -60), rand(60, -60), '#ffe4ae', 'spark', .24, 1.8);
         b.dead = true; continue;
       }
+      let blockDrone = null;
+      for (const p of G.players || []) {
+        if (!p.alive || p.downed) continue;
+        for (const ds of p.droneState || []) {
+          if (dist2(b.x, b.y, ds.x, ds.y) < (10 + b.radius + 1) ** 2) { blockDrone = ds; break; }
+        }
+        if (blockDrone) break;
+      }
+      if (blockDrone) {
+        blockDrone.blockFlash = .16;
+        b.dead = true;
+        addEffect({ type: 'ring', x: b.x, y: b.y, radius: 18, life: .24, maxLife: .24, color: '#bafff0' });
+        for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(85, -85), rand(85, -85), '#bafff0', 'spark', .28, 1.5);
+        continue;
+      }
       const sentryHit = (G.sentries || []).find(s => s.life > 0 && s.hp > 0 && dist2(b.x, b.y, s.x, s.y) < (s.radius + b.radius + 1) ** 2);
       if (sentryHit) {
         damageSentry(sentryHit, b.damage, 'shell');
@@ -5842,6 +5838,12 @@
         ctx.fillStyle = accent; ctx.fillRect(-9, -6, 2, 2); ctx.fillRect(7, -6, 2, 2); ctx.fillRect(-9, 4, 2, 2); ctx.fillRect(7, 4, 2, 2);
         ctx.strokeStyle = hexA(accent, .18); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(0, 0, 10 + Math.sin(t * 5 + i) * 2, 0, TAU); ctx.stroke();
+        if (ds.blockFlash > 0) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = hexA('#d8fff7', .85);
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, 13 + ds.blockFlash * 26, 0, TAU); ctx.stroke();
+        }
         ctx.restore();
       }
     }

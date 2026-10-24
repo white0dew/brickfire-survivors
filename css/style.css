@@ -2446,7 +2446,65 @@ body.pad-connected .sf-hint { display: flex; }
 }
 
 /* With the side column gone, let the battlefield take the available width. */
-.battle-frame { width: min(100%, calc((100svh - 200px) * 1.6667)); }
+.battle-frame { width: min(100%, calc((100svh - 212px) * 1.6667)); }
 @media (max-width: 1100px) {
   .battle-frame { width: min(100%, calc((100svh - 188px) * 1.6667)); }
+}
+
+/* Large displays: remove the old 1500px desktop cap and let the battlefield
+   consume the full usable height. The column also absorbs leftover space so
+   the frame stays centred vertically instead of hugging the top. */
+.battle-column { max-width: none; }
+@media (min-width: 901px) {
+  .battle-column { flex: 1 1 auto; }
+}
+
+/* 2K / 4K typography: keep the HUD legible without taking space away from
+   the battlefield. Minimum values match the 1080p layout exactly. */
+.topbar { grid-template-columns: 1fr minmax(320px, clamp(440px, 28vw, 720px)) 1fr; }
+.topbar__brand strong { font-size: clamp(12px, .7vw, 17px); }
+.topbar__brand span { font-size: clamp(7px, .4vw, 10px); }
+.run-clock__meta span:first-child { font-size: clamp(11px, .7vw, 15px); }
+.run-clock__meta span:last-child { font-size: clamp(13px, .8vw, 18px); }
+.run-clock__bar { height: clamp(3px, .2vw, 5px); }
+.topbar .icon-btn { width: clamp(31px, 1.6vw, 40px); height: clamp(29px, 1.5vw, 38px); }
+.topbar .icon-btn svg { width: clamp(14px, .8vw, 18px); height: clamp(14px, .8vw, 18px); }
+
+.hud-pilot {
+  width: clamp(280px, 18vw, 420px);
+  padding: clamp(9px, .45vw, 13px) clamp(11px, .55vw, 16px) clamp(10px, .48vw, 14px);
+}
+.hud-pilot__top { gap: clamp(7px, .35vw, 10px); }
+.hud-pilot__tag {
+  width: clamp(24px, 1.4vw, 32px);
+  height: clamp(16px, .95vw, 22px);
+  font-size: clamp(8px, .5vw, 10px);
+}
+.hud-pilot__top strong { font-size: clamp(13px, .78vw, 18px); }
+.hud-pilot__top em { font-size: clamp(8px, .48vw, 11px); }
+.hud-pilot__line { grid-template-columns: clamp(30px, 1.8vw, 40px) minmax(0,1fr) auto; gap: clamp(7px, .35vw, 10px); margin-top: clamp(5px, .3vw, 7px); }
+.hud-pilot__line span, .hud-pilot__line em { font-size: clamp(8px, .48vw, 11px); }
+.hud-meter { height: clamp(4px, .28vw, 6px); }
+.hud-pilot__build { font-size: clamp(8px, .48vw, 11px); margin-top: clamp(5px, .3vw, 7px); }
+.hud-base {
+  width: clamp(206px, 12vw, 300px);
+  gap: clamp(7px, .4vw, 10px);
+  padding: clamp(6px, .35vw, 9px) clamp(9px, .55vw, 13px);
+}
+.hud-base__label, .hud-base > em { font-size: clamp(8px, .48vw, 11px); }
+.hud-pilot__feed { width: min(clamp(330px, 20vw, 460px), 100%); }
+.pickup-toast { font-size: clamp(10px, .55vw, 12px); }
+.hud-loadout__head span { font-size: clamp(8px, .45vw, 11px); }
+.hud-loadout__head b { font-size: clamp(9px, .5vw, 12px); }
+.hud-loadout .loadout-item canvas { width: clamp(18px, 1vw, 24px); height: clamp(18px, 1vw, 24px); flex-basis: clamp(18px, 1vw, 24px); }
+.hud-loadout .loadout-item__copy strong { font-size: clamp(10px, .55vw, 13px); }
+.hud-loadout .loadout-item__copy small { font-size: clamp(7px, .4vw, 10px); }
+.combat-deck--actions .deck-slot__copy small { font-size: clamp(10px, .55vw, 13px); }
+.combat-deck--actions .deck-slot__copy strong { font-size: clamp(14px, .75vw, 18px); }
+.combat-deck--actions .dash-icon,
+.combat-deck--actions .recall-icon { width: clamp(34px, 1.8vw, 42px); height: clamp(34px, 1.8vw, 42px); flex-basis: clamp(34px, 1.8vw, 42px); }
+
+/* Keep the slightly roomier 4K reserve from shrinking ordinary desktop play. */
+@media (min-width: 1101px) and (max-width: 1899px) {
+  .battle-frame { width: min(100%, calc((100svh - 200px) * 1.6667)); }
 }
