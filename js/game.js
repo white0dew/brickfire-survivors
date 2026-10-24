@@ -5935,8 +5935,7 @@
     const g = Input.gamepad;
     const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
     const owner = G.levelupPlayer;
-    const padOwner = G.twoPlayer ? 1 : 0;
-    if (!owner || owner.index !== padOwner) {
+    if (!owner) {
       cards.forEach(card => card.classList.remove('is-pad'));
       clearPadFocus();
       return;
@@ -5952,8 +5951,7 @@
 
   function moveLevelupSelection(dir, owner) {
     const p = G.levelupPlayer;
-    const required = G.twoPlayer ? 'P2' : 'P1';
-    if (!p || p.label !== required || (owner && owner !== required)) { AUDIO.deny(); return; }
+    if (!p || (owner && owner !== p.label)) { AUDIO.deny(); return; }
     const g = Input.gamepad;
     const count = Math.max(1, (G.currentChoices || []).length);
     g.levelupOwner = p.label;
@@ -5970,7 +5968,7 @@
     if (U.levelupP1) {
       U.levelupP1.classList.toggle('is-active', !isP2);
       U.levelupP1.innerHTML = coop
-        ? `<b>P1</b><em>${isP2 ? '等待 P2 选择' : '键盘 1 / 2 / 3 直接选择'}</em>`
+        ? `<b>P1</b><em>${isP2 ? '等待 P2 选择' : '键盘 1 / 2 / 3 或 ← → 切换'}</em>`
         : '<b>P1</b><em>键盘 1 / 2 / 3 · 手柄 摇杆 + A</em>';
     }
     if (U.levelupP2) {
@@ -5984,10 +5982,10 @@
     }
     if (U.levelupKeyHint) U.levelupKeyHint.innerHTML = isP2
       ? '<kbd>P2</kbd> 手柄选择'
-      : (coop ? '<kbd>P1</kbd> 1 / 2 / 3 直接选择' : '<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 选择');
+      : (coop ? '<kbd>P1</kbd> 1 / 2 / 3 · ← →' : '<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · ← → 选择');
     if (U.levelupPadHint) U.levelupPadHint.textContent = isP2
       ? 'P2 手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷'
-      : (coop ? 'P2 手柄将在自己的升级窗口启用' : '手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷');
+      : '手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷';
     if (U.rerollBtn) U.rerollBtn.disabled = isP2 || !p || p.rerolls <= 0;
     if (U.rerollCount) U.rerollCount.textContent = String((p && p.rerolls) || 0);
   }
@@ -7888,8 +7886,8 @@
         // Do not auto-select the first card: wait for a neutral stick/d-pad state,
         // then require an explicit direction before showing the selection frame.
         if (g.levelupNeedsNeutral && Math.hypot(g.x, g.y) < .24) g.levelupNeedsNeutral = false;
-        const padOwnerLabel = G.twoPlayer ? 'P2' : 'P1';
-        if (!g.levelupNeedsNeutral && G.levelupPlayer && G.levelupPlayer.label === padOwnerLabel) {
+        const padOwnerLabel = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
+        if (!g.levelupNeedsNeutral && G.levelupPlayer) {
           const left = just(14) || just(12) || just(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
           const right = just(15) || just(13) || just(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
           if (left) moveLevelupSelection(-1, padOwnerLabel);
