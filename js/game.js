@@ -2508,6 +2508,11 @@
     r(36, 1, 1, 1, C.coreHot);
     for (let i = 0; i < 5; i++) r(27 + i * 3, 10, 2, 2, i % 2 ? p.hazard : C.black);
 
+    // turret assembly has a slow servo sway, so the hangar tank feels alive
+    ctx.save();
+    ctx.translate(0, -14);
+    ctx.rotate(Math.sin(t * .5) * .035);
+    ctx.translate(0, 14);
     // turret basket
     r(-19, -23, 38, 15, C.black);
     r(-17, -22, 34, 13, C.steelDark);
@@ -2556,6 +2561,7 @@
     r(53, -3, 2, 7, C.shellLight);
     r(9, 0, 31, 1, hexA(C.core, .68));
     r(8, -1, 31, 1, hexA(C.core, .25));
+    ctx.restore();
     ctx.restore();
 
     // rim / panel light
@@ -6531,6 +6537,17 @@
     }
   }
 
+  function syncMenuSelection() {
+    const tank = TANKS.find(t => t.id === G.tankIds[0]) || TANKS[0];
+    const stage = G.endlessSelected ? { name: '无尽协议', sector: 'ENDLESS' } : (MAPS[G.arenaIndex] || MAPS[0]);
+    if (U.sfStageName) U.sfStageName.textContent = stage.name;
+    if (U.sfStageSector) U.sfStageSector.textContent = G.endlessSelected ? 'ENDLESS' : stage.sector;
+    if (U.sfTankName) U.sfTankName.textContent = tank.name;
+    if (U.sfUnitName) U.sfUnitName.textContent = tank.name;
+    if (U.sfUnitRole) U.sfUnitRole.textContent = `${tank.role} / ${tank.en}`;
+    if (U.sfModeName) U.sfModeName.textContent = G.coopSelected ? '双人' : '单人';
+  }
+
   function updatePilotCard(slot) {
     const tank = TANKS.find(t => t.id === G.tankIds[slot]) || TANKS[0];
     const p2 = slot === 1;
@@ -6542,6 +6559,7 @@
     if (roleEl) roleEl.textContent = `${tank.role} / ${tank.en}`;
     if (traitEl) traitEl.textContent = tank.trait;
     if (preview) drawTankPreview(preview, tank);
+    if (!p2) syncMenuSelection();
   }
 
   function renderTankGrid() {
@@ -6564,9 +6582,7 @@
     const tank = TANKS.find(t => t.id === selected) || TANKS[0];
     const owned = tankOwned(tank.id, profile);
     if (U.tankDetail) {
-      const aff = (tank.affinity || []).map(id => (WEAPONS[id] && WEAPONS[id].name) || (PASSIVES[id] && PASSIVES[id].name) || id).join(' / ');
-      const status = owned ? '<span class="tank-detail__ok">已解锁</span>' : `<span class="tank-detail__lock">未解锁 · ${tankRequirementText(tank)}</span>`;
-      U.tankDetail.innerHTML = `<strong>${tank.name} // ${tank.en}</strong><br>${tank.desc}<br><b>${tank.trait}</b>${aff ? `<br><span class="tank-detail__affinity">协议偏好：${aff}</span>` : ''}<br>${status}${owned ? '' : ` · 兑换价 ${tank.cost} 核心`}`;
+      U.tankDetail.innerHTML = `<strong>${tank.name}</strong><b>${tank.trait}</b>${owned ? '' : `<em>${tankRequirementText(tank)} · ${tank.cost} 核心</em>`}`;
     }
     if (U.tankCores) U.tankCores.textContent = `合金核心 ${profile.cores}`;
     if (U.tankUnlockBtn) {
@@ -6827,6 +6843,7 @@
     updatePilotCard(1);
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.endlessSelected ? (G.coopSelected ? '双人无尽' : '无尽出击') : (G.coopSelected ? '双人出击' : '点火出击');
     if (U.startBtnSub) U.startBtnSub.textContent = G.endlessSelected ? (G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL') : (G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR');
+    syncMenuSelection();
   }
 
   function updateDifficultyUI() {
@@ -6873,6 +6890,7 @@
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ${MAPS[index].sector}`;
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人出击' : '点火出击';
     if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR';
+    syncMenuSelection();
     menuCache = null;
     menuParticles = [];
   }
@@ -6906,6 +6924,7 @@
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ENDLESS`;
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人无尽' : '无尽出击';
     if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL';
+    syncMenuSelection();
     menuCache = null;
     menuParticles = [];
   }
@@ -7201,6 +7220,7 @@
       'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
+      'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
       'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
       'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'itemBtn', 'itemScreen', 'itemGrid', 'itemClose', 'itemDone', 'artBtn', 'artScreen', 'artClose', 'artDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
@@ -7222,6 +7242,28 @@
     });
     U.modeCards.forEach(card => card.addEventListener('click', () => { AUDIO.init(); selectCoop(card.dataset.coop === '1'); AUDIO.tick(); }));
     U.startBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); });
+    if (U.menuNav) U.menuNav.querySelectorAll('[data-menu-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        AUDIO.init(); AUDIO.tick();
+        const action = btn.dataset.menuAction;
+        if (action === 'start') U.startBtn.click();
+        else if (action === 'stage') U.stagePickerBtn.click();
+        else if (action === 'tank') U.tankPickerBtn.click();
+        else if (action === 'mode') selectCoop(!G.coopSelected);
+        else if (action === 'manual') U.itemBtn.click();
+        else if (action === 'fusion') U.fusionBtn.click();
+        else if (action === 'codex') U.codexBtn.click();
+        else if (action === 'save') U.saveBtn.click();
+      });
+    });
+    [U.arenaOptions, U.tankGrid, U.itemGrid].forEach(grid => {
+      if (!grid) return;
+      grid.addEventListener('wheel', e => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || grid.scrollWidth <= grid.clientWidth) return;
+        grid.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }, { passive: false });
+    });
     U.arenaOptions.addEventListener('click', e => {
       const endlessCard = e.target.closest('[data-endless]');
       if (endlessCard) {
@@ -7387,7 +7429,17 @@
           return;
         }
         if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden') || !U.codexScreen.classList.contains('hidden') || (U.artScreen && !U.artScreen.classList.contains('hidden')) || !U.itemScreen.classList.contains('hidden') || !U.saveScreen.classList.contains('hidden')) return;
-        if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
+        if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+          e.preventDefault();
+          movePadFocus(e.code === 'ArrowLeft' ? -1 : e.code === 'ArrowRight' ? 1 : 0, e.code === 'ArrowUp' ? -1 : e.code === 'ArrowDown' ? 1 : 0);
+          return;
+        }
+        if (e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          const navItem = document.activeElement && document.activeElement.closest && document.activeElement.closest('.sf-nav__item');
+          if (navItem) { navItem.click(); return; }
+          AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected);
+        }
         return;
       }
       if (G.mode === 'paused') {
@@ -7540,6 +7592,8 @@
   function padScrollRoot(ctx) {
     if (!ctx) return null;
     const selectors = {
+      stage: '#arenaOptions',
+      tank: '#tankGrid',
       codex: '#codexGrid',
       item: '#itemGrid',
       how: '.how__panel',
@@ -7556,7 +7610,9 @@
   function padScrollPage(ctx, dir) {
     const el = padScrollRoot(ctx);
     if (!el) return false;
-    el.scrollBy({ top: Math.max(90, el.clientHeight * .72) * dir, behavior: 'auto' });
+    const horizontal = el.scrollWidth > el.clientWidth + 4;
+    if (horizontal) el.scrollBy({ left: Math.max(120, el.clientWidth * .72) * dir, behavior: 'auto' });
+    else el.scrollBy({ top: Math.max(90, el.clientHeight * .72) * dir, behavior: 'auto' });
     return true;
   }
 
@@ -7606,7 +7662,7 @@
 
   function defaultPadFocus(ctx) {
     if (!ctx) return null;
-    if (ctx.key === 'menu') return U.startBtn;
+    if (ctx.key === 'menu') return document.querySelector('.sf-nav__item--start') || (U.menuNav && U.menuNav.querySelector('.sf-nav__item--start')) || U.startBtn;
     if (ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
     if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
@@ -7896,7 +7952,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {

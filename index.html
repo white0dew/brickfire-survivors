@@ -7,7 +7,7 @@
   <title>钢铁余烬 // STEEL EMBERS</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261024-28">
+  <link rel="stylesheet" href="css/style.css?v=20261024-42">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -20,20 +20,14 @@
     </div>
 
     <!-- ================= TITLE / HANGAR ================= -->
-    <section id="menuScreen" class="menu-screen" aria-label="主菜单">
-      <header class="hangar-top">
+    <section id="menuScreen" class="menu-screen sf-menu" aria-label="主菜单">
+      <header class="hangar-top sf-top">
         <div class="brand-lockup">
-          <div class="brand-mark" aria-hidden="true">
-            <span></span><span></span><span></span><span></span>
-          </div>
-          <div>
-            <div class="brand-name">STEEL EMBERS<span>//</span></div>
-            <div class="brand-sub">ARMORED SURVIVAL SYSTEMS</div>
-          </div>
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div class="brand-name">STEEL EMBERS<span>//</span></div>
         </div>
         <div class="hangar-top__right">
           <div id="padState" class="pad-state">PAD / 按手柄键</div>
-          <div class="status-led"><i></i> EXTRACTION LINK STABLE</div>
           <button id="fullBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="全屏" title="全屏 (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
           <button id="soundBtnMenu" class="icon-btn icon-btn--ghost" type="button" aria-label="切换声音" title="声音 (M)">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8c1.2 1 1.8 2.3 1.8 4S18.2 15 17 16M19.5 5.5C21.4 7.2 22.5 9.5 22.5 12s-1.1 4.8-3 6.5"/></svg>
@@ -41,108 +35,122 @@
         </div>
       </header>
 
-      <div class="hangar-main">
-        <div class="hero-copy">
-          <div class="eyebrow reveal reveal-1"><span class="eyebrow__line"></span> FC-1985 / REBUILT-2026</div>
-          <h1 class="game-title reveal reveal-2">
-            <span class="game-title__brick">STEEL</span>
-            <span class="game-title__fire">EMBER</span>
-            <span class="game-title__tag">SURVIVORS</span>
-          </h1>
-          <div class="cn-title reveal reveal-2"><span>钢</span><span>铁</span><span>余</span><span>烬</span></div>
-          <p class="hero-pitch reveal reveal-3">经典坦克大战，被拖进无尽的钢铁潮汐。<br><strong>活过六分钟。</strong>单人 / 本地双人同屏，吞噬余烬升级。让每一发炮弹都变成奇观。</p>
-
-          <div class="arena-picker reveal reveal-4" role="group" aria-label="选择战役关卡">
-            <div class="section-label"><span>01</span> 战役星图 / CAMPAIGN <b id="stageProgress">01 / 12</b></div>
-            <button id="stagePickerBtn" class="stage-picker-card" type="button">
-              <span id="stageIndex" class="stage-picker-card__index">01</span>
-              <span class="stage-picker-card__copy"><strong id="stageName">熔炉工厂</strong><small id="stageMeta">SECTOR 01 / FURNACE WORKS</small><em id="stageTrait">标准威胁 · 高温余烬</em><span id="stageDifficulty" class="stage-picker-card__difficulty">NORMAL</span></span>
-              <span class="stage-picker-card__cta">打开星图 <b>↗</b></span>
-            </button>
-            <div id="stageHint" class="stage-hint">通关当前关卡，自动解锁下一关。</div>
-          </div>
-
-          <div class="pilot-picker reveal reveal-4" role="group" aria-label="选择坦克">
-            <div class="section-label"><span>02</span> 坦克库 / CHASSIS <b id="tankCountLabel">1 / 20</b></div>
-            <div class="pilot-pair">
-              <button id="tankPickerBtn" class="pilot-card" type="button">
-                <span class="pilot-card__slot">P1</span>
-                <span class="pilot-card__preview"><canvas id="pilotPreview" width="78" height="58" aria-hidden="true"></canvas></span>
-                <span class="pilot-card__copy"><strong id="pilotName">先锋 M-01</strong><small id="pilotRole">均衡 / VANGUARD</small><em id="pilotTrait">全伤害 +10%，最大装甲 +10%</em></span>
-                <span class="pilot-card__cta">更换 <b>↗</b></span>
-              </button>
-              <button id="tankPickerBtn2" class="pilot-card pilot-card--p2 is-hidden" type="button">
-                <span class="pilot-card__slot">P2</span>
-                <span class="pilot-card__preview"><canvas id="pilotPreview2" width="78" height="58" aria-hidden="true"></canvas></span>
-                <span class="pilot-card__copy"><strong id="pilotName2">先锋 M-01</strong><small id="pilotRole2">均衡 / VANGUARD</small><em id="pilotTrait2">全伤害 +10%，最大装甲 +10%</em></span>
-                <span class="pilot-card__cta">更换 <b>↗</b></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="mode-picker reveal reveal-4" id="modePicker" role="group" aria-label="选择编队模式">
-            <div class="section-label"><span>03</span> 编队模式 / DEPLOYMENT</div>
-            <div class="mode-options">
-              <button class="mode-card is-active" data-coop="0" type="button" aria-pressed="true"><strong>单人</strong><small>SOLO</small></button>
-              <button class="mode-card" data-coop="1" type="button" aria-pressed="false"><strong>双人合作</strong><small>CO-OP / 2P</small></button>
-            </div>
-            <span id="modeHint" class="mode-hint">P1 键鼠 · 自动索敌 · 单兵生存</span>
-            <span id="touchHint" class="touch-hint">触屏：左侧摇杆移动 · 自动索敌 · 右下 DASH 冲刺 · 点按战场可手动瞄准</span>
-          </div>
-
-          <div class="menu-actions reveal reveal-5">
-            <button id="startBtn" class="cta" type="button">
-              <span class="cta__corners" aria-hidden="true"></span>
-              <span class="cta__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11H5zM14 4v5h5M8 13h8M8 16h5"/></svg></span>
-              <span class="cta__copy"><strong id="startBtnLabel">点火出击</strong><small id="startBtnSub">ENTER THE SECTOR</small></span>
-              <span class="cta__arrow" aria-hidden="true">↗</span>
-            </button>
-            <button id="howBtn" class="text-btn" type="button">战术简报 <span>?</span></button>
-            <button id="fusionBtn" class="text-btn" type="button">合成表 <span>⌁</span></button>
-            <button id="codexBtn" class="text-btn" type="button">敌人图鉴 <span>▦</span></button>
-            <button id="itemBtn" class="text-btn" type="button">道具说明 <span>▤</span></button>
-            <button id="artBtn" class="text-btn art-test-btn is-hidden" type="button">视觉试验 <span>◈</span></button>
-            <button id="saveBtn" class="text-btn" type="button">存档管理 <span>⇅</span></button>
-          </div>
-
-          <div class="record-strip reveal reveal-6">
-            <div><span>最高生存</span><strong id="bestTime">--:--</strong></div>
-            <div><span>最高等级</span><strong id="bestLevel">LV.01</strong></div>
-            <div><span>成功撤离</span><strong id="bestWins">0</strong></div>
+      <main class="sf-main">
+        <div class="sf-heading">
+          <div class="sf-kicker">ARMORED SURVIVAL // 2026</div>
+          <h1 class="sf-wordmark"><span>STEEL</span><em>EMBER</em></h1>
+          <div class="sf-cn-title">钢 铁 余 烬</div>
+          <div class="sf-mission">
+            <span id="sfStageSector">SECTOR 01</span>
+            <strong id="sfStageName">熔炉工厂</strong>
+            <i></i>
+            <strong id="sfTankName">先锋 M-01</strong>
           </div>
         </div>
 
-        <div class="hero-visual reveal reveal-3">
-          <div class="visual-frame">
-            <div class="visual-frame__top">
-              <span>CAMPAIGN // LIVE FEED</span>
-              <span class="live-dot"><i></i> REC</span>
+        <div class="sf-showcase">
+          <div class="sf-showcase__orbit sf-showcase__orbit--one" aria-hidden="true"></div>
+          <div class="sf-showcase__orbit sf-showcase__orbit--two" aria-hidden="true"></div>
+          <canvas id="menuCanvas" width="720" height="760" aria-label="坦克展示画面"></canvas>
+          <div class="sf-unit-tag">
+            <span>P1 // 当前机体</span>
+            <strong id="sfUnitName">先锋 M-01</strong>
+            <em id="sfUnitRole">均衡 / VANGUARD</em>
+          </div>
+        </div>
+      </main>
+
+      <nav id="menuNav" class="sf-nav" aria-label="主菜单选项">
+        <button class="sf-nav__item" data-menu-action="stage" type="button">战役</button>
+        <button class="sf-nav__item" data-menu-action="tank" type="button">坦克</button>
+        <button class="sf-nav__item" data-menu-action="mode" type="button">编队 <b id="sfModeName">单人</b></button>
+        <button class="sf-nav__item sf-nav__item--start" data-menu-action="start" type="button">出击</button>
+        <button class="sf-nav__item" data-menu-action="manual" type="button">战术</button>
+        <button class="sf-nav__item" data-menu-action="fusion" type="button">合成</button>
+        <button class="sf-nav__item" data-menu-action="codex" type="button">图鉴</button>
+        <button class="sf-nav__item" data-menu-action="save" type="button">存档</button>
+      </nav>
+      <div class="sf-hint"><span>← → 选择</span><span>A 确认</span><span>START 出击</span></div>
+
+      <!-- Legacy controls stay in the DOM for save-compatible game flow; the
+           command rail above is the only visible menu UI. -->
+      <div class="menu-legacy" aria-hidden="true">
+        <div class="hangar-main">
+          <div class="hero-copy">
+            <div class="hero-pitch"></div>
+            <div class="arena-picker" role="group" aria-label="选择战役关卡">
+              <div class="section-label"><span>01</span> 战役星图 / CAMPAIGN <b id="stageProgress">01 / 12</b></div>
+              <button id="stagePickerBtn" class="stage-picker-card" type="button">
+                <span id="stageIndex" class="stage-picker-card__index">01</span>
+                <span class="stage-picker-card__copy"><strong id="stageName">熔炉工厂</strong><small id="stageMeta">SECTOR 01 / FURNACE WORKS</small><em id="stageTrait">标准威胁 · 高温余烬</em><span id="stageDifficulty" class="stage-picker-card__difficulty">NORMAL</span></span>
+                <span class="stage-picker-card__cta">打开星图 <b>↗</b></span>
+              </button>
+              <div id="stageHint" class="stage-hint">通关当前关卡，自动解锁下一关。</div>
             </div>
-            <canvas id="menuCanvas" width="720" height="760" aria-label="坦克展示画面"></canvas>
-            <div class="visual-frame__scan" aria-hidden="true"></div>
-            <div class="visual-frame__hud visual-frame__hud--tl"><span>EXIT</span><b>06:00</b></div>
-            <div class="visual-frame__hud visual-frame__hud--br"><span>THREAT</span><b>SWARM</b></div>
-            <div class="visual-frame__coords">X 047 / Y 209<br>ALT 000 / HDG 315</div>
-            <div class="visual-frame__cross" aria-hidden="true"><i></i><i></i></div>
-            <div class="visual-frame__caption">
-              <span class="caption-index">UNIT</span>
-              <strong id="visualUnit">先锋 M-01 «VANGUARD»</strong>
-              <small id="visualUnitSub">MODULAR SIEGE PLATFORM / CAMPAIGN 01</small>
+
+            <div class="pilot-picker" role="group" aria-label="选择坦克">
+              <div class="section-label"><span>02</span> 坦克库 / CHASSIS <b id="tankCountLabel">1 / 20</b></div>
+              <div class="pilot-pair">
+                <button id="tankPickerBtn" class="pilot-card" type="button">
+                  <span class="pilot-card__slot">P1</span>
+                  <span class="pilot-card__preview"><canvas id="pilotPreview" width="78" height="58" aria-hidden="true"></canvas></span>
+                  <span class="pilot-card__copy"><strong id="pilotName">先锋 M-01</strong><small id="pilotRole">均衡 / VANGUARD</small><em id="pilotTrait">全伤害 +10%，最大装甲 +10%</em></span>
+                  <span class="pilot-card__cta">更换 <b>↗</b></span>
+                </button>
+                <button id="tankPickerBtn2" class="pilot-card pilot-card--p2 is-hidden" type="button">
+                  <span class="pilot-card__slot">P2</span>
+                  <span class="pilot-card__preview"><canvas id="pilotPreview2" width="78" height="58" aria-hidden="true"></canvas></span>
+                  <span class="pilot-card__copy"><strong id="pilotName2">先锋 M-01</strong><small id="pilotRole2">均衡 / VANGUARD</small><em id="pilotTrait2">全伤害 +10%，最大装甲 +10%</em></span>
+                  <span class="pilot-card__cta">更换 <b>↗</b></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mode-picker" id="modePicker" role="group" aria-label="选择编队模式">
+              <div class="section-label"><span>03</span> 编队模式 / DEPLOYMENT</div>
+              <div class="mode-options">
+                <button class="mode-card is-active" data-coop="0" type="button" aria-pressed="true"><strong>单人</strong><small>SOLO</small></button>
+                <button class="mode-card" data-coop="1" type="button" aria-pressed="false"><strong>双人合作</strong><small>CO-OP / 2P</small></button>
+              </div>
+              <span id="modeHint" class="mode-hint">P1 键鼠 · 自动索敌 · 单兵生存</span>
+              <span id="touchHint" class="touch-hint">触屏：左侧摇杆移动 · 自动索敌 · 右下 DASH 冲刺 · 点按战场可手动瞄准</span>
+            </div>
+
+            <div class="menu-actions">
+              <button id="startBtn" class="cta" type="button">
+                <span class="cta__corners" aria-hidden="true"></span>
+                <span class="cta__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11H5zM14 4v5h5M8 13h8M8 16h5"/></svg></span>
+                <span class="cta__copy"><strong id="startBtnLabel">点火出击</strong><small id="startBtnSub">ENTER THE SECTOR</small></span>
+                <span class="cta__arrow" aria-hidden="true">↗</span>
+              </button>
+              <button id="howBtn" class="text-btn" type="button">战术简报 <span>?</span></button>
+              <button id="fusionBtn" class="text-btn" type="button">合成表 <span>⌁</span></button>
+              <button id="codexBtn" class="text-btn" type="button">敌人图鉴 <span>▦</span></button>
+              <button id="itemBtn" class="text-btn" type="button">道具说明 <span>▤</span></button>
+              <button id="artBtn" class="text-btn art-test-btn is-hidden" type="button">视觉试验 <span>◈</span></button>
+              <button id="saveBtn" class="text-btn" type="button">存档管理 <span>⇅</span></button>
+            </div>
+
+            <div class="record-strip">
+              <div><span>最高生存</span><strong id="bestTime">--:--</strong></div>
+              <div><span>最高等级</span><strong id="bestLevel">LV.01</strong></div>
+              <div><span>成功撤离</span><strong id="bestWins">0</strong></div>
             </div>
           </div>
-          <div class="visual-note"><span></span> 自动索敌已启用 / AUTO-TARGET ENGAGED</div>
+
+          <div class="hero-visual">
+            <div class="visual-frame">
+              <div class="visual-frame__top"><span>CAMPAIGN // LIVE FEED</span><span class="live-dot"><i></i> REC</span></div>
+              <div class="visual-frame__caption"><span class="caption-index">UNIT</span><strong id="visualUnit">先锋 M-01 «VANGUARD»</strong><small id="visualUnitSub">MODULAR SIEGE PLATFORM / CAMPAIGN 01</small></div>
+            </div>
+          </div>
         </div>
+
+        <footer class="hangar-footer">
+          <div class="ticker"><div class="ticker__track"><span>STEEL EMBERS</span><i></i><span>ARMORED SURVIVAL</span><i></i><span>STEEL EMBERS</span></div></div>
+          <div class="footer-meta"><span>BUILD 2026.10.22</span><span>NO QUARTER</span></div>
+        </footer>
       </div>
-
-      <footer class="hangar-footer">
-        <div class="ticker">
-          <div class="ticker__track">
-            <span>SURVIVE THE SWARM</span><i></i><span>BREAK THE TIDE</span><i></i><span>COLLECT THE EMBERS</span><i></i><span>EVOLVE YOUR ARMOR</span><i></i><span>WASD / XBOX PAD READY</span><i></i><span>CO-OP LINK READY</span><i></i>
-            <span>SURVIVE THE SWARM</span><i></i><span>BREAK THE TIDE</span><i></i><span>COLLECT THE EMBERS</span><i></i><span>EVOLVE YOUR ARMOR</span><i></i><span>WASD / XBOX PAD READY</span><i></i>
-          </div>
-        </div>
-        <div class="footer-meta"><span>BUILD 2026.10.22</span><span>OPEN-SOURCE INSPIRATION / BATTLE CITY</span><span>NO QUARTER</span></div>
-      </footer>
     </section>
 
     <!-- ================= GAME ================= -->
@@ -502,9 +510,14 @@
       <div class="tank-select__panel codex-panel item-guide-panel">
         <button id="itemClose" class="close-btn" type="button" aria-label="关闭">×</button>
         <div class="tank-select__head">
-          <div class="how__eyebrow">FIELD MANUAL / 道具说明 · <b>9 ITEMS</b></div>
-          <h2 id="itemTitle">每一种补给，都能改写战局</h2>
-          <p>战场掉落物不会进入背包，拾取即生效。靠近掉落物会自动吸附；优先拾取能救急或能拆开敌群的那一个。</p>
+          <div class="how__eyebrow">FIELD MANUAL / 战术档案 · <b>9 ITEMS</b></div>
+          <h2 id="itemTitle">战术与道具</h2>
+        </div>
+        <div class="manual-brief">
+          <article><strong>驾驶</strong><span>WASD / 左摇杆移动。主炮自动索敌，RT 补火，A 冲刺，Y 回程。</span></article>
+          <article><strong>生存</strong><span>活到 06:00 撤离。双人可互相救援，两人都倒下才会失败。</span></article>
+          <article><strong>成长</strong><span>拾取余烬升级。每局最多 6 把武器 + 6 个被动，共 16 条合成路线。</span></article>
+          <article><strong>合成</strong><span>武器 Lv.6 + 对应被动 Lv.2，升级时出现最终武器协议。</span></article>
         </div>
         <div id="itemGrid" class="item-guide-grid"></div>
         <div class="tank-select__foot">
@@ -542,10 +555,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261024-28"></script>
-  <script src="js/icons.js?v=20261024-28"></script>
-  <script src="js/audio.js?v=20261024-28"></script>
-  <script src="js/game.js?v=20261024-28"></script>
-  <script src="js/main.js?v=20261024-28"></script>
+  <script src="js/content.js?v=20261024-42"></script>
+  <script src="js/icons.js?v=20261024-42"></script>
+  <script src="js/audio.js?v=20261024-42"></script>
+  <script src="js/game.js?v=20261024-42"></script>
+  <script src="js/main.js?v=20261024-42"></script>
 </body>
 </html>
