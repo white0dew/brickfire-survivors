@@ -242,6 +242,7 @@
     deadReason: '',
     tutorialStep: 0,
     tutorialTimer: 0,
+    tutorialMusicPending: false,
     autoPause: false,
     entityId: 1,
     lastEnemySound: 0,
@@ -2892,6 +2893,7 @@
     G.secondWindUsed = false;
     G.tutorialStep = 0;
     G.tutorialTimer = 6;
+    G.tutorialMusicPending = false;
     G.autoPause = false;
     G.entityId = 1;
     G.lastEnemySound = 0;
@@ -2972,8 +2974,17 @@
     if (U.p2Feed) U.p2Feed.innerHTML = '';
     updateHUD();
     AUDIO.init();
-    AUDIO.startMusic(G.arenaIndex, { intro: true });
-    AUDIO.setIntensity(0);
+    const tutorialPending = G.arenaIndex === 0 && !G.endless;
+    G.tutorialMusicPending = tutorialPending;
+    if (tutorialPending) {
+      // The first-stage manual pauses the run. Keep the 7s deploy sting for
+      // the moment the player actually enters the battlefield, instead of
+      // playing it underneath the tutorial overlay.
+      AUDIO.stopMusic();
+    } else {
+      AUDIO.startMusic(G.arenaIndex, { intro: true });
+      AUDIO.setIntensity(0);
+    }
     showToast(G.endless
       ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
       : (G.twoPlayer
@@ -7527,6 +7538,11 @@
     Input.dashQueued = false; Input.dashQueued2 = false;
     clearPadFocus();
     AUDIO.confirm();
+    if (G.tutorialMusicPending) {
+      G.tutorialMusicPending = false;
+      AUDIO.startMusic(G.arenaIndex, { intro: true });
+      AUDIO.setIntensity(0);
+    }
   }
 
   /* ---------------- input / lifecycle ---------------- */
