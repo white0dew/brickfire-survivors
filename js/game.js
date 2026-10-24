@@ -232,7 +232,7 @@
     mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
     gamepad: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
-    gamepad2: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [] },
+    gamepad2: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [], dpadDirX: 0, dpadDirY: 0, dpadRepeatAt: 0, uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
     padSlots: { p1: { ref: null, index: -1, id: '' }, p2: { ref: null, index: -1, id: '' } },
     dashQueued: false,
     dashQueued2: false
@@ -7374,7 +7374,7 @@
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
-      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
+      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
@@ -7536,6 +7536,18 @@
     if (U.settingsDone) U.settingsDone.addEventListener('click', closeSettings);
     if (U.settingsScreen) U.settingsScreen.addEventListener('click', e => { if (e.target === U.settingsScreen || e.target.classList.contains('overlay__backdrop')) closeSettings(); });
     if (U.settingsFullscreen) U.settingsFullscreen.addEventListener('click', () => { AUDIO.init(); toggleFullscreen(); });
+    if (U.padSwapBtn) U.padSwapBtn.addEventListener('click', () => {
+      if (!Input.gamepad.connected || !Input.gamepad2.connected) {
+        AUDIO.deny();
+        showToast('需要两只手柄才能交换 // 当前只识别到一只', 'red');
+        return;
+      }
+      swapPadSlots();
+      pollGamepad();
+      syncPadState();
+      AUDIO.confirm();
+      showToast('手柄已交换 // P1 ↔ P2', 'cyan');
+    });
     if (U.sfxVolume) U.sfxVolume.addEventListener('input', () => {
       AUDIO.init();
       AUDIO.setSfxVolume(Number(U.sfxVolume.value) / 100);
@@ -7781,8 +7793,13 @@
     el.classList.toggle('is-on', !!p1);
     if (U.padSwapBtn) {
       const canSwap = !!Input.gamepad.connected && !!Input.gamepad2.connected;
-      U.padSwapBtn.disabled = !canSwap;
+      U.padSwapBtn.classList.toggle('is-unavailable', !canSwap);
       U.padSwapBtn.setAttribute('aria-disabled', canSwap ? 'false' : 'true');
+      const label = U.padSwapBtn.querySelector('span');
+      if (label) label.textContent = canSwap ? '交换 P1/P2' : '等待两只手柄';
+    }
+    if (U.padAssignment) {
+      U.padAssignment.textContent = `P1 ${Input.gamepad.connected ? '已连接' : '未连接'} · P2 ${Input.gamepad2.connected ? '已连接' : '未连接'}`;
     }
     document.body.classList.toggle('pad-connected', !!Input.gamepad.connected);
     syncPadCues();
@@ -8012,6 +8029,42 @@
     return true;
   }
 
+  // Turn one pad's d-pad/stick into one UI step, with a short repeat delay.
+  // Level-up must use the pad owned by the pilot who is choosing, not P1's pad.
+  function padUiStep(state) {
+    if (!state || !state.buttons) return null;
+    const pressed = i => !!(state.buttons[i] && state.buttons[i].pressed);
+    const now = performance.now();
+    const ddx = (pressed(15) ? 1 : 0) - (pressed(14) ? 1 : 0);
+    const ddy = (pressed(13) ? 1 : 0) - (pressed(12) ? 1 : 0);
+    if (ddx || ddy) {
+      if (ddx !== state.dpadDirX || ddy !== state.dpadDirY) {
+        state.dpadDirX = ddx; state.dpadDirY = ddy; state.dpadRepeatAt = now + 340;
+        return { dx: ddx, dy: ddy };
+      }
+      if (now >= state.dpadRepeatAt) {
+        state.dpadRepeatAt = now + 140;
+        return { dx: ddx, dy: ddy };
+      }
+      return null;
+    }
+    state.dpadDirX = 0; state.dpadDirY = 0;
+    const ax = Math.abs(state.x) >= .48 ? Math.sign(state.x) : 0;
+    const ay = Math.abs(state.y) >= .48 ? Math.sign(state.y) : 0;
+    if (!ax && !ay) { state.uiDirX = 0; state.uiDirY = 0; return null; }
+    const dx = Math.abs(ax) >= Math.abs(ay) ? ax : 0;
+    const dy = dx ? 0 : ay;
+    if (dx !== state.uiDirX || dy !== state.uiDirY) {
+      state.uiDirX = dx; state.uiDirY = dy; state.uiRepeatAt = now + 340;
+      return { dx, dy };
+    }
+    if (now >= state.uiRepeatAt) {
+      state.uiRepeatAt = now + 150;
+      return { dx, dy };
+    }
+    return null;
+  }
+
   function pollGamepad() {
     const g = Input.gamepad;
     const g2 = Input.gamepad2;
@@ -8189,9 +8242,10 @@
         const justL = i => pressedL(i) && !(lp.prevButtons && lp.prevButtons[i]);
         if (lp.levelupNeedsNeutral && Math.hypot(lp.x, lp.y) < .24) lp.levelupNeedsNeutral = false;
         const padOwnerLabel = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
+        const lpStep = lp === g ? padStep : padUiStep(lp);
         if (!lp.levelupNeedsNeutral && G.levelupPlayer) {
-          const left = justL(14) || justL(12) || justL(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
-          const right = justL(15) || justL(13) || justL(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
+          const left = justL(14) || justL(12) || justL(4) || (lpStep && lpStep.dx < 0) || (lpStep && lpStep.dy < 0);
+          const right = justL(15) || justL(13) || justL(5) || (lpStep && lpStep.dx > 0) || (lpStep && lpStep.dy > 0);
           if (left) moveLevelupSelection(-1, padOwnerLabel);
           if (right) moveLevelupSelection(1, padOwnerLabel);
           if (justL(0) && lp.selectedCard >= 0) { AUDIO.init(); chooseUpgrade(lp.selectedCard, padOwnerLabel); }

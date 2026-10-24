@@ -2598,3 +2598,5 @@ body.pad-connected .sf-hint { display: flex; }
   .settings__note { font-size: 12px; }
 }
 .settings-toggle:disabled { opacity: .38; cursor: not-allowed; }
+.toast-stack { z-index: 300; }
+.settings-toggle.is-unavailable { opacity: .55; }
