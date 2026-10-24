@@ -2824,9 +2824,8 @@
     U.sideTip.textContent = G.twoPlayer
       ? `P1 // ${G.tank.name} · P2 // ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
-    if (U.pilotHudName) U.pilotHudName.textContent = G.twoPlayer
-      ? `P1 ${G.tank.name.replace(/^.*?M-/, 'M-')} // P2 ${tankData(G.players[1]).name.replace(/^.*?M-/, 'M-')}`
-      : G.tank.name.replace(/^.*?M-/, 'M-');
+    if (U.pilotHudName) U.pilotHudName.textContent = G.tank.name;
+    if (U.coopName2 && G.twoPlayer && G.players[1]) U.coopName2.textContent = tankData(G.players[1]).name;
     if (U.visualUnit) U.visualUnit.textContent = `${G.tank.name} «${G.tank.en}»`;
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ${MAPS[index].sector}`;
     if (U.coopPanel) U.coopPanel.classList.toggle('is-hidden', !G.twoPlayer);
@@ -6156,10 +6155,11 @@
       U.coopLv2.textContent = String(p2.level).padStart(2, '0');
       U.coopXp2.textContent = `${Math.floor(p2.xp)} / ${Math.ceil(p2.xpNext)}`;
       U.coopXpMeter2.style.width = `${clamp(p2.xp / p2.xpNext * 100, 0, 100)}%`;
-      const build = Object.entries(p2.weapons)
-        .filter(([id, lvl]) => lvl > 0 && WEAPONS[id])
-        .map(([id, lvl]) => `${WEAPONS[id].short} ${lvl}`)
-        .slice(0, 4).join(' / ') || '主炮 1';
+      const buildParts = [
+        ...Object.entries(p2.weapons).filter(([id, lvl]) => lvl > 0 && WEAPONS[id]).map(([id, lvl]) => `${WEAPONS[id].short} ${lvl}`),
+        ...Object.entries(p2.passives).filter(([id, lvl]) => lvl > 0 && PASSIVES[id]).map(([id, lvl]) => `${PASSIVES[id].short} ${lvl}`)
+      ];
+      const build = buildParts.slice(0, 4).join(' / ') || '主炮 1';
       U.coopBuild2.innerHTML = `<b>P2</b> // ${build}`;
     }
     G.xp = p.xp; G.xpNext = p.xpNext; G.level = p.level;
@@ -6493,15 +6493,23 @@
         <span class="arena-card__diff arena-card__diff--${diff.id}">${diff.name} / ${diff.en}</span>
         ${locked ? '<span class="arena-card__lock">▣</span>' : ''}
       </button>`;
-    }).join('') + `<button class="arena-card arena-card--endless${endlessActive ? ' is-active' : ''}${endlessUnlocked ? '' : ' is-locked'}" data-endless="1" type="button" ${endlessUnlocked ? '' : 'disabled aria-disabled="true"'}>
-      <span class="arena-card__index">∞ ${endlessUnlocked ? (endlessActive ? '// ACTIVE' : '// READY') : '// LOCKED'}</span>
-      <span class="arena-card__name">无尽协议</span>
-      <span class="arena-card__en">ENDLESS PROTOCOL</span>
-      <span class="arena-card__trait">${endlessUnlocked ? '无尽波次 · 循环 Boss · 生存计分' : '通关第 2 关解锁'}</span>
-      <span class="arena-card__diff arena-card__diff--endless">∞ / ENDLESS</span>
-      ${endlessUnlocked ? '' : '<span class="arena-card__lock">▣</span>'}
-    </button>`;
-    U.arenaCards = Array.from(U.arenaOptions.querySelectorAll('.arena-card'));
+    }).join('');
+    if (U.endlessOptions) {
+      U.endlessOptions.innerHTML = `<button class="arena-card arena-card--endless${endlessActive ? ' is-active' : ''}${endlessUnlocked ? '' : ' is-locked'}" data-endless="1" type="button" ${endlessUnlocked ? '' : 'disabled aria-disabled="true"'}>
+        <span class="arena-card__index">无穷 // PROTOCOL</span>
+        <span class="arena-card__name">无尽协议</span>
+        <span class="arena-card__en">ENDLESS PROTOCOL</span>
+        <span class="arena-card__trait">${endlessUnlocked ? '无尽波次 · 循环 Boss · 生存计分' : '通关第 2 关解锁'}</span>
+        <span class="arena-card__diff arena-card__diff--endless">∞ / ENDLESS</span>
+        ${endlessUnlocked ? '' : '<span class="arena-card__lock">▣</span>'}
+      </button>`;
+    }
+    requestAnimationFrame(() => {
+      const active = U.arenaOptions && U.arenaOptions.querySelector('.arena-card.is-active');
+      if (active) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+    });
+    U.arenaCards = Array.from((U.arenaOptions || document).querySelectorAll('.arena-card'))
+      .concat(Array.from((U.endlessOptions || document).querySelectorAll('.arena-card')));
     const p = U.stageProgress;
     if (p) p.textContent = `${String(camp.unlocked).padStart(2, '0')} / ${String(MAPS.length).padStart(2, '0')}`;
     if (U.stageFootHint) U.stageFootHint.textContent = endlessUnlocked
@@ -6629,8 +6637,14 @@
   }
 
   function openStageScreen() {
+    const camp = G.campaign || readCampaign();
+    G.campaign = camp;
+    G.endlessSelected = false;
+    G.arenaIndex = Math.max(0, Math.min(camp.unlocked - 1, MAPS.length - 1));
+    G.difficulty = stageDifficulty(camp, G.arenaIndex);
     renderStagePicker();
     updateDifficultyUI();
+    syncMenuSelection();
     U.stageScreen.classList.remove('hidden');
     AUDIO.init(); AUDIO.tick();
   }
@@ -7214,21 +7228,20 @@
       'gameLayout', 'slotCount', 'passiveCount', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
-      'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
+      'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
-      'arenaOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
+      'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
       'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
-      'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'itemBtn', 'itemScreen', 'itemGrid', 'itemClose', 'itemDone', 'artBtn', 'artScreen', 'artClose', 'artDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
+      'baseMeter', 'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'itemBtn', 'itemScreen', 'itemGrid', 'itemClose', 'itemDone', 'artBtn', 'artScreen', 'artClose', 'artDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
     for (const id of ids) U[id] = document.getElementById(id);
     U.arenaCards = Array.from(U.arenaOptions ? U.arenaOptions.querySelectorAll('.arena-card') : document.querySelectorAll('.arena-card'));
     U.modeCards = Array.from(document.querySelectorAll('.mode-card'));
     U.visualFrame = document.querySelector('.visual-frame');
-    U.baseMeter = document.querySelector('.base-meter');
   }
 
   function bindUI() {
@@ -7246,7 +7259,7 @@
       btn.addEventListener('click', () => {
         AUDIO.init(); AUDIO.tick();
         const action = btn.dataset.menuAction;
-        if (action === 'start') U.startBtn.click();
+        if (action === 'start') openStageScreen();
         else if (action === 'stage') U.stagePickerBtn.click();
         else if (action === 'tank') U.tankPickerBtn.click();
         else if (action === 'mode') selectCoop(!G.coopSelected);
@@ -7264,16 +7277,19 @@
         e.preventDefault();
       }, { passive: false });
     });
-    U.arenaOptions.addEventListener('click', e => {
-      const endlessCard = e.target.closest('[data-endless]');
-      if (endlessCard) {
-        if (endlessCard.disabled) return;
-        AUDIO.init(); selectEndless(); closeStageScreen(); AUDIO.tick();
-        return;
-      }
-      const card = e.target.closest('.arena-card');
-      if (!card || card.disabled) return;
-      AUDIO.init(); selectArena(parseInt(card.dataset.arena, 10)); closeStageScreen(); AUDIO.tick();
+    [U.arenaOptions, U.endlessOptions].forEach(grid => {
+      if (!grid) return;
+      grid.addEventListener('click', e => {
+        const endlessCard = e.target.closest('[data-endless]');
+        if (endlessCard) {
+          if (endlessCard.disabled) return;
+          AUDIO.init(); selectEndless(); renderStagePicker(); updateDifficultyUI(); AUDIO.tick();
+          return;
+        }
+        const card = e.target.closest('.arena-card');
+        if (!card || card.disabled) return;
+        AUDIO.init(); selectArena(parseInt(card.dataset.arena, 10)); renderStagePicker(); updateDifficultyUI(); AUDIO.tick();
+      });
     });
     U.stagePickerBtn.addEventListener('click', openStageScreen);
     if (U.difficultyOptions) U.difficultyOptions.addEventListener('click', e => {
@@ -7294,7 +7310,11 @@
       AUDIO.init(); AUDIO.tick();
     });
     U.stageClose.addEventListener('click', closeStageScreen);
-    U.stageConfirm.addEventListener('click', closeStageScreen);
+    U.stageConfirm.addEventListener('click', () => {
+      closeStageScreen();
+      AUDIO.init(); AUDIO.confirm();
+      startRun(G.arenaIndex, G.coopSelected, G.endlessSelected);
+    });
     U.stageScreen.addEventListener('click', e => { if (e.target === U.stageScreen || e.target.classList.contains('overlay__backdrop')) closeStageScreen(); });
     U.tankPickerBtn.addEventListener('click', () => openTankScreen(0));
     if (U.tankPickerBtn2) U.tankPickerBtn2.addEventListener('click', () => openTankScreen(1));

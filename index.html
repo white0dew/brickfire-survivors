@@ -7,7 +7,7 @@
   <title>钢铁余烬 // STEEL EMBERS</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261024-42">
+  <link rel="stylesheet" href="css/style.css?v=20261024-49">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -61,8 +61,7 @@
       </main>
 
       <nav id="menuNav" class="sf-nav" aria-label="主菜单选项">
-        <button class="sf-nav__item" data-menu-action="stage" type="button">战役</button>
-        <button class="sf-nav__item" data-menu-action="tank" type="button">坦克</button>
+        <button class="sf-nav__item" data-menu-action="tank" type="button">机库</button>
         <button class="sf-nav__item" data-menu-action="mode" type="button">编队 <b id="sfModeName">单人</b></button>
         <button class="sf-nav__item sf-nav__item--start" data-menu-action="start" type="button">出击</button>
         <button class="sf-nav__item" data-menu-action="manual" type="button">战术</button>
@@ -184,6 +183,41 @@
             <div class="screen-scanlines" aria-hidden="true"></div>
             <div id="dangerTint" class="danger-tint" aria-hidden="true"></div>
             <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+            <div class="hud-pilot hud-pilot--p1">
+              <div class="hud-pilot__top">
+                <span class="hud-pilot__tag">P1</span>
+                <strong id="pilotHudName">M-01</strong>
+                <em>LV <b id="levelLabel">01</b></em>
+              </div>
+              <div class="hud-pilot__line"><span>装甲</span><i class="hud-meter hud-meter--hp"><b id="hpMeter"></b></i><em id="hpText">190 / 190</em></div>
+              <div class="hud-pilot__line"><span>余烬</span><i class="hud-meter hud-meter--xp"><b id="xpMeter"></b></i><em id="xpText">0 / 12</em></div>
+            </div>
+
+            <div id="coopPanel" class="hud-pilot hud-pilot--p2 is-hidden">
+              <div class="hud-pilot__top">
+                <span class="hud-pilot__tag hud-pilot__tag--p2">P2</span>
+                <strong id="coopName2">M-02</strong>
+                <em id="coopState2">ONLINE</em>
+                <em>LV <b id="coopLv2">01</b></em>
+              </div>
+              <div class="hud-pilot__line"><span>装甲</span><i class="hud-meter hud-meter--hp"><b id="coopMeter2"></b></i><em id="coopHp2">190 / 190</em></div>
+              <div class="hud-pilot__line"><span>余烬</span><i class="hud-meter hud-meter--xp"><b id="coopXpMeter2"></b></i><em id="coopXp2">0 / 9</em></div>
+              <div id="coopBuild2" class="hud-pilot__build">P2 // 主炮 Lv.1</div>
+            </div>
+
+            <div class="hud-base" id="hudBase">
+              <span class="hud-base__label">基地</span>
+              <i class="hud-meter hud-meter--base" id="baseMeter"><b id="baseHpMeter"></b></i>
+              <em id="baseHpText">760 / 780</em>
+              <div class="hud-base__hidden" aria-hidden="true">
+                <div class="core-gauge__ring" id="coreRing" style="--p:0"><span id="corePercent">0</span></div>
+                <strong id="coreText">06:00</strong>
+                <small id="coreState">T-06:00</small>
+                <div class="core-pips" id="corePips"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </div>
+
             <div id="bossHud" class="boss-hud is-hidden">
               <div class="boss-hud__meta"><span>BOSS // 未知单位</span><b id="bossHpLabel">100%</b></div>
               <div class="boss-hud__bar"><i id="bossHpBar"></i></div>
@@ -196,9 +230,17 @@
             </div>
             <div class="canvas-id">BF-09 // LIVE</div>
           </div>
+
           <div id="mobileStick" class="mobile-stick" aria-hidden="true"><i></i></div>
           <button id="mobileDash" class="mobile-dash" type="button" aria-label="冲刺">DASH</button>
           <button id="mobileRecall" class="mobile-recall" type="button" aria-label="回程">HOME</button>
+
+          <div class="hud-loadout">
+            <div class="hud-loadout__head"><span>LOADOUT</span><b id="slotCount">武器 1 / 6</b><b id="passiveCount" class="is-passive-count">被动 0 / 6</b></div>
+            <div id="loadoutList" class="loadout-list">
+              <div class="empty-slot">升级解锁武器模块</div>
+            </div>
+          </div>
 
           <div class="combat-deck combat-deck--actions">
             <div class="deck-slot deck-slot--thruster">
@@ -215,74 +257,18 @@
             </button>
           </div>
         </section>
-
-        <aside class="sidebar">
-          <section class="side-panel pilot-panel">
-            <div class="panel-head"><span>PILOT</span><b id="pilotHudName">M-01</b><i class="panel-head__line"></i></div>
-            <div class="level-row">
-              <div class="level-badge"><small>LV</small><strong id="levelLabel">01</strong></div>
-              <div class="level-info">
-                <div class="level-info__row"><span>装甲完整度</span><b id="hpText">190 / 190</b></div>
-                <div class="meter meter--hp"><i id="hpMeter"></i></div>
-                <div class="level-info__row"><span>余烬同步</span><b id="xpText">0 / 12</b></div>
-                <div class="meter meter--xp"><i id="xpMeter"></i></div>
-              </div>
-            </div>
-            <div class="pilot-tags"><span>ATK <b id="statAtk">100</b></span><span>SPD <b id="statSpd">100</b></span><span>CRIT <b id="statCrit">5%</b></span></div>
-          </section>
-
-          <section id="coopPanel" class="side-panel coop-panel is-hidden">
-            <div class="panel-head"><span>LINKED PILOTS</span><b>CO-OP</b><i class="panel-head__line"></i></div>
-            <div class="coop-list">
-              <div class="coop-unit">
-                <div class="coop-unit__row"><span class="coop-tag">P1</span><b id="coopHp1">190 / 190</b><em id="coopState1">ONLINE</em></div>
-                <div class="meter meter--hp"><i id="coopMeter1"></i></div>
-              </div>
-              <div class="coop-unit">
-                <div class="coop-unit__row"><span class="coop-tag coop-tag--p2">P2</span><b id="coopHp2">190 / 190</b><em id="coopState2">ONLINE</em></div>
-                <div class="meter meter--hp meter--p2"><i id="coopMeter2"></i></div>
-                <div class="coop-unit__xp"><span>LV <b id="coopLv2">01</b></span><span id="coopXp2">0 / 9</span></div>
-                <div class="meter meter--xp meter--p2"><i id="coopXpMeter2"></i></div>
-                <div id="coopBuild2" class="coop-build">P2 // 主炮 Lv.1</div>
-              </div>
-            </div>
-          </section>
-
-          <section class="side-panel core-panel">
-            <div class="panel-head"><span>BASE / EXTRACTION</span><b id="coreState">T-06:00</b><i class="panel-head__line"></i></div>
-            <div class="core-gauge">
-              <div class="core-gauge__ring" id="coreRing" style="--p:0"><i></i><span id="corePercent">0</span></div>
-              <div class="core-gauge__copy"><strong id="coreText">06:00</strong><small>距离撤离</small><div class="core-pips" id="corePips"><i></i><i></i><i></i><i></i><i></i></div></div>
-            </div>
-            <div class="base-meter">
-              <div class="base-meter__row"><span>基地装甲</span><b id="baseHpText">520 / 520</b></div>
-              <div class="meter meter--base"><i id="baseHpMeter"></i></div>
-              <div id="baseTurretNote" class="base-turret-note">防御塔 0 / 4 · 拾取炮塔后启用</div>
-            </div>
-            <div id="coreNote" class="core-note"><span class="blink-dot"></span> 基地或车体归零即失败 · 基地会自行修复</div>
-          </section>
-
-          <section class="side-panel loadout-panel">
-            <div class="panel-head"><span>LOADOUT</span><b id="slotCount">武器 1 / 6</b><b id="passiveCount" class="is-passive-count">被动 0 / 6</b><i class="panel-head__line"></i></div>
-            <div id="loadoutList" class="loadout-list">
-              <div class="empty-slot">升级解锁武器模块</div>
-            </div>
-          </section>
-
-          <section class="side-panel intel-panel">
-            <div class="panel-head"><span>FIELD INTEL</span><b>LIVE</b><i class="panel-head__line"></i></div>
-            <div class="intel-grid">
-              <div><span>击毁</span><strong id="killCount">000</strong></div>
-              <div><span>连杀</span><strong id="comboCount">x1.0</strong></div>
-              <div><span>拾取</span><strong id="pickupCount">000</strong></div>
-              <div><span>威胁</span><strong id="threatLabel">低</strong></div>
-            </div>
-            <div class="threat-bars" id="threatBars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </section>
-
-          <div class="side-tip" id="sideTip">提示 // 砖墙可打碎，钢板不可。</div>
-        </aside>
       </main>
+
+      <!-- Hidden compatibility nodes: keep existing HUD telemetry available to the game loop. -->
+      <div class="hud-legacy" aria-hidden="true">
+        <span id="statAtk">100</span><span id="statSpd">100</span><span id="statCrit">5%</span>
+        <b id="coopHp1"></b><i id="coopMeter1"></i><em id="coopState1"></em>
+        <span id="killCount">000</span><span id="comboCount">x1.0</span><span id="pickupCount">000</span><span id="threatLabel">低</span>
+        <div id="threatBars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div id="sideTip"></div>
+        <div id="coreNote"></div>
+        <div id="baseTurretNote"></div>
+      </div>
     </div>
 
     <!-- ================= LEVEL UP ================= -->
@@ -390,9 +376,10 @@
           <span id="difficultyHint" class="difficulty-hint">普通：标准敌军强度，适合首次推进。</span>
         </div>
         <div id="arenaOptions" class="arena-options stage-grid"></div>
+        <div id="endlessOptions" class="endless-row"></div>
         <div class="stage-select__foot">
           <span id="stageFootHint" class="tank-detail">当前进度会保存在本机。</span>
-          <button id="stageConfirm" class="cta cta--small" type="button"><span class="cta__copy"><strong>返回机库</strong><small>RETURN TO HANGAR</small></span><span class="cta__arrow">↗</span></button>
+          <button id="stageConfirm" class="cta cta--small" type="button"><span class="cta__copy"><strong>确认出击</strong><small>DEPLOY</small></span><span class="cta__arrow">↗</span></button>
         </div>
       </div>
     </section>
@@ -555,10 +542,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261024-42"></script>
-  <script src="js/icons.js?v=20261024-42"></script>
-  <script src="js/audio.js?v=20261024-42"></script>
-  <script src="js/game.js?v=20261024-42"></script>
-  <script src="js/main.js?v=20261024-42"></script>
+  <script src="js/content.js?v=20261024-49"></script>
+  <script src="js/icons.js?v=20261024-49"></script>
+  <script src="js/audio.js?v=20261024-49"></script>
+  <script src="js/game.js?v=20261024-49"></script>
+  <script src="js/main.js?v=20261024-49"></script>
 </body>
 </html>
