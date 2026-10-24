@@ -12,8 +12,12 @@
   const ROWS = 18;
   const W = COLS * TILE;
   const H = ROWS * TILE;
-  const TOTAL_TIME = 360;
-  const BOSS_AT = 285;
+  const TOTAL_TIME = 600;
+  const BOSS_AT = 600;
+  const TUTORIAL_BOSS_AT = 300;
+  const PHASE_LEN = 120;
+  const ELITE_FIRST_AT = 150;
+  const ELITE_GAP = 150;
   const ENDLESS_WAVE_SPAN = 75;
   const ENDLESS_FIRST_BOSS = 120;
   const ENDLESS_BOSS_GAP = 90;
@@ -117,12 +121,69 @@
     throne: 'bossWarlord'
   };
 
-  function pickWaveType(wave) {
-    const signatures = MAP_SIGNATURES[G.arena.id] || [];
-    const unlocked = signatures.filter(entry => G.elapsed >= entry.at).map(entry => entry.type);
-    // Every map should feel like its own battlefield, not a recolored generic wave.
-    if (unlocked.length && chance(.62)) return pick(unlocked);
-    return pick(wave.types);
+  // Static stage pressure. Difficulty comes from the enemy roster and the
+  // stage itself, never from a hidden per-minute HP/damage multiplier.
+  const STAGE_PRESSURE = [
+    { hp: .72, dmg: .62, spawn: 1.06 }, // tutorial
+    { hp: .82, dmg: .72, spawn: 1.00 },
+    { hp: .90, dmg: .80, spawn: .98 },
+    { hp: .98, dmg: .88, spawn: .96 },
+    { hp: 1.06, dmg: .96, spawn: .94 },
+    { hp: 1.14, dmg: 1.04, spawn: .92 },
+    { hp: 1.22, dmg: 1.10, spawn: .90 },
+    { hp: 1.30, dmg: 1.16, spawn: .88 },
+    { hp: 1.38, dmg: 1.22, spawn: .86 },
+    { hp: 1.46, dmg: 1.28, spawn: .84 },
+    { hp: 1.55, dmg: 1.34, spawn: .82 },
+    { hp: 1.65, dmg: 1.40, spawn: .80 }
+  ];
+
+  const TUTORIAL_PHASES = [
+    { spawn: 1.55, cap: 8 },
+    { spawn: 1.35, cap: 11 },
+    { spawn: 1.15, cap: 14 }
+  ];
+  const NORMAL_PHASES = [
+    { spawn: 1.35, cap: 9 },
+    { spawn: 1.20, cap: 13 },
+    { spawn: 1.05, cap: 17 },
+    { spawn: .90, cap: 21 },
+    { spawn: .80, cap: 25 }
+  ];
+
+  // Each run introduces exactly one new regular enemy every two minutes.
+  // The previous type stays at a low weight for one window, then rotates out:
+  // at most two regular types are active at once.
+  function stageRoster() {
+    if (G.arenaIndex === 0 && !G.endless) return ['scout', 'grunt', 'heavy'];
+    const base = ['scout', 'grunt', 'heavy'];
+    const signatures = (MAP_SIGNATURES[G.arena.id] || [])
+      .map(entry => entry.type)
+      .filter(type => type !== 'warden');
+    return Array.from(new Set(base.concat(signatures))).slice(0, 5);
+  }
+
+  function phaseIndex() {
+    const roster = stageRoster();
+    return Math.min(roster.length - 1, Math.floor(G.elapsed / PHASE_LEN));
+  }
+
+  function phaseData() {
+    return (G.arenaIndex === 0 && !G.endless ? TUTORIAL_PHASES : NORMAL_PHASES)[phaseIndex()] || NORMAL_PHASES[0];
+  }
+
+  function phaseLabel() {
+    const roster = stageRoster();
+    const type = roster[phaseIndex()] || 'scout';
+    const cfg = ENEMIES[type] || {};
+    return cfg.name || type;
+  }
+
+  function pickWaveType() {
+    const roster = stageRoster();
+    const idx = phaseIndex();
+    if (idx <= 0) return roster[0];
+    return chance(.75) ? roster[idx] : roster[idx - 1];
   }
 
   // Attack identity per enemy family. Shape + cadence matter more than color:
@@ -210,9 +271,13 @@
     bossSpawned: false,
     bossDefeated: false,
     victoryTimer: 0,
-    freezeTimer: 0,
+    bossAt: 600,
+    runDuration: 600,
+    nextEliteAt: 150,
+    eliteTutorialSeen: false,
     itemTutorialSeen: false,
     itemTutorialQueued: false,
+    freezeTimer: 0,
     weapons: { cannon: 1 },
     passives: {},
     fusions: {},
@@ -860,7 +925,9 @@
       if (points.some(p => p.cx === cx && p.cy === cy)) return;
       points.push({ cx, cy, side });
     };
-    // Top deployment hatches.
+    // Top deployment hatches. Add the center hatch explicitly so the first
+    // minutes have one predictable entrance instead of a full perimeter.
+    add(14, 0, 'top');
     for (let x = 2; x <= COLS - 3; x += 5) add(x, 0, 'top');
     // Left and right edge lanes. These are the pressure lanes that force repositioning.
     for (let y = 2; y <= ROWS - 4; y += 3) {
@@ -873,13 +940,32 @@
     G.spawnPoints = points.length ? points : FALLBACK_SPAWN_POINTS.slice();
   }
 
+  function spawnPointOrder(sp) {
+    if (sp.side === 'top' && sp.cx === 14) return 0;
+    // Interleave left and right lanes so the third/fourth entrances are not
+    // both on the same side of the map.
+    if (sp.side === 'left') return 10 + Math.abs(sp.cy - 8) * 2;
+    if (sp.side === 'right') return 11 + Math.abs(sp.cy - 8) * 2;
+    if (sp.side === 'top') return 30 + Math.abs(sp.cx - 14);
+    return 50 + sp.cy;
+  }
+
+  // New entrances unlock every two minutes: center top -> left/right lanes ->
+  // wider top hatches -> bottom corners. This prevents the opening minute from
+  // becoming a four-direction surround.
+  function activeSpawnPoints() {
+    const all = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
+    const sorted = all.slice().sort((a, b) => spawnPointOrder(a) - spawnPointOrder(b));
+    const count = 1 + Math.min(5, Math.floor(G.elapsed / PHASE_LEN));
+    return sorted.slice(0, Math.min(count, sorted.length));
+  }
+
   function spawnPoolSides() {
-    const points = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
-    return points.filter(sp => sp.side === 'left' || sp.side === 'right');
+    return activeSpawnPoints().filter(sp => sp.side === 'left' || sp.side === 'right');
   }
 
   function chooseSpawnPoint(pool) {
-    const points = pool && pool.length ? pool : FALLBACK_SPAWN_POINTS;
+    const points = pool && pool.length ? pool : activeSpawnPoints();
     const ps = G.players && G.players.length ? G.players : [G.player];
     const safe = points.filter(sp => !ps.some(p => p && dist((sp.cx + .5) * TILE, (sp.cy + .5) * TILE, p.x, p.y) < 130));
     return pick(safe.length ? safe : points);
@@ -1927,6 +2013,14 @@
     if (e.elite) {
       const sealBoss = !!e.sealTankId;
       const w = sealBoss ? 116 : 76;
+      // Pulsing command ring: an elite must read as an event, not a recolored grunt.
+      const pulse = .5 + .5 * Math.sin(t * 5 + e.id);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = sealBoss ? `rgba(95,240,206,${.25 + pulse * .28})` : `rgba(255,181,45,${.25 + pulse * .3})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(e.x, e.y, 23 + pulse * 3, 0, TAU); ctx.stroke();
+      ctx.restore();
       // mini-boss nameplate, kept above the swarm
       ctx.fillStyle = 'rgba(4,8,7,.88)'; ctx.fillRect(e.x - w / 2, e.y - 50, w, 11);
       ctx.strokeStyle = sealBoss ? 'rgba(95,240,206,.65)' : 'rgba(255,181,45,.55)'; ctx.lineWidth = 1; ctx.strokeRect(e.x - w / 2 + .5, e.y - 49.5, w - 1, 10);
@@ -2368,6 +2462,19 @@
         ctx.fillStyle = '#cafff3';
         ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(4, 0); ctx.lineTo(0, 5); ctx.lineTo(-4, 0); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#39bda4'; ctx.fillRect(-1, -2, 2, 4);
+      } else if (p.type === 'chest') {
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 24);
+        g.addColorStop(0, 'rgba(255,220,120,.72)'); g.addColorStop(.4, 'rgba(255,170,50,.30)'); g.addColorStop(1, 'rgba(255,170,50,0)');
+        ctx.fillStyle = g; ctx.fillRect(-24, -24, 48, 48);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.save();
+        ctx.rotate(Math.sin(t * 2 + p.seed) * .08);
+        ctx.fillStyle = '#3b2714'; ctx.fillRect(-10, -8, 20, 15);
+        ctx.strokeStyle = '#ffd66b'; ctx.lineWidth = 1.5; ctx.strokeRect(-9.5, -7.5, 19, 14);
+        ctx.fillStyle = '#ffcf5a'; ctx.fillRect(-10, -2, 20, 2); ctx.fillRect(-2, -2, 4, 7);
+        ctx.fillStyle = '#fff3bd'; ctx.fillRect(-3, 1, 6, 2);
+        ctx.restore();
       } else {
         const item = ITEMS[p.type];
         ctx.globalCompositeOperation = 'lighter';
@@ -2800,7 +2907,9 @@
 
   /* ---------------- run lifecycle / stats ---------------- */
   function xpNeeded(level) {
-    return Math.floor(4 + (level - 1) * 3.8 + Math.pow(level, 1.38) * 1.7);
+    // Longer early curve: the first few levels should not chain-pause the run.
+    // Tuned for roughly 18-20 choices in a 10-minute stage.
+    return Math.floor(20 + (level - 1) * 15 + Math.pow(level, 1.35) * 7.2);
   }
 
   function startRun(index, coop, endless) {
@@ -2824,6 +2933,24 @@
     G.difficulty = stageDifficulty(G.campaign || readCampaign(), index);
     G.difficultyMod = difficultyData(G.difficulty).mod;
     G.runMod = buildRunMod(G.arena.mod, G.difficulty);
+    const stagePressure = STAGE_PRESSURE[clamp(index, 0, STAGE_PRESSURE.length - 1)] || STAGE_PRESSURE[0];
+    G.runMod.enemyHp *= stagePressure.hp;
+    G.runMod.bossHp *= stagePressure.hp;
+    G.runMod.enemyDamage *= stagePressure.dmg;
+    G.runMod.spawnMul *= stagePressure.spawn;
+    if (G.arenaIndex === 0 && !G.endless) {
+      // The five-minute tutorial has fewer kills but still needs a usable build.
+      G.runMod.xpMul *= 1.4;
+    }
+    if (G.twoPlayer) {
+      // Two tanks already double the damage output. Add bodies, not sponges:
+      // no extra HP, a small damage trim, and a boss HP compensation only.
+      G.runMod.spawnMul *= .82;
+      G.runMod.enemyDamage *= .90;
+      G.runMod.bossHp *= 1.35;
+    }
+    G.bossAt = G.endless ? Infinity : (index === 0 ? TUTORIAL_BOSS_AT : BOSS_AT);
+    G.runDuration = G.bossAt;
     G.runSeed = Date.now() % 99999;
     G.tiles = [];
     G.core = null;
@@ -2857,13 +2984,19 @@
     G.comboTimer = 0;
     G.revives = 0;
     G.progressRecorded = false;
-    G.spawnTimer = 1.1;
-    G.sideSpawnTimer = G.endless ? 5.5 : (G.arenaIndex === 0 ? 22 : 5.5);
+    G.spawnTimer = 1.2;
+    G.sideSpawnTimer = 8;
     G.sideWarned = false;
     G.mapHazardTimer = 3.5;
     G.mapHazardIndex = 0;
     G.spawnPoints = [];
     G.eliteFlags = {};
+    G.nextEliteAt = ELITE_FIRST_AT;
+    try { G.eliteTutorialSeen = localStorage.getItem('bf.eliteTutorial') === '1'; }
+    catch (_) { G.eliteTutorialSeen = false; }
+    try { G.itemTutorialSeen = localStorage.getItem('bf.itemTutorial') === '1'; }
+    catch (_) { G.itemTutorialSeen = false; }
+    G.itemTutorialQueued = false;
     G.boss = null;
     G.bossSpawned = false;
     G.bossDefeated = false;
@@ -2936,9 +3069,6 @@
     G.pendingLevels = 0;
     G.rerolls = 2;
     G.levelupPlayer = null;
-    try { G.itemTutorialSeen = localStorage.getItem('bf.itemTutorial') === '1'; }
-    catch (_) { G.itemTutorialSeen = false; }
-    G.itemTutorialQueued = false;
     // Give the player one nearby sentry pickup so the base has a clear
     // defensive choice from the first minute instead of firing for free.
     if (G.player) spawnPickup('turret', clamp(G.player.x + 110, 24, W - 24), clamp(G.player.y + 20, 24, H - 24), 0);
@@ -2970,7 +3100,7 @@
     if (U.bossMarker) U.bossMarker.style.display = G.endless ? 'none' : '';
     const diff = difficultyData(G.difficulty);
     U.sectorLabel.textContent = `第 ${index + 1} 区 · ${MAPS[index].name} · ${diff.name}${G.endless ? ' · 无尽' : ''}`;
-    U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : '生存至撤离 · 06:00';
+    U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : `泰坦降临倒计时 · ${fmtShort(G.bossAt || BOSS_AT)}`;
     U.sideTip.textContent = G.twoPlayer
       ? `P1 · ${G.tank.name} · P2 · ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
@@ -3111,8 +3241,19 @@
     };
   }
 
-  function weaponsFor(p) { return (p && p.weapons) || (G.player && G.player.weapons) || G.weapons || { cannon: 1 }; }
-  function passivesFor(p) { return (p && p.passives) || (G.player && G.player.passives) || G.passives || {}; }
+  // Four visible tiers, each worth roughly two old levels.
+  const WEAPON_TIER_LEVEL = [0, 1, 3, 6, 8];
+  const PASSIVE_TIER_LEVEL = [0, 1, 2, 4, 5];
+  function tierLevels(raw, table) {
+    const out = {};
+    for (const [id, tier] of Object.entries(raw || {})) {
+      const mapped = table[clamp(tier | 0, 0, table.length - 1)];
+      if (mapped > 0) out[id] = mapped;
+    }
+    return out;
+  }
+  function weaponsFor(p) { return tierLevels((p && p.weapons) || (G.player && G.player.weapons) || G.weapons || { cannon: 1 }, WEAPON_TIER_LEVEL); }
+  function passivesFor(p) { return tierLevels((p && p.passives) || (G.player && G.player.passives) || G.passives || {}, PASSIVE_TIER_LEVEL); }
   function fusionsFor(p) { return (p && p.fusions) || (G.player && G.player.fusions) || G.fusions || {}; }
 
   function statsFor(p) {
@@ -4137,53 +4278,44 @@
   }
 
   function updateWaves(dt) {
-    let wi = G.endless ? Math.floor(G.elapsed / ENDLESS_WAVE_SPAN) : 0;
-    if (!G.endless) {
-      for (let i = 0; i < WAVES.length; i++) if (G.elapsed >= WAVES[i].at) wi = i;
-    }
-    if (wi !== G.waveIndex) {
-      G.waveIndex = wi;
-      const wave = getWave();
-      showToast(`第 ${wi + 1} 波 · ${wave.label}${G.endless ? ' · 无尽' : ''}`, 'cyan');
-      if (wi > 0 && G.mode === 'playing') {
-        for (let i = 0; i < Math.min(3, 1 + Math.floor(wi / 2)); i++) spawnEnemy(pickWaveType(wave));
+    const pi = phaseIndex();
+    if (pi !== G.waveIndex) {
+      G.waveIndex = pi;
+      const roster = stageRoster();
+      showToast(`第 ${pi + 1} 阶段 · ${phaseLabel()}${G.endless ? ' · 无尽' : ''}`, 'cyan');
+      if (G.elapsed > 1 && G.mode === 'playing') {
+        for (let i = 0; i < 2; i++) spawnEnemy(pickWaveType());
       }
       AUDIO.tick();
-      AUDIO.setIntensity(wi >= 3 ? 1 : 0);
+      AUDIO.setIntensity(pi >= 3 ? 1 : 0);
     }
-    if (G.elapsed >= 165 && !G.eliteFlags[165]) {
-      G.eliteFlags[165] = true;
+
+    // Elites are timed events, not a random drop. First one teaches the chest.
+    if (!G.endless && !G.boss && G.elapsed >= G.nextEliteAt && G.elapsed < G.bossAt) {
+      G.nextEliteAt += ELITE_GAP;
       spawnEnemy('elite', { warning: true });
-      showToast('警告：精英单位「破城者」进入战区', 'red');
-      AUDIO.boss();
-    }
-    if (G.elapsed >= 225 && !G.eliteFlags[225]) {
-      G.eliteFlags[225] = true;
-      spawnEnemy('elite', { warning: true });
-      spawnEnemy('elite', { warning: true });
-      showToast('警告：双精英编队压境', 'red');
+      showToast('警告：精英单位「破城者」进入战区 · 击破必掉战术宝箱', 'red');
       AUDIO.boss();
     }
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
-      G.endlessEliteAt = G.elapsed + 150;
+      G.endlessEliteAt = G.elapsed + ELITE_GAP;
       spawnEnemy('elite', { warning: true });
       showToast('无尽猎杀 · 精英单位进入战区', 'red');
       AUDIO.boss();
     }
+
     if (G.endless) {
       if (!G.boss && G.elapsed >= G.endlessNextBossAt) {
         G.bossSpawned = true;
         spawnBoss();
       }
-    } else if (G.elapsed >= BOSS_AT && !G.bossSpawned) {
+    } else if (G.elapsed >= G.bossAt && !G.bossSpawned) {
       G.bossSpawned = true;
       spawnBoss();
+      showToast('泰坦级目标降临 · 击破它才能结束战役', 'red');
+      AUDIO.boss();
     }
-    if (!G.endless && G.elapsed >= TOTAL_TIME) {
-      if (G.mode === 'playing') endRun(true, 'extracted');
-      return;
-    }
-    // Titan kill opens the extraction window immediately; do not idle until 06:00.
+
     if (!G.endless && G.bossDefeated) {
       G.victoryTimer = Math.max(0, G.victoryTimer - dt);
       if (G.victoryTimer <= 0 && G.mode === 'playing') {
@@ -4191,46 +4323,31 @@
         return;
       }
     }
-    // Keep pressure during the final Titan phase; previously all regular spawns stopped at 05:10.
-    if (G.endless || G.elapsed < TOTAL_TIME) {
-      const wave = getWave();
-      G.spawnTimer -= dt;
-      // Solo late game needs a little more pressure; co-op keeps its current pacing.
-      const soloLate = !G.twoPlayer && G.elapsed >= 225;
-      const cap = G.endless
-        ? Math.min(ENDLESS_MAX_ENEMIES, wave.max + Math.floor(G.elapsed / 60) * 2 + (G.twoPlayer ? 2 : 0))
-        : wave.max + (soloLate ? 2 : 0);
-      if (G.spawnTimer <= 0 && G.enemies.length < cap) {
-        const type = pickWaveType(wave);
-        spawnEnemy(type);
-        // Each minute gets denser: wave tables step down, then a continuous time ramp adds pressure.
-        const timeRamp = G.endless
-          ? Math.max(.58, 1 - Math.min(G.elapsed, 1200) / 1200 * .42)
-          : 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .15;
-        let interval = wave.spawn * rand(1.08, .78) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1) * timeRamp;
-        if (soloLate && !G.endless) interval *= .94;
-        G.spawnTimer = interval;
-        const extraChance = G.endless ? Math.min(.42, .15 + G.elapsed / 1200 * .25) : .15 + G.elapsed / TOTAL_TIME * .16;
-        if (G.elapsed > 120 && chance(extraChance)) setTimeout(() => {
-          if (G.mode === 'playing' && G.enemies.length < cap && (G.endless || G.elapsed < TOTAL_TIME)) spawnEnemy(pickWaveType(wave));
-        }, 220);
-      }
-      // Dedicated left/right assault lanes create a second, continuous front.
-      G.sideSpawnTimer -= dt;
-      if (G.sideSpawnTimer <= 0) {
-        const sidePoints = spawnPoolSides();
-        if (G.enemies.length < cap && sidePoints.length) {
-          if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼突击 · 地图左右边缘持续入场', 'red'); }
-          const squad = G.endless ? Math.min(3, 1 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 180 ? 2 : 1);
-          for (let i = 0; i < squad && G.enemies.length < cap; i++) {
-            spawnEnemy(pickWaveType(wave), { spawn: chooseSpawnPoint(sidePoints) });
-          }
-          G.sideSpawnTimer = (G.endless
-            ? Math.max(1.5, 5.6 - Math.min(G.elapsed, 900) / 900 * 3.8)
-            : Math.max(2.4, 5.6 - G.elapsed / TOTAL_TIME * 2.6)) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
-        } else {
-          G.sideSpawnTimer = 1.2;
+
+    // During the Titan duel, stop feeding the arena so the boss pattern is readable.
+    if (G.boss && !G.endless) return;
+    const phase = phaseData();
+    const coopCap = G.twoPlayer ? 1.35 : 1;
+    const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : 40, Math.round(phase.cap * coopCap));
+    G.spawnTimer -= dt;
+    if (G.spawnTimer <= 0 && G.enemies.length < cap) {
+      spawnEnemy(pickWaveType());
+      G.spawnTimer = Math.max(.55, phase.spawn * rand(1.08, .82) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1));
+    }
+
+    // Side lanes unlock gradually with the active spawn-point set.
+    G.sideSpawnTimer -= dt;
+    if (G.sideSpawnTimer <= 0) {
+      const sidePoints = spawnPoolSides();
+      if (G.enemies.length < cap && sidePoints.length) {
+        if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼通道开启 · 地图边缘开始入场', 'red'); }
+        const squad = G.endless ? Math.min(3, 1 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 240 ? 2 : 1);
+        for (let i = 0; i < squad && G.enemies.length < cap; i++) {
+          spawnEnemy(pickWaveType(), { spawn: chooseSpawnPoint(sidePoints) });
         }
+        G.sideSpawnTimer = Math.max(2.2, 5.6 - Math.min(1, G.elapsed / 600) * 2.6) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
+      } else {
+        G.sideSpawnTimer = 1.2;
       }
     }
   }
@@ -4240,7 +4357,7 @@
     const cfg = ENEMIES[type];
     if (!cfg) return null;
     if (G.enemies.length > 110) return null;
-    const spawnPool = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
+    const spawnPool = activeSpawnPoints();
     let sp = opts.spawn || chooseSpawnPoint(spawnPool);
     if (!opts.spawn) {
       let tries = 0;
@@ -4249,15 +4366,12 @@
     }
     const x = (sp.cx + .5) * TILE, y = (sp.cy + .5) * TILE;
     const mod = G.runMod || {};
-    const timeScale = 1 + G.elapsed / 60 * .25;
-    const dmgScale = 1 + G.elapsed / 60 * .065;
-    const early = G.elapsed < 180 ? .82 : 1;
     const e = {
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (cfg.boss ? 1 : timeScale) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (cfg.boss ? 1 : timeScale) * (mod.enemyHp || 1),
-      damage: cfg.damage * dmgScale * early * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) * (G.elapsed < 180 ? 1.18 : 1), fireInterval: cfg.fire * (G.elapsed < 180 ? 1.18 : 1), bulletSpeed: cfg.bulletSpeed,
+      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
+      damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
@@ -4279,7 +4393,7 @@
     const cfg = ENEMIES[bossKey] || ENEMIES.boss;
     const flying = cfg.domain === 'air' || cfg.domain === 'hover';
     const x = W / 2, y = flying ? 122 : 150;
-    const scale = 1 + G.elapsed / 60 * .1 + (G.endless ? G.endlessBossKills * .16 : 0);
+    const scale = 1 + (G.endless ? G.endlessBossKills * .16 : 0);
     const mod = G.runMod || {};
     const e = {
       id: ++G.entityId, type: 'boss', bossKey, bossKind: cfg.bossKind || 'siege',
@@ -4288,7 +4402,7 @@
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
       hp: cfg.hp * scale * (mod.bossHp || 1), maxHp: cfg.hp * scale * (mod.bossHp || 1),
-      damage: cfg.damage * (1 + G.elapsed / 60 * .05) * .88 * (mod.enemyDamage || 1),
+      damage: cfg.damage * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       elite: false, boss: true, xp: cfg.xp, spawnTimer: 1.35, spawnTotal: 1.35,
@@ -5614,7 +5728,7 @@
         showToast(`${e.bossName || '首领'} 已击破 · 第 ${G.endlessBossKills} 个无尽首领 · 下一轮 ${fmtShort(ENDLESS_BOSS_GAP)} 后`, 'cyan');
       } else {
         G.bossDefeated = true;
-        showToast(`${e.bossName || '首领'} 已击破 · 撤离通道开启`, 'cyan');
+        showToast(`${e.bossName || '泰坦'} 已击破 · 战役完成`, 'cyan');
         G.victoryTimer = 1.2;
       }
     } else {
@@ -5623,7 +5737,13 @@
         addParticles(e.x, e.y, 24, '#ffbd58', 'spark', 1.6);
         addShake(8, .45); AUDIO.explode(1.6);
         if (e.sealTankId) unlockTankFromSeal(e.sealTankId);
-        else showToast('精英单位已击毁', 'cyan');
+        else showToast('精英单位已击毁 · 战术宝箱已掉落', 'gold');
+        if (!e.sealTankId) spawnPickup('chest', e.x, e.y, 0);
+        if (!e.sealTankId && !G.eliteTutorialSeen) {
+          G.eliteTutorialSeen = true;
+          try { localStorage.setItem('bf.eliteTutorial', '1'); } catch (_) {}
+          showEliteTutorial();
+        }
       } else {
         addParticles(e.x, e.y, 12, e.color, 'debris', .55);
         addEffect({ type: 'explosion', x: e.x, y: e.y, radius: 28, life: .2, maxLife: .2, color: '#ff9a58' });
@@ -5856,7 +5976,7 @@
     const speed = type === 'xp' ? rand(65, 20) : rand(30, 8);
     G.pickups.push({
       type, x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-      value: value || 0, life: 38, seed: rand(TAU), picked: false
+      value: value || 0, life: type === 'chest' ? 120 : 38, seed: rand(TAU), picked: false
     });
     // The scripted opening turret is not a combat drop; let the first real
     // item drop (or first pickup) introduce the supply system.
@@ -5900,9 +6020,19 @@
     const p = picker || G.player;
     G.pickupsCollected += 1;
     if (pk.type === 'xp') {
+      // Co-op keeps the same XP requirements and full pickup value. Enemy
+      // count is the difficulty lever, not invisible XP inflation.
       addXp(pk.value || 1, p);
       AUDIO.xp();
       addParticle(pk.x, pk.y, rand(20, -20), rand(-30, -60), '#aef9e7', 'spark', .35, 1.3);
+      return;
+    }
+    if (pk.type === 'chest') {
+      p.pendingLevels = (p.pendingLevels || 0) + 1;
+      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 46, life: .6, maxLife: .6, color: '#ffcf5a' });
+      addParticles(p.x, p.y, 20, '#ffcf5a', 'spark', 1.2);
+      showPickupToast(p, '战术宝箱 · 获得一次升级选择');
+      AUDIO.item();
       return;
     }
     queueItemTutorial();
@@ -5947,13 +6077,12 @@
       return;
     }
     if (pk.type === 'star') {
-      const wset = weaponsFor(p);
-      if ((wset.cannon || 1) < 8) wset.cannon = (wset.cannon || 1) + 1;
-      else {
-        const upgradable = Object.keys(wset).filter(k => wset[k] < 8);
-        if (upgradable.length) wset[pick(upgradable)] += 1;
-        else healPlayer(25, p);
-      }
+      const raw = p.weapons || (p.weapons = {});
+      const upgradable = Object.keys(raw).filter(k => (raw[k] || 0) < 4);
+      if (upgradable.length) {
+        const id = pick(upgradable);
+        raw[id] = Math.min(4, (raw[id] || 0) + 1);
+      } else healPlayer(25, p);
       recalcStats(false);
       G.loadoutDirty = true;
     } else if (pk.type === 'grenade') {
@@ -6127,6 +6256,8 @@
     const affinity = tank.affinity || [];
     const wset = weaponsFor(p);
     const pset = passivesFor(p);
+    const rawWeapons = p.weapons || {};
+    const rawPassives = p.passives || {};
     const fset = fusionsFor(p);
     const fusionCandidates = [];
     for (const f of Object.values(FUSIONS)) {
@@ -6139,28 +6270,29 @@
       });
     }
     const weaponCandidates = [];
-    const weaponCount = Object.keys(wset).length;
+    const weaponCount = Object.values(rawWeapons).filter(lvl => lvl > 0).length;
     for (const id of Object.keys(WEAPONS)) {
       const data = WEAPONS[id];
-      const lvl = wset[id] || 0;
-      if (lvl >= 8) continue;
+      const lvl = rawWeapons[id] || 0;
+      if (lvl >= 4) continue;
       if (lvl === 0 && weaponCount >= 6) continue;
       weaponCandidates.push({
-        kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: 8,
+        kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: 4,
         accent: data.color,
         weight: (lvl === 0 ? 1.15 : 1.7) * (affinity.includes(id) ? 1.6 : 1)
       });
     }
     const passiveCandidates = [];
-    const passiveCount = Object.keys(pset).length;
+    const passiveCount = Object.values(rawPassives).filter(lvl => lvl > 0).length;
     for (const id of Object.keys(PASSIVES)) {
       const data = PASSIVES[id];
-      const lvl = pset[id] || 0;
-      if (lvl >= data.max) continue;
+      const lvl = rawPassives[id] || 0;
+      const maxTier = Math.min(4, data.max || 4);
+      if (lvl >= maxTier) continue;
       if (lvl === 0 && data.minLevel && p.level < data.minLevel) continue;
       if (lvl === 0 && passiveCount >= 6) continue;
       passiveCandidates.push({
-        kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: data.max,
+        kind: 'passive', id, data, level: lvl, nextLevel: lvl + 1, max: maxTier,
         accent: data.color,
         weight: (lvl === 0 ? 1.1 : 1.35) * (affinity.includes(id) ? 1.45 : 1)
       });
@@ -6286,12 +6418,12 @@
       const data = c.data;
       let typeLabel = c.kind === 'fusion' ? '合成' : c.kind === 'weapon' ? '武器' : c.kind === 'passive' ? '被动' : '补给';
       let levelLabel = c.kind === 'utility' ? '补给' : c.kind === 'fusion' ? '进化' : c.level === 0 ? '新模块' : '';
-      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[c.nextLevel - 1].text : PASSIVES[c.id].text;
+      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[WEAPON_TIER_LEVEL[c.nextLevel] - 1].text : PASSIVES[c.id].text;
       let pips = '';
       if (c.kind === 'fusion') {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       } else if (c.kind !== 'utility') {
-        const count = c.kind === 'weapon' ? 8 : c.max;
+        const count = c.kind === 'weapon' ? 4 : c.max;
         for (let n = 0; n < count; n++) pips += `<i class="${n < c.nextLevel ? 'is-on' : ''}"></i>`;
       } else {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
@@ -6337,7 +6469,7 @@
       addParticles(p.x, p.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
       const cur = p.weapons[c.id] || 0;
-      p.weapons[c.id] = Math.min(8, cur + 1);
+      p.weapons[c.id] = Math.min(4, cur + 1);
       if (cur === 0) p.weaponCds[c.id] = .5;
       showToast(`${p.label} 武器解锁 · ${c.data.name}`, 'cyan');
     } else if (c.kind === 'passive') {
@@ -6420,10 +6552,10 @@
     const endless = !!G.endless;
     const progress = endless
       ? clamp((G.elapsed % ENDLESS_WAVE_SPAN) / ENDLESS_WAVE_SPAN * 100, 0, 100)
-      : clamp(G.elapsed / TOTAL_TIME * 100, 0, 100);
+      : clamp(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100, 0, 100);
     const remain = endless
       ? Math.max(0, (G.endlessNextBossAt || 0) - G.elapsed)
-      : Math.max(0, TOTAL_TIME - G.elapsed);
+      : Math.max(0, (G.bossAt || BOSS_AT) - G.elapsed);
     const xpPct = clamp(p.xp / p.xpNext * 100, 0, 100);
     U.hpMeter.style.width = `${hpPct}%`;
     U.xpMeter.style.width = `${xpPct}%`;
@@ -6448,8 +6580,8 @@
     U.statCrit.textContent = `${Math.round(G.stats.crit * 100)}%`;
     U.coreRing.style.setProperty('--p', progress.toFixed(1));
     U.corePercent.textContent = endless ? String(G.endlessBossKills).padStart(2, '0') : String(Math.floor(progress));
-    U.coreText.textContent = endless ? (G.boss ? '首领' : `下一波 ${fmtShort(remain)}`) : fmtShort(remain);
-    U.coreState.textContent = endless ? 'ENDLESS' : (remain <= 0 ? 'READY' : `T-${fmtShort(remain)}`);
+    U.coreText.textContent = endless ? (G.boss ? '首领' : `下一波 ${fmtShort(remain)}`) : (G.boss ? '泰坦' : fmtShort(remain));
+    U.coreState.textContent = endless ? 'ENDLESS' : (G.boss ? 'BOSS' : (remain <= 0 ? 'READY' : `T-${fmtShort(remain)}`));
     const basePct = G.core ? clamp(G.core.hp / G.core.maxHp * 100, 0, 100) : 0;
     if (U.baseHpText) U.baseHpText.textContent = G.core ? `${Math.ceil(G.core.hp)} / ${Math.ceil(G.core.maxHp)}` : '--';
     if (U.baseHpMeter) U.baseHpMeter.style.width = `${basePct}%`;
@@ -6465,23 +6597,22 @@
     U.topKills.textContent = String(G.kills).padStart(3, '0');
     U.pickupCount.textContent = String(G.pickupsCollected).padStart(3, '0');
     U.comboCount.textContent = `x${(1 + Math.min(1.5, G.combo * .02)).toFixed(1)}`;
-    const wave = getWave();
     if (G.boss) {
-      const bossName = G.boss.bossName || '首领';
-      U.phaseLabel.textContent = `首领 · ${bossName}`;
-      U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 撑到撤离`;
+      const bossName = G.boss.bossName || '泰坦';
+      U.phaseLabel.textContent = `泰坦 · ${bossName}`;
+      U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 摧毁泰坦`;
       U.sideTip.textContent = G.twoPlayer ? `${bossName}优先锁定车体。保持移动，队友别站同一条弹道。` : `${bossName}优先锁定你的车体。保持移动，别被逼进死角。`;
     } else {
-      U.phaseLabel.textContent = `第 ${G.waveIndex + 1} 波 · ${wave.label}`;
-      U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : `生存至撤离 · ${fmtShort(remain)}`;
+      U.phaseLabel.textContent = `第 ${phaseIndex() + 1} 阶段 · ${phaseLabel()}`;
+      U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : (remain > 0 ? `泰坦降临倒计时 · ${fmtShort(remain)}` : '泰坦已降临 · 摧毁它');
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 · 拉开距离，先吃维修包。';
       else if (endless) U.sideTip.textContent = `无尽协议 · 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
-      else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 · 保持移动，别被包夹。';
+      else if (G.elapsed > 480) U.sideTip.textContent = '最后阶段 · 保留冲刺，准备迎击泰坦。';
       else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
       else U.sideTip.textContent = '提示 · 砖墙可打碎，钢板不可。';
     }
-    U.clockLabel.textContent = endless ? fmtTime(G.elapsed) : fmtTime(Math.max(0, TOTAL_TIME - G.elapsed));
-    U.clockBar.style.width = `${endless ? clamp((G.elapsed % 120) / 120 * 100, 0, 100) : clamp(G.elapsed / TOTAL_TIME * 100, 0, 100)}%`;
+    U.clockLabel.textContent = endless ? fmtTime(G.elapsed) : (G.boss ? `+${fmtTime(Math.max(0, G.elapsed - (G.bossAt || BOSS_AT)))}` : fmtTime(remain));
+    U.clockBar.style.width = `${endless ? clamp((G.elapsed % 120) / 120 * 100, 0, 100) : clamp(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100, 0, 100)}%`;
     if (U.mCoreBar) {
       U.mCoreBar.style.width = `${progress}%`;
       if (U.mBaseBar) U.mBaseBar.style.width = `${basePct}%`;
@@ -6491,7 +6622,7 @@
       if (U.mBaseBar) U.mBaseBar.parentElement.parentElement.classList.toggle('is-low', basePct < 30);
       U.mHpBar.parentElement.parentElement.classList.toggle('is-low', hpPct < 30);
     }
-    const threat = clamp(1 + G.waveIndex * 1.1 + G.enemies.length / 9, 0, 8);
+    const threat = clamp(1 + phaseIndex() * 1.1 + G.enemies.length / 9, 0, 8);
     Array.from(U.threatBars.children).forEach((el, i) => el.classList.toggle('is-on', i < threat));
     U.threatBars.classList.toggle('is-critical', threat > 5.5);
     U.threatLabel.textContent = threat > 6.5 ? '极危' : threat > 4.5 ? '高' : threat > 2.5 ? '中' : '低';
@@ -6532,11 +6663,11 @@
         if (downed) U.sideTip.textContent = `P${downed.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
       }
     }
-    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? '双人 06:00 · 双车或基地归零即失败' : '生存 06:00 · 车体或基地归零即失败')}`;
-    if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 8 ? '湮灭主炮' : WEAPONS.cannon.name;
+    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? `双人 · 泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 双车或基地归零即失败` : `泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 车体或基地归零即失败`)}`;
+    if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 4 ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
     if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
-    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '首领'} 会攻击最近的你和基地，撑到撤离` : '活到撤离，车体或基地归零即失败'));
+    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：击破泰坦，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '泰坦'} 会攻击最近的你和基地，击破它才能结束战役` : '在倒计时结束前整备，击破降临的泰坦'));
     if (G.boss && G.boss.hp > 0) {
       U.bossHud.classList.remove('is-hidden');
       const bp = clamp(G.boss.hp / G.boss.maxHp * 100, 0, 100);
@@ -6556,11 +6687,11 @@
       if (!data) continue;
       const fusion = FUSIONS[id] && G.fusions[id] ? FUSIONS[id] : null;
       const name = fusion ? fusion.name : data.name;
-      const sub = fusion ? '进化' : `等级 ${lvl} / 8`;
+      const sub = fusion ? '进化' : `等级 ${lvl} / 4`;
       html += `<div class="loadout-item${fusion ? ' is-fused' : ''}">
         <canvas data-icon="${fusion ? fusion.icon : data.icon}" data-color="${fusion ? fusion.color : data.color}" data-size="22"></canvas>
         <div class="loadout-item__copy"><strong>${name}</strong><small>${sub}</small></div>
-        <div class="loadout-pips">${Array.from({ length: 8 }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
+        <div class="loadout-pips">${Array.from({ length: 4 }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
       </div>`;
     }
     for (const id of Object.keys(G.passives)) {
@@ -6568,8 +6699,8 @@
       if (!data) continue;
       html += `<div class="loadout-item is-passive">
         <canvas data-icon="${data.icon}" data-color="${data.color}" data-size="22"></canvas>
-        <div class="loadout-item__copy"><strong>${data.name}</strong><small>PASSIVE · LV.${lvl} / ${data.max}</small></div>
-        <div class="loadout-pips">${Array.from({ length: data.max }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
+        <div class="loadout-item__copy"><strong>${data.name}</strong><small>PASSIVE · LV.${lvl} / ${Math.min(4, data.max)}</small></div>
+        <div class="loadout-pips">${Array.from({ length: Math.min(4, data.max) }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
       </div>`;
     }
     const totalItems = Object.keys(G.weapons).length + Object.keys(G.passives).length;
@@ -6987,7 +7118,7 @@
     G.mode = 'result';
     G.deadReason = reason || '';
     AUDIO.stopMusic();
-    const progress = clamp(G.elapsed / TOTAL_TIME * 100, 0, 100);
+    const progress = clamp(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100, 0, 100);
     const records = readRecords();
     records.bestTime = Math.max(records.bestTime, Math.floor(G.elapsed));
     records.bestLevel = Math.max(records.bestLevel, G.level);
@@ -7546,6 +7677,49 @@
     AUDIO.init(); AUDIO.tick();
   }
   function hideHow() { U.howScreen.classList.add('hidden'); }
+
+  function showEliteTutorial() {
+    if (document.getElementById('eliteTutorial')) return;
+    G.mode = 'eliteTutorial';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    const wrap = document.createElement('div');
+    wrap.id = 'eliteTutorial';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,5,.82);backdrop-filter:blur(5px);padding:24px;';
+    wrap.innerHTML = `
+      <div style="width:min(460px,92vw);border:1px solid rgba(255,207,90,.6);background:linear-gradient(160deg,rgba(34,25,10,.98),rgba(5,10,8,.99));box-shadow:0 0 50px rgba(255,170,40,.18);padding:28px;">
+        <div style="font:700 11px/1.2 Silkscreen,monospace;letter-spacing:.18em;color:#ffcf5a;margin-bottom:12px;">ELITE PROTOCOL // 首次击破</div>
+        <h2 style="margin:0 0 12px;font-size:26px;color:#fff3bd;">精英单位已击破</h2>
+        <p style="margin:0 0 10px;color:#e8dfc8;line-height:1.7;font-size:15px;">精英单位必掉一个 <b style="color:#ffcf5a;">战术宝箱</b>。靠近并拾取宝箱，会立即获得一次升级选择。</p>
+        <p style="margin:0 0 22px;color:#a9b8aa;line-height:1.6;font-size:13px;">精英每 2–3 分钟出现一次。优先击破它们，是建立构筑的关键。</p>
+        <button id="eliteTutorialClose" type="button" style="width:100%;padding:13px 18px;border:1px solid #ffcf5a;background:#ffcf5a;color:#201608;font:700 15px/1 Silkscreen,monospace;cursor:pointer;letter-spacing:.08em;">继续战斗</button>
+      </div>`;
+    document.body.appendChild(wrap);
+    let padWatch = null;
+    const close = () => {
+      if (!wrap.parentNode) return;
+      wrap.parentNode.removeChild(wrap);
+      document.removeEventListener('keydown', onKey);
+      if (padWatch) clearInterval(padWatch);
+      G.mode = 'playing';
+      G.accum = 0;
+      G.lastFrame = performance.now();
+      Input.keys.clear();
+      AUDIO.confirm();
+    };
+    const onKey = (event) => {
+      if (event.code === 'Enter' || event.code === 'Space' || event.code === 'Escape') { event.preventDefault(); close(); }
+    };
+    document.addEventListener('keydown', onKey);
+    padWatch = setInterval(() => {
+      for (const gp of [Input.gamepad, Input.gamepad2]) {
+        if (gp && gp.connected && gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) { close(); break; }
+      }
+    }, 90);
+    wrap.querySelector('#eliteTutorialClose').addEventListener('click', close);
+    AUDIO.tick();
+  }
 
   function renderItemTutorial() {
     if (!U.itemTutorialGrid) return;
@@ -8704,7 +8878,7 @@
     syncSettingsUI();
     updateBestStats();
     syncPadState();
-    U.bossMarker.style.left = `${BOSS_AT / TOTAL_TIME * 100}%`;
+    U.bossMarker.style.left = `${clamp((G.bossAt || BOSS_AT) / Math.max(1, G.bossAt || BOSS_AT) * 100, 0, 100)}%`;
     rebuildMenuCache();
     if (new URLSearchParams(location.search).has('debug')) {
       const tick = (seconds, autoMove) => {
@@ -8738,9 +8912,10 @@
           update(1 / 60);
         }
         if (autoMove) Input.keys.clear();
-        return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
+        return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, spawnPickup, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, queueItemTutorial, openItemTutorial, closeItemTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, spawnPickup, damageEnemy, update, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, queueItemTutorial, openItemTutorial, closeItemTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      Object.assign(window.__BF_DEBUG, { stageRoster, pickWaveType, phaseIndex, activeSpawnPoints });
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
@@ -8750,7 +8925,7 @@
         G.sideSpawnTimer = 999;
         G.player.invuln = 999;
         G.core.hp = G.core.maxHp = 99999;
-        G.elapsed = BOSS_AT;
+        G.elapsed = G.bossAt || BOSS_AT;
         G.bossSpawned = true;
         spawnBoss();
         if (G.boss) { G.boss.spawnTimer = 0; G.boss.spawnTotal = 0; }

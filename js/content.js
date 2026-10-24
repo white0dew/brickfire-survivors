@@ -970,22 +970,22 @@
   ];
 
   const FUSIONS = {
-    cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，穿透+2，命中引发 <b>轨道爆裂</b>。' },
-    drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:6, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'环绕机 +1，脉冲伤害提高，蜂群形成贴身弹幕屏障。' },
-    arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'超导风暴', en:'SUPERCONDUCTING STORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，超导线圈把闪电导向更多目标。' },
-    flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'热熔过载', en:'THERMAL OVERLOAD', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的热熔带。' },
-    mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:6, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
-    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:6, passiveLevel:2, name:'天基熔断', en:'ORBITAL OVERRIDE', color:'#b896ff', icon:'orbital', desc:'光矛 +1，暴击由轨道放大，熔断覆盖整片战区。' },
-    scatter: { id:'scatter', weapon:'scatter', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'超新星霰弹', en:'SUPERNOVA BUCKSHOT', color:'#ff9a4a', icon:'cannon', desc:'弹丸 +3，扇面爆炸，命中引发 <b>超新星爆裂</b>。' },
-    laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:6, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
-    missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:6, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
-    frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
-    toxin: { id:'toxin', weapon:'toxin', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'天基齐射', en:'ORBITAL BARRAGE', color:'#9dbbff', icon:'orbital', desc:'动能棒 +1，冲击半径 +25%，落点引发二次震波。' },
-    gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
-    mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
-    sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，耐久与嘲讽范围提升，形成会吸火的交叉防线。' },
-    emp: { id:'emp', weapon:'emp', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'零域脉冲', en:'NULL FIELD', color:'#6fd8ff', icon:'emp', desc:'脉冲半径 +30%，瘫痪时间延长，零域覆盖整片近场。' },
-    rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:6, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
+    cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，穿透+2，命中引发 <b>轨道爆裂</b>。' },
+    drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:3, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'环绕机 +1，脉冲伤害提高，蜂群形成贴身弹幕屏障。' },
+    arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'超导风暴', en:'SUPERCONDUCTING STORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，超导线圈把闪电导向更多目标。' },
+    flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'热熔过载', en:'THERMAL OVERLOAD', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的热熔带。' },
+    mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:3, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
+    orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:3, passiveLevel:2, name:'天基熔断', en:'ORBITAL OVERRIDE', color:'#b896ff', icon:'orbital', desc:'光矛 +1，暴击由轨道放大，熔断覆盖整片战区。' },
+    scatter: { id:'scatter', weapon:'scatter', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'超新星霰弹', en:'SUPERNOVA BUCKSHOT', color:'#ff9a4a', icon:'cannon', desc:'弹丸 +3，扇面爆炸，命中引发 <b>超新星爆裂</b>。' },
+    laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:3, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
+    missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:3, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
+    frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
+    toxin: { id:'toxin', weapon:'toxin', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'天基齐射', en:'ORBITAL BARRAGE', color:'#9dbbff', icon:'orbital', desc:'动能棒 +1，冲击半径 +25%，落点引发二次震波。' },
+    gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:3, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
+    mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
+    sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:3, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，耐久与嘲讽范围提升，形成会吸火的交叉防线。' },
+    emp: { id:'emp', weapon:'emp', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'零域脉冲', en:'NULL FIELD', color:'#6fd8ff', icon:'emp', desc:'脉冲半径 +30%，瘫痪时间延长，零域覆盖整片近场。' },
+    rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
   };
 
   // Role tags make each upgrade card's battlefield job explicit.
