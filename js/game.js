@@ -371,7 +371,7 @@
       hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp,
       shield: 0, shieldMax: 0, shieldRecharge: 0, noDamageTime: 0,
       radius: PLAYER_BASE.radius, speed: PLAYER_BASE.speed,
-      fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, waterWalkTimer: 0,
+      fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, dashInvuln: .34, waterWalkTimer: 0,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
       hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0, secondWindUsed: false,
       level: 1, xp: 0, xpNext: xpNeeded(1), pendingLevels: 0, rerolls: 2,
@@ -2841,8 +2841,8 @@
         attackSpeed: 1 + loaderLvl * .07,
         cdr: Math.max(.45, 1 - coolingLvl * .07),
         area: 1 + warheadLvl * .1,
-        crit: .05 + critLvl * .06,
-        critMult: 1.8,
+        crit: .05 + critLvl * .08,
+        critMult: 1.8 + critLvl * .05,
         pickup: PLAYER_BASE.pickupRadius * (1 + magnetLvl * .22),
         xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
         dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
@@ -2864,7 +2864,7 @@
         cdr: Math.max(.45, base.cdr * (tank.cdrMul || 1)),
         area: base.area * (tank.areaMul || 1),
         crit: base.crit + (tank.critAdd || 0),
-        critMult: 1.8,
+        critMult: base.critMult,
         pickup: base.pickup * (tank.pickupMul || 1),
         xpGain: base.xpGain * (tank.xpMul || 1),
         dropChance: base.dropChance + (tank.dropAdd || 0),
@@ -2889,6 +2889,7 @@
       if (fullHeal || p.shieldMax <= 0) p.shield = p.shieldMax;
       else if (p.shieldMax > oldShieldMax) p.shield = Math.min(p.shieldMax, p.shield + (p.shieldMax - oldShieldMax));
       p.dashMax = 2.3 * st.cdr * (tank.dashCdMul || 1) * (1 - dashLvl * .05);
+      p.dashInvuln = .34 + dashLvl * .04;
       p.radius = PLAYER_BASE.radius;
       p.bodyColor = tank.colors.body;
       p.bodyLight = tank.colors.light;
@@ -3118,7 +3119,7 @@
       if (p.dashCd <= .02 && p.alive) {
         p.dashCd = p.dashMax;
         p.dashTimer = .2;
-        p.invincible = Math.max(p.invincible, .34);
+        p.invincible = Math.max(p.invincible, p.dashInvuln || .34);
         AUDIO.dash(); rumble(.3, 70);
         addShake(2.5, .12);
         for (let i = 0; i < 9; i++) addParticle(p.x + rand(10, -10), p.y + rand(10, -10), rand(120, -120), rand(120, -120), '#5ff0ce', 'spark', .4, 1.5);
@@ -3438,10 +3439,12 @@
         if (candidates.length) {
           for (let i = 0; i < orbitalCount; i++) {
             const target = candidates[(Math.random() * candidates.length) | 0];
+            const crit = chance(st.crit);
             G.strikes.push({
               x: clamp(target.x + rand(30, -30), 30, W - 30), y: clamp(target.y + rand(30, -30), 30, H - 30),
-              radius: w.radius * st.area * (orbitalFusion ? 1.25 : 1), damage: w.damage * st.damage * (orbitalFusion ? 1.25 : 1), owner: p,
-              delay: w.delay, timer: w.delay, state: 'warn', color: '#b896ff'
+              radius: w.radius * st.area * (orbitalFusion ? 1.25 : 1),
+              damage: w.damage * st.damage * (orbitalFusion ? 1.25 : 1) * (crit ? st.critMult : 1),
+              crit, owner: p, delay: w.delay, timer: w.delay, state: 'warn', color: '#b896ff'
             });
           }
           p.orbitalTimer = Math.max(.8, w.interval / st.attackSpeed * st.cdr);
@@ -3785,7 +3788,7 @@
             damageBase(s.damage * .8, 'hazard');
           }
         } else {
-          explodeAt(s.x, s.y, s.radius, s.damage, color, { source: 'orbital', owner: s.owner });
+          explodeAt(s.x, s.y, s.radius, s.damage, color, { source: 'orbital', owner: s.owner, crit: s.crit });
         }
         addShake(9, .33);
         G.flash = .6; G.flashColor = color;
@@ -4968,7 +4971,7 @@
         } else {
           const broken = hitTile(tile, b.x, b.y, b.damage * .4, '#c45e3d');
           if (b.explode > 0) {
-            explodeAt(b.x, b.y, b.explode, b.damage * .48, '#ffb15a', { source: 'cannon', silent: true, owner: b.owner, slow: b.slow });
+            explodeAt(b.x, b.y, b.explode, b.damage * .48, '#ffb15a', { source: 'cannon', silent: true, owner: b.owner, slow: b.slow, crit: b.crit });
             b.dead = true;
           } else if (broken) {
             b.dead = true;
@@ -4994,7 +4997,7 @@
           damageEnemy(e, b.damage, b.crit, 'bullet', b.owner);
           addParticle(b.x, b.y, rand(50, -50), rand(50, -50), b.color, 'spark', .2, 1.5);
           if (b.explode > 0) {
-            explodeAt(b.x, b.y, b.explode, b.damage * .6, b.color, { source: 'cannon', owner: b.owner, slow: b.slow });
+            explodeAt(b.x, b.y, b.explode, b.damage * .6, b.color, { source: 'cannon', owner: b.owner, slow: b.slow, crit: b.crit });
             b.dead = true;
           } else if (b.pierce <= 0 || (b.hit && b.hit.size > b.pierce)) {
             b.dead = true;
@@ -5058,7 +5061,7 @@
         const d2 = dist2(x, y, e.x, e.y);
         if (d2 < rr * rr) {
           const fall = 1 - .35 * Math.sqrt(d2) / rr;
-          damageEnemy(e, damage * fall, false, opts.source || 'explosion', opts.owner);
+          damageEnemy(e, damage * fall, !!opts.crit, opts.source || 'explosion', opts.owner);
           if (opts.slow) e.slowTimer = Math.max(e.slowTimer || 0, opts.slow);
         }
       }

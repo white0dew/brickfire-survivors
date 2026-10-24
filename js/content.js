@@ -861,8 +861,8 @@
     },
     crit: {
       name: '暴击协议', en: 'CRITICAL PROTOCOL', short: '暴击', icon: 'crit', color: '#ff4f58',
-      desc: '提高暴击率，暴击造成 1.8 倍伤害。', max: 5,
-      stats: ['暴击率 +6%'], text: '暴击率 <b>+6%</b>，暴击伤害 <b>180%</b>。'
+      desc: '提高暴击率与暴击伤害，直接命中与轨道打击均可暴击。', max: 5,
+      stats: ['暴击率 +8%', '暴击伤害 +5%'], text: '暴击率 <b>+8%</b>，暴击伤害 <b>+5%</b>。'
     },
     salvage: {
       name: '余烬解析', en: 'EMBER DECODER', short: '解析', icon: 'salvage', color: '#b896ff',
@@ -896,8 +896,8 @@
     },
     dash: {
       name: '矢量推进', en: 'VECTOR THRUST', short: '冲刺', icon: 'engine', color: '#9bd8ff',
-      desc: '压缩推进器再装填时间。', max: 5,
-      stats: ['冲刺冷却 -5%'], text: '冲刺冷却 <b>-5%</b>。'
+      desc: '压缩推进器再装填时间，并延长冲刺无敌帧。', max: 5,
+      stats: ['冲刺冷却 -5%', '冲刺无敌 +0.04s'], text: '冲刺冷却 <b>-5%</b>，冲刺无敌 <b>+0.04</b> 秒。'
     },
     fortune: {
       name: '回收协议', en: 'SALVAGE PROTOCOL', short: '掉落', icon: 'salvage', color: '#f5d76e',
