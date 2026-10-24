@@ -14,11 +14,16 @@
   const H = ROWS * TILE;
   const TOTAL_TIME = 360;
   const BOSS_AT = 285;
+  const ENDLESS_WAVE_SPAN = 75;
+  const ENDLESS_FIRST_BOSS = 120;
+  const ENDLESS_BOSS_GAP = 90;
+  const ENDLESS_MAX_ENEMIES = 78;
   const CORE_W = 64;
   const CORE_H = 64;
   const BASE_MAX_HP = 520;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
+  const SHAKE_SCALE = .5;
   const RECALL_CD = 30;
   const MAX_PARTICLES = 620;
   const MAX_EFFECTS = 160;
@@ -129,6 +134,11 @@
     profile: { cores: 0, totalKills: 0, wins: 0, revives: 0, unlocked: [TANKS[0].id] },
     campaign: { unlocked: 1, cleared: [] },
     nextStageIndex: -1,
+    endless: false,
+    endlessSelected: false,
+    endlessNextBossAt: 0,
+    endlessBossKills: 0,
+    endlessEliteAt: 0,
     tiles: [],
     core: null,
     player: null,
@@ -2635,10 +2645,15 @@
     return Math.floor(4 + (level - 1) * 3.8 + Math.pow(level, 1.38) * 1.7);
   }
 
-  function startRun(index, coop) {
+  function startRun(index, coop, endless) {
     const unlocked = G.campaign ? G.campaign.unlocked : 1;
     index = clamp(index | 0, 0, Math.min(MAPS.length - 1, Math.max(0, unlocked - 1)));
     G.mode = 'playing';
+    G.endless = !!endless;
+    G.endlessSelected = G.endless;
+    G.endlessBossKills = 0;
+    G.endlessNextBossAt = ENDLESS_FIRST_BOSS;
+    G.endlessEliteAt = 180;
     G.twoPlayer = coop !== undefined ? !!coop : !!G.coopSelected;
     G.coopSelected = G.twoPlayer;
     G.lastCoop = G.twoPlayer;
@@ -2685,7 +2700,7 @@
     G.revives = 0;
     G.progressRecorded = false;
     G.spawnTimer = 1.1;
-    G.sideSpawnTimer = G.arenaIndex === 0 ? 22 : 5.5;
+    G.sideSpawnTimer = G.endless ? 5.5 : (G.arenaIndex === 0 ? 22 : 5.5);
     G.sideWarned = false;
     G.mapHazardTimer = 3.5;
     G.mapHazardIndex = 0;
@@ -2788,9 +2803,10 @@
     if (U.codexScreen) U.codexScreen.classList.add('hidden');
     if (U.saveScreen) U.saveScreen.classList.add('hidden');
     U.bossHud.classList.add('is-hidden');
+    if (U.bossMarker) U.bossMarker.style.display = G.endless ? 'none' : '';
     const diff = difficultyData(G.difficulty);
-    U.sectorLabel.textContent = `${MAPS[index].sector} / ${MAPS[index].en} · ${diff.name}`;
-    U.objectiveLabel.textContent = '生存至撤离 · 06:00';
+    U.sectorLabel.textContent = `${MAPS[index].sector} / ${MAPS[index].en} · ${diff.name}${G.endless ? ' · ENDLESS' : ''}`;
+    U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : '生存至撤离 · 06:00';
     U.sideTip.textContent = G.twoPlayer
       ? `P1 // ${G.tank.name} · P2 // ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
@@ -2807,9 +2823,11 @@
     AUDIO.init();
     AUDIO.startMusic();
     AUDIO.setIntensity(0);
-    showToast(G.twoPlayer
-      ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署 // 拾取哨戒炮塔`
-      : `${G.tank.name} 已部署 // ${G.tank.trait} // 拾取哨戒炮塔`, 'cyan');
+    showToast(G.endless
+      ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
+      : (G.twoPlayer
+        ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署 // 拾取哨戒炮塔`
+        : `${G.tank.name} 已部署 // ${G.tank.trait} // 拾取哨戒炮塔`), 'cyan');
     setTimeout(() => {
       if (G.mode !== 'playing') return;
       if (G.twoPlayer) showToast(isTouchUI() ? '手机双人建议外接手柄 · 靠近倒地队友可救援' : 'P1 键鼠 / P2 手柄 · 靠近倒地队友可救援');
@@ -3897,6 +3915,7 @@
   }
 
   function getWave() {
+    if (G.endless) return WAVES[Math.floor(G.elapsed / ENDLESS_WAVE_SPAN) % WAVES.length];
     let w = WAVES[0];
     for (const wave of WAVES) if (G.elapsed >= wave.at) w = wave;
     return w;
@@ -3918,12 +3937,14 @@
   }
 
   function updateWaves(dt) {
-    let wi = 0;
-    for (let i = 0; i < WAVES.length; i++) if (G.elapsed >= WAVES[i].at) wi = i;
+    let wi = G.endless ? Math.floor(G.elapsed / ENDLESS_WAVE_SPAN) : 0;
+    if (!G.endless) {
+      for (let i = 0; i < WAVES.length; i++) if (G.elapsed >= WAVES[i].at) wi = i;
+    }
     if (wi !== G.waveIndex) {
       G.waveIndex = wi;
-      const wave = WAVES[wi];
-      showToast(`WAVE ${String(wi + 1).padStart(2, '0')} // ${wave.label}`, 'cyan');
+      const wave = getWave();
+      showToast(`WAVE ${String(wi + 1).padStart(2, '0')} // ${wave.label}${G.endless ? ' // ENDLESS' : ''}`, 'cyan');
       if (wi > 0 && G.mode === 'playing') {
         for (let i = 0; i < Math.min(3, 1 + Math.floor(wi / 2)); i++) spawnEnemy(pickWaveType(wave));
       }
@@ -3943,16 +3964,27 @@
       showToast('警告：双精英编队压境', 'red');
       AUDIO.boss();
     }
-    if (G.elapsed >= BOSS_AT && !G.bossSpawned) {
+    if (G.endless && G.elapsed >= G.endlessEliteAt) {
+      G.endlessEliteAt = G.elapsed + 150;
+      spawnEnemy('elite', { warning: true });
+      showToast('无尽猎杀 // 精英单位进入战区', 'red');
+      AUDIO.boss();
+    }
+    if (G.endless) {
+      if (!G.boss && G.elapsed >= G.endlessNextBossAt) {
+        G.bossSpawned = true;
+        spawnBoss();
+      }
+    } else if (G.elapsed >= BOSS_AT && !G.bossSpawned) {
       G.bossSpawned = true;
       spawnBoss();
     }
-    if (G.elapsed >= TOTAL_TIME) {
+    if (!G.endless && G.elapsed >= TOTAL_TIME) {
       if (G.mode === 'playing') endRun(true, 'extracted');
       return;
     }
     // Titan kill opens the extraction window immediately; do not idle until 06:00.
-    if (G.bossDefeated) {
+    if (!G.endless && G.bossDefeated) {
       G.victoryTimer = Math.max(0, G.victoryTimer - dt);
       if (G.victoryTimer <= 0 && G.mode === 'playing') {
         endRun(true, 'titan');
@@ -3960,22 +3992,27 @@
       }
     }
     // Keep pressure during the final Titan phase; previously all regular spawns stopped at 05:10.
-    if (G.elapsed < TOTAL_TIME) {
+    if (G.endless || G.elapsed < TOTAL_TIME) {
       const wave = getWave();
       G.spawnTimer -= dt;
       // Solo late game needs a little more pressure; co-op keeps its current pacing.
       const soloLate = !G.twoPlayer && G.elapsed >= 225;
-      const cap = wave.max + (soloLate ? 2 : 0);
+      const cap = G.endless
+        ? Math.min(ENDLESS_MAX_ENEMIES, wave.max + Math.floor(G.elapsed / 60) * 2 + (G.twoPlayer ? 2 : 0))
+        : wave.max + (soloLate ? 2 : 0);
       if (G.spawnTimer <= 0 && G.enemies.length < cap) {
         const type = pickWaveType(wave);
         spawnEnemy(type);
         // Each minute gets denser: wave tables step down, then a continuous time ramp adds pressure.
-        const timeRamp = 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .15;
+        const timeRamp = G.endless
+          ? Math.max(.58, 1 - Math.min(G.elapsed, 1200) / 1200 * .42)
+          : 1 - clamp(G.elapsed / TOTAL_TIME, 0, 1) * .15;
         let interval = wave.spawn * rand(1.08, .78) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1) * timeRamp;
-        if (soloLate) interval *= .94;
+        if (soloLate && !G.endless) interval *= .94;
         G.spawnTimer = interval;
-        if (G.elapsed > 120 && chance(.15 + G.elapsed / TOTAL_TIME * .16)) setTimeout(() => {
-          if (G.mode === 'playing' && G.enemies.length < cap && G.elapsed < TOTAL_TIME) spawnEnemy(pickWaveType(wave));
+        const extraChance = G.endless ? Math.min(.42, .15 + G.elapsed / 1200 * .25) : .15 + G.elapsed / TOTAL_TIME * .16;
+        if (G.elapsed > 120 && chance(extraChance)) setTimeout(() => {
+          if (G.mode === 'playing' && G.enemies.length < cap && (G.endless || G.elapsed < TOTAL_TIME)) spawnEnemy(pickWaveType(wave));
         }, 220);
       }
       // Dedicated left/right assault lanes create a second, continuous front.
@@ -3984,11 +4021,13 @@
         const sidePoints = spawnPoolSides();
         if (G.enemies.length < cap && sidePoints.length) {
           if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼突击 // 地图左右边缘持续入场', 'red'); }
-          const squad = G.elapsed >= 180 ? 2 : 1;
+          const squad = G.endless ? Math.min(3, 1 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 180 ? 2 : 1);
           for (let i = 0; i < squad && G.enemies.length < cap; i++) {
             spawnEnemy(pickWaveType(wave), { spawn: chooseSpawnPoint(sidePoints) });
           }
-          G.sideSpawnTimer = Math.max(2.4, 5.6 - G.elapsed / TOTAL_TIME * 2.6) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
+          G.sideSpawnTimer = (G.endless
+            ? Math.max(1.5, 5.6 - Math.min(G.elapsed, 900) / 900 * 3.8)
+            : Math.max(2.4, 5.6 - G.elapsed / TOTAL_TIME * 2.6)) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
         } else {
           G.sideSpawnTimer = 1.2;
         }
@@ -4040,7 +4079,7 @@
     const cfg = ENEMIES[bossKey] || ENEMIES.boss;
     const flying = cfg.domain === 'air' || cfg.domain === 'hover';
     const x = W / 2, y = flying ? 122 : 150;
-    const scale = 1 + G.elapsed / 60 * .1;
+    const scale = 1 + G.elapsed / 60 * .1 + (G.endless ? G.endlessBossKills * .16 : 0);
     const mod = G.runMod || {};
     const e = {
       id: ++G.entityId, type: 'boss', bossKey, bossKind: cfg.bossKind || 'siege',
@@ -5257,7 +5296,6 @@
     G.comboTimer = 2.6;
     const xpValue = e.xp || 2;
     if (e.boss) {
-      G.bossDefeated = true;
       G.boss = null;
       U.bossHud.classList.add('is-hidden');
       addEffect({ type: 'explosion', x: e.x, y: e.y, radius: 160, life: .9, maxLife: .9, color: '#ff8a3e' });
@@ -5266,9 +5304,16 @@
       addParticles(e.x, e.y, 24, '#4d3a30', 'smoke', 1.1);
       addShake(18, 1.0); G.flash = 1; G.flashColor = '#ffc46b';
       AUDIO.bigExplode();
-      showToast(`${e.bossName || 'BOSS'} 已击破 // 撤离通道开启`, 'cyan');
       for (let i = 0; i < 9; i++) spawnPickup(chance(.55) ? 'xp' : pick(Object.keys(ITEMS)), e.x + rand(30, -30), e.y + rand(24, -24), 0);
-      G.victoryTimer = 1.2;
+      if (G.endless) {
+        G.endlessBossKills += 1;
+        G.endlessNextBossAt = G.elapsed + ENDLESS_BOSS_GAP;
+        showToast(`${e.bossName || 'BOSS'} 已击破 // 第 ${G.endlessBossKills} 个无尽首领 · 下一轮 ${fmtShort(ENDLESS_BOSS_GAP)} 后`, 'cyan');
+      } else {
+        G.bossDefeated = true;
+        showToast(`${e.bossName || 'BOSS'} 已击破 // 撤离通道开启`, 'cyan');
+        G.victoryTimer = 1.2;
+      }
     } else {
       if (e.elite) {
         addEffect({ type: 'explosion', x: e.x, y: e.y, radius: 72, life: .65, maxLife: .65, color: '#ffb52d' });
@@ -5453,7 +5498,7 @@
     p.hitFlash = 1;
     p.invincible = .5;
     p.shieldRecharge = 0;
-    G.shake = Math.max(G.shake, 5);
+    G.shake = Math.max(G.shake, 5 * SHAKE_SCALE);
     G.flash = Math.max(G.flash, .35); G.flashColor = '#ff4343';
     addParticles(p.x, p.y, 10, '#ff8b58', 'spark', 1);
     AUDIO.hit(); rumble(.6, 120);
@@ -5678,7 +5723,7 @@
     G.damageNumbers.push({ x: x + rand(8, -8), y, text: crit ? `${Math.round(amount)}!` : String(Math.round(amount)), color, crit, life: .65, maxLife: .65, vy: -28 });
   }
   function addShake(mag, time) {
-    G.shake = Math.max(G.shake, mag);
+    G.shake = Math.max(G.shake, mag * SHAKE_SCALE);
     G.shakeTime = Math.max(G.shakeTime, time || .2);
   }
 
@@ -6032,8 +6077,13 @@
     const p = (G.players && G.players[0]) || G.player;
     if (!p) return;
     const hpPct = clamp(p.hp / p.maxHp * 100, 0, 100);
-    const progress = clamp(G.elapsed / TOTAL_TIME * 100, 0, 100);
-    const remain = Math.max(0, TOTAL_TIME - G.elapsed);
+    const endless = !!G.endless;
+    const progress = endless
+      ? clamp((G.elapsed % ENDLESS_WAVE_SPAN) / ENDLESS_WAVE_SPAN * 100, 0, 100)
+      : clamp(G.elapsed / TOTAL_TIME * 100, 0, 100);
+    const remain = endless
+      ? Math.max(0, (G.endlessNextBossAt || 0) - G.elapsed)
+      : Math.max(0, TOTAL_TIME - G.elapsed);
     const xpPct = clamp(p.xp / p.xpNext * 100, 0, 100);
     U.hpMeter.style.width = `${hpPct}%`;
     U.xpMeter.style.width = `${xpPct}%`;
@@ -6056,9 +6106,9 @@
     U.statSpd.textContent = `${Math.round(p.speed / PLAYER_BASE.speed * 100)}`;
     U.statCrit.textContent = `${Math.round(G.stats.crit * 100)}%`;
     U.coreRing.style.setProperty('--p', progress.toFixed(1));
-    U.corePercent.textContent = String(Math.floor(progress));
-    U.coreText.textContent = fmtShort(remain);
-    U.coreState.textContent = remain <= 0 ? 'READY' : `T-${fmtShort(remain)}`;
+    U.corePercent.textContent = endless ? String(G.endlessBossKills).padStart(2, '0') : String(Math.floor(progress));
+    U.coreText.textContent = endless ? (G.boss ? 'BOSS' : `NEXT ${fmtShort(remain)}`) : fmtShort(remain);
+    U.coreState.textContent = endless ? 'ENDLESS' : (remain <= 0 ? 'READY' : `T-${fmtShort(remain)}`);
     const basePct = G.core ? clamp(G.core.hp / G.core.maxHp * 100, 0, 100) : 0;
     if (U.baseHpText) U.baseHpText.textContent = G.core ? `${Math.ceil(G.core.hp)} / ${Math.ceil(G.core.maxHp)}` : '--';
     if (U.baseHpMeter) U.baseHpMeter.style.width = `${basePct}%`;
@@ -6074,23 +6124,24 @@
     U.topKills.textContent = String(G.kills).padStart(3, '0');
     U.pickupCount.textContent = String(G.pickupsCollected).padStart(3, '0');
     U.comboCount.textContent = `x${(1 + Math.min(1.5, G.combo * .02)).toFixed(1)}`;
-    const wave = WAVES[clamp(G.waveIndex, 0, WAVES.length - 1)];
+    const wave = getWave();
     if (G.boss) {
       const bossName = G.boss.bossName || 'BOSS';
       U.phaseLabel.textContent = `BOSS // ${bossName}`;
-      U.objectiveLabel.textContent = `击破${bossName} · 撑到撤离`;
+      U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 撑到撤离`;
       U.sideTip.textContent = G.twoPlayer ? `${bossName}追最近的车体。保持移动，队友别站同一条弹道。` : `${bossName}只追你。保持移动，别被逼进死角。`;
     } else {
-      U.phaseLabel.textContent = `WAVE ${String(clamp(G.waveIndex + 1, 1, 6)).padStart(2, '0')} // ${wave.label}`;
-      U.objectiveLabel.textContent = `生存至撤离 · ${fmtShort(remain)}`;
+      U.phaseLabel.textContent = `WAVE ${String(G.waveIndex + 1).padStart(2, '0')} // ${wave.label}`;
+      U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : `生存至撤离 · ${fmtShort(remain)}`;
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 // 拉开距离，先吃维修包。';
       else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 // 手动瞄准可拆墙。';
+      else if (endless) U.sideTip.textContent = `无尽协议 // 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
       else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 // 保持移动，别被包夹。';
       else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
       else U.sideTip.textContent = '提示 // 砖墙可打碎，钢板不可。';
     }
-    U.clockLabel.textContent = fmtTime(Math.max(0, TOTAL_TIME - G.elapsed));
-    U.clockBar.style.width = `${clamp(G.elapsed / TOTAL_TIME * 100, 0, 100)}%`;
+    U.clockLabel.textContent = endless ? fmtTime(G.elapsed) : fmtTime(Math.max(0, TOTAL_TIME - G.elapsed));
+    U.clockBar.style.width = `${endless ? clamp((G.elapsed % 120) / 120 * 100, 0, 100) : clamp(G.elapsed / TOTAL_TIME * 100, 0, 100)}%`;
     if (U.mCoreBar) {
       U.mCoreBar.style.width = `${progress}%`;
       if (U.mBaseBar) U.mBaseBar.style.width = `${basePct}%`;
@@ -6141,11 +6192,11 @@
         if (downed) U.sideTip.textContent = `P${downed.index + 1} 倒地 // 队友靠近并停留 2.4 秒可重启`;
       }
     }
-    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.twoPlayer ? '双人 06:00 · 双车或基地归零即失败' : '生存 06:00 · 车体或基地归零即失败'}`;
+    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? '双人 06:00 · 双车或基地归零即失败' : '生存 06:00 · 车体或基地归零即失败')}`;
     if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 8 ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
     if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 // 队友靠近并停留 2.4 秒可重启`;
-    U.objectiveLabel.title = G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || 'BOSS'} 会攻击最近的你和基地，撑到撤离` : '活到撤离，车体或基地归零即失败');
+    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，Boss 循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || 'BOSS'} 会攻击最近的你和基地，撑到撤离` : '活到撤离，车体或基地归零即失败'));
     if (G.boss && G.boss.hp > 0) {
       U.bossHud.classList.remove('is-hidden');
       const bp = clamp(G.boss.hp / G.boss.maxHp * 100, 0, 100);
@@ -6365,11 +6416,14 @@
   function renderStagePicker() {
     if (!U.arenaOptions) return;
     const camp = G.campaign || readCampaign();
+    const endlessUnlocked = !!camp.cleared[1] || camp.unlocked >= 3;
+    const endlessActive = !!G.endlessSelected;
     U.arenaOptions.innerHTML = MAPS.map((m, i) => {
       const locked = i >= camp.unlocked;
       const cleared = !!camp.cleared[i];
       const diff = difficultyData(stageDifficulty(camp, i));
-      return `<button class="arena-card${i === G.arenaIndex ? ' is-active' : ''}${locked ? ' is-locked' : ''}${cleared ? ' is-cleared' : ''}" data-arena="${i}" type="button" ${locked ? 'disabled aria-disabled="true"' : ''}>
+      const active = !endlessActive && i === G.arenaIndex;
+      return `<button class="arena-card${active ? ' is-active' : ''}${locked ? ' is-locked' : ''}${cleared ? ' is-cleared' : ''}" data-arena="${i}" type="button" ${locked ? 'disabled aria-disabled="true"' : ''}>
         <span class="arena-card__index">${String(i + 1).padStart(2, '0')} ${cleared ? '// CLEAR' : locked ? '// LOCKED' : '// READY'}</span>
         <span class="arena-card__name">${m.name}</span>
         <span class="arena-card__en">${m.en}</span>
@@ -6377,11 +6431,20 @@
         <span class="arena-card__diff arena-card__diff--${diff.id}">${diff.name} / ${diff.en}</span>
         ${locked ? '<span class="arena-card__lock">▣</span>' : ''}
       </button>`;
-    }).join('');
+    }).join('') + `<button class="arena-card arena-card--endless${endlessActive ? ' is-active' : ''}${endlessUnlocked ? '' : ' is-locked'}" data-endless="1" type="button" ${endlessUnlocked ? '' : 'disabled aria-disabled="true"'}>
+      <span class="arena-card__index">∞ ${endlessUnlocked ? (endlessActive ? '// ACTIVE' : '// READY') : '// LOCKED'}</span>
+      <span class="arena-card__name">无尽协议</span>
+      <span class="arena-card__en">ENDLESS PROTOCOL</span>
+      <span class="arena-card__trait">${endlessUnlocked ? '无尽波次 · 循环 Boss · 生存计分' : '通关第 2 关解锁'}</span>
+      <span class="arena-card__diff arena-card__diff--endless">∞ / ENDLESS</span>
+      ${endlessUnlocked ? '' : '<span class="arena-card__lock">▣</span>'}
+    </button>`;
     U.arenaCards = Array.from(U.arenaOptions.querySelectorAll('.arena-card'));
     const p = U.stageProgress;
     if (p) p.textContent = `${String(camp.unlocked).padStart(2, '0')} / ${String(MAPS.length).padStart(2, '0')}`;
-    if (U.stageFootHint) U.stageFootHint.textContent = camp.unlocked >= MAPS.length ? '全部星区已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区。`;
+    if (U.stageFootHint) U.stageFootHint.textContent = endlessUnlocked
+      ? (camp.unlocked >= MAPS.length ? '全部星区与无尽协议已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 无尽协议已开放。`)
+      : (camp.unlocked >= MAPS.length ? '全部星区已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 通关第 2 关解锁无尽协议。`);
   }
 
   function drawTankPreview(canvas, tank) {
@@ -6574,12 +6637,19 @@
     U.resultTime.textContent = fmtShort(G.elapsed);
     U.resultLevel.textContent = `LV.${String(G.level).padStart(2, '0')}`;
     U.resultKills.textContent = String(G.kills).padStart(3, '0');
-    U.resultCore.textContent = `${Math.floor(progress)}%`;
+    U.resultCore.textContent = G.endless ? `${G.endlessBossKills} BOSS` : `${Math.floor(progress)}%`;
+    if (U.resultCoreLabel) U.resultCoreLabel.textContent = G.endless ? '击破首领' : '生存进度';
     U.resultSeal.classList.toggle('is-win', win);
     U.resultSeal.querySelector('b').textContent = win ? 'WIN' : 'BF';
     U.resultTag.classList.toggle('is-win', win);
     const stageNo = String(G.arenaIndex + 1).padStart(2, '0');
-    if (win) {
+    if (G.endless) {
+      const baseLost = reason === 'base';
+      U.resultTag.textContent = 'ENDLESS PROTOCOL // 生存终止';
+      U.resultTitle.textContent = baseLost ? '防线归零' : '钢铁归零';
+      U.resultFlavor.textContent = `无尽协议中断 // ${MAPS[G.arenaIndex].name} · 生存 ${fmtShort(G.elapsed)} · 击破 ${G.endlessBossKills} 个首领。`;
+      AUDIO.gameOver();
+    } else if (win) {
       const finalWin = G.arenaIndex >= MAPS.length - 1;
       U.resultTag.textContent = finalWin ? 'CAMPAIGN COMPLETE // 战役完成' : `SECTOR ${stageNo} CLEARED // 关卡突破`;
       U.resultTitle.textContent = finalWin ? '穹顶陷落' : '黎明抵达';
@@ -6699,13 +6769,13 @@
     if (U.tankPickerBtn2) U.tankPickerBtn2.classList.toggle('is-hidden', !G.coopSelected);
     updatePilotCard(0);
     updatePilotCard(1);
-    if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人出击' : '点火出击';
-    if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR';
+    if (U.startBtnLabel) U.startBtnLabel.textContent = G.endlessSelected ? (G.coopSelected ? '双人无尽' : '无尽出击') : (G.coopSelected ? '双人出击' : '点火出击');
+    if (U.startBtnSub) U.startBtnSub.textContent = G.endlessSelected ? (G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL') : (G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR');
   }
 
   function updateDifficultyUI() {
     const diff = difficultyData(G.difficulty);
-    if (U.stageDifficulty) U.stageDifficulty.textContent = `${diff.en} / ${diff.name}`;
+    if (U.stageDifficulty) U.stageDifficulty.textContent = G.endlessSelected ? '∞ / ENDLESS' : `${diff.en} / ${diff.name}`;
     if (U.difficultyHint) U.difficultyHint.textContent = `${diff.name}：${diff.desc}`;
     if (U.difficultyOptions) {
       U.difficultyOptions.querySelectorAll('.difficulty-card').forEach(btn => {
@@ -6718,14 +6788,16 @@
 
   function selectArena(index) {
     const camp = G.campaign || readCampaign();
+    G.endlessSelected = false;
     index = clamp(index | 0, 0, Math.min(MAPS.length - 1, camp.unlocked - 1));
     G.arenaIndex = index;
     G.arena = MAPS[index];
     loadStageArt(G.arena.id);
     G.difficulty = stageDifficulty(camp, index);
-    U.arenaCards.forEach((card, i) => {
-      card.classList.toggle('is-active', i === index);
-      card.setAttribute('aria-pressed', i === index ? 'true' : 'false');
+    U.arenaCards.forEach(card => {
+      const active = card.dataset.endless !== '1' && parseInt(card.dataset.arena, 10) === index;
+      card.classList.toggle('is-active', active);
+      card.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
     const diff = difficultyData(G.difficulty);
     if (U.stageHint) {
@@ -6743,6 +6815,41 @@
       frame.style.boxShadow = `0 0 0 1px rgba(0,0,0,.5), 0 0 70px ${hexA(MAPS[index].palette.accent, .12)}`;
     }
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ${MAPS[index].sector}`;
+    if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人出击' : '点火出击';
+    if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR';
+    menuCache = null;
+    menuParticles = [];
+  }
+
+  function selectEndless() {
+    const camp = G.campaign || readCampaign();
+    if (!(camp.cleared[1] || camp.unlocked >= 3)) return;
+    G.endlessSelected = true;
+    const index = clamp(G.arenaIndex | 0, 0, Math.min(MAPS.length - 1, camp.unlocked - 1));
+    G.arenaIndex = index;
+    G.arena = MAPS[index];
+    loadStageArt(G.arena.id);
+    G.difficulty = stageDifficulty(camp, index);
+    U.arenaCards.forEach(card => {
+      const active = card.dataset.endless === '1';
+      card.classList.toggle('is-active', active);
+      card.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (U.stageHint) U.stageHint.textContent = `无尽协议 · ${MAPS[index].name} · 敌军持续升级 / Boss 循环刷新 / 生存时间计分`;
+    if (U.stageIndex) U.stageIndex.textContent = '∞';
+    if (U.stageName) U.stageName.textContent = '无尽协议';
+    if (U.stageMeta) U.stageMeta.textContent = `ENDLESS PROTOCOL / ${MAPS[index].en}`;
+    if (U.stageTrait) U.stageTrait.textContent = '持续波次 · 循环 Boss · 生存计分';
+    updateDifficultyUI();
+    if (U.stageDifficulty) U.stageDifficulty.textContent = '∞ / ENDLESS';
+    const frame = document.querySelector('.visual-frame');
+    if (frame) {
+      frame.style.borderColor = hexA(MAPS[index].palette.accent, .27);
+      frame.style.boxShadow = `0 0 0 1px rgba(0,0,0,.5), 0 0 70px ${hexA(MAPS[index].palette.accent, .12)}`;
+    }
+    if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ENDLESS`;
+    if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人无尽' : '无尽出击';
+    if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL';
     menuCache = null;
     menuParticles = [];
   }
@@ -7036,7 +7143,7 @@
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
-      'resultKills', 'resultCore', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
+      'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
       'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
@@ -7058,8 +7165,14 @@
       syncPadState();
     });
     U.modeCards.forEach(card => card.addEventListener('click', () => { AUDIO.init(); selectCoop(card.dataset.coop === '1'); AUDIO.tick(); }));
-    U.startBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); });
+    U.startBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); });
     U.arenaOptions.addEventListener('click', e => {
+      const endlessCard = e.target.closest('[data-endless]');
+      if (endlessCard) {
+        if (endlessCard.disabled) return;
+        AUDIO.init(); selectEndless(); closeStageScreen(); AUDIO.tick();
+        return;
+      }
       const card = e.target.closest('.arena-card');
       if (!card || card.disabled) return;
       AUDIO.init(); selectArena(parseInt(card.dataset.arena, 10)); closeStageScreen(); AUDIO.tick();
@@ -7138,7 +7251,7 @@
     U.saveImportBtn.addEventListener('click', importSave);
     U.howBtn.addEventListener('click', showHow);
     U.howClose.addEventListener('click', hideHow);
-    U.howStart.addEventListener('click', () => { hideHow(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); });
+    U.howStart.addEventListener('click', () => { hideHow(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); });
     U.howScreen.addEventListener('click', e => { if (e.target === U.howScreen || e.target.classList.contains('overlay__backdrop')) hideHow(); });
     U.soundBtnMenu.addEventListener('click', toggleMute);
     U.soundBtn.addEventListener('click', toggleMute);
@@ -7146,10 +7259,10 @@
     U.fullBtn.addEventListener('click', toggleFullscreen);
     if (U.fullBtnMenu) U.fullBtnMenu.addEventListener('click', toggleFullscreen);
     U.resumeBtn.addEventListener('click', resumeGame);
-    U.restartBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); });
+    U.restartBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop, G.endless); });
     U.quitBtn.addEventListener('click', returnToMenu);
-    U.nextBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.nextStageIndex, G.lastCoop); });
-    U.againBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); });
+    U.nextBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.nextStageIndex, G.lastCoop, false); });
+    U.againBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop, G.endless); });
     U.backBtn.addEventListener('click', returnToMenu);
     U.rerollBtn.addEventListener('click', () => rerollUpgrades('P1'));
     U.upgradeCards.addEventListener('click', e => {
@@ -7214,11 +7327,11 @@
       }
       if (G.mode === 'menu') {
         if (!U.howScreen.classList.contains('hidden')) {
-          if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); hideHow(); startRun(G.arenaIndex, G.coopSelected); }
+          if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); hideHow(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
           return;
         }
         if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden') || !U.codexScreen.classList.contains('hidden') || (U.artScreen && !U.artScreen.classList.contains('hidden')) || !U.itemScreen.classList.contains('hidden') || !U.saveScreen.classList.contains('hidden')) return;
-        if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); }
+        if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
         return;
       }
       if (G.mode === 'paused') {
@@ -7553,14 +7666,14 @@
         if (just(0)) activatePadFocus();
         if (just(1)) backPadContext();
         if (just(9)) {
-          if (G.mode === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected); }
+          if (G.mode === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
           else if (G.mode === 'paused') resumeGame();
           else if (G.mode === 'result') returnToMenu();
         }
       } else if (G.mode === 'paused') {
         if (just(0) || just(9)) resumeGame();
       } else if (G.mode === 'result') {
-        if (just(0)) { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop); }
+        if (just(0)) { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop, G.endless); }
         if (just(9)) returnToMenu();
       }
     }
