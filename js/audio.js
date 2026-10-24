@@ -2,6 +2,12 @@
 (function () {
   'use strict';
 
+  const BGM_TRACKS = [
+    '01-furnace.mp3', '02-marsh.mp3', '03-frost.mp3', '04-redtide.mp3',
+    '05-foundry.mp3', '06-graveyard.mp3', '07-reactor.mp3', '08-dome.mp3',
+    '09-citadel.mp3', '10-abyss.mp3', '11-solar.mp3', '12-throne.mp3'
+  ];
+
   class AudioEngine {
     constructor() {
       this.ctx = null;
@@ -15,6 +21,10 @@
       this.intensity = 0;
       this.musicOn = false;
       this.lastXp = 0;
+      this.bgmEl = null;
+      this.bgmGain = null;
+      this.bgmToken = 0;
+      this.currentStage = -1;
     }
 
     init() {
@@ -26,12 +36,24 @@
       comp.threshold.value = -18; comp.knee.value = 14; comp.ratio.value = 5; comp.attack.value = .004; comp.release.value = .18;
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : .48;
-      this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = .22;
+      this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = .34;
       this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = .82;
       this.musicBus.connect(this.master);
       this.sfxBus.connect(this.master);
       this.master.connect(comp); comp.connect(this.ctx.destination);
       this.noise = this.makeNoise(1.2);
+      this.bgmEl = new Audio();
+      this.bgmEl.loop = true;
+      this.bgmEl.preload = 'auto';
+      try {
+        const src = this.ctx.createMediaElementSource(this.bgmEl);
+        this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.value = .0001;
+        src.connect(this.bgmGain);
+        this.bgmGain.connect(this.musicBus);
+      } catch (e) {
+        this.bgmEl.volume = .55;
+      }
     }
 
     makeNoise(seconds) {
@@ -51,6 +73,7 @@
         this.master.gain.cancelScheduledValues(this.t);
         this.master.gain.linearRampToValueAtTime(this.muted ? 0 : .48, this.t + .08);
       }
+      if (this.bgmEl && !this.bgmGain) this.bgmEl.volume = this.muted ? 0 : .55;
       return this.muted;
     }
 
@@ -152,17 +175,51 @@
     }
     tick() { this.tone(560, .03, 'square', .012, 540); }
 
-    startMusic() {
+    startMusic(stageIndex) {
       if (!this.ctx || this.musicOn) return;
       this.musicOn = true;
+      this.currentStage = stageIndex | 0;
+      const file = BGM_TRACKS[this.currentStage];
+      if (this.bgmEl && file) {
+        const token = ++this.bgmToken;
+        this.bgmEl.src = `assets/audio/bgm/${file}`;
+        this.bgmEl.currentTime = 0;
+        if (this.bgmGain) {
+          this.bgmGain.gain.cancelScheduledValues(this.t);
+          this.bgmGain.gain.setValueAtTime(.0001, this.t);
+          this.bgmGain.gain.linearRampToValueAtTime(.9, this.t + .9);
+        }
+        const play = this.bgmEl.play();
+        if (play && play.catch) play.catch(() => {
+          if (token !== this.bgmToken || !this.musicOn) return;
+          this.startProceduralMusic();
+        });
+        return;
+      }
+      this.startProceduralMusic();
+    }
+    startProceduralMusic() {
       this.step = 0;
       this.startPad();
       this.musicTimer = setInterval(() => this.musicStep(), 130);
     }
     stopMusic() {
       this.musicOn = false;
+      this.bgmToken += 1;
       if (this.musicTimer) clearInterval(this.musicTimer);
       this.musicTimer = null;
+      if (this.bgmEl && this.bgmGain) {
+        try {
+          this.bgmGain.gain.cancelScheduledValues(this.t);
+          this.bgmGain.gain.setValueAtTime(this.bgmGain.gain.value || .0001, this.t);
+          this.bgmGain.gain.linearRampToValueAtTime(.0001, this.t + .35);
+        } catch (e) {}
+      }
+      if (this.bgmEl) {
+        const el = this.bgmEl;
+        const token = this.bgmToken;
+        setTimeout(() => { if (token === this.bgmToken) el.pause(); }, 420);
+      }
       if (this.pad) {
         try { this.pad.gain.exponentialRampToValueAtTime(.0001, this.t + .3); } catch (e) {}
         this.pad = null;

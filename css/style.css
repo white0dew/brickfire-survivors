@@ -2380,3 +2380,73 @@ body.pad-connected .sf-hint { display: flex; }
   .toast-stack { bottom: 8px; left: 6px; }
 }
 .hud-pilot--p2 .hud-meter--hp b { background: linear-gradient(90deg, #2d8b83, var(--cyan)); }
+
+/* Main menu: the white selection block follows the current focus, instead of
+   staying pinned to the primary action. */
+.sf-nav__item--start {
+  border-color: transparent;
+  background: transparent;
+  color: var(--paper);
+  box-shadow: none;
+}
+.sf-nav:not(:has(.sf-nav__item.is-pad-focus)) .sf-nav__item--start {
+  border-color: var(--paper);
+  background: var(--paper);
+  color: #090b08;
+  box-shadow: 0 0 30px rgba(237,230,211,.11);
+}
+.sf-nav__item.is-pad-focus,
+.sf-nav__item--start.is-pad-focus {
+  color: #090b08 !important;
+  background: var(--paper) !important;
+  border-color: var(--paper) !important;
+  clip-path: var(--cut);
+  box-shadow: 0 0 32px rgba(237,230,211,.18) !important;
+}
+.sf-nav__item.is-pad-focus::after { background: #090b08; }
+.sf-nav__item.is-pad-focus b { color: #6b4a00; }
+
+/* Pickup messages hang directly under the owning pilot's corner. */
+.hud-pilot__feed {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: min(330px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+.hud-pilot__feed--p2 { left: auto; right: 0; align-items: flex-end; }
+.pickup-toast {
+  max-width: 100%;
+  padding: 5px 9px;
+  border-left: 2px solid var(--cyan);
+  background: rgba(5,10,8,.88);
+  color: var(--paper);
+  font-family: var(--font-cn);
+  font-size: 10px;
+  line-height: 1.55;
+  letter-spacing: .02em;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  animation: pickupFeedIn .18s ease-out both;
+}
+.hud-pilot__feed--p2 .pickup-toast { border-left: 0; border-right: 2px solid var(--cyan); text-align: right; }
+@keyframes pickupFeedIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (max-width: 620px) and (orientation: portrait) {
+  .hud-pilot__feed { width: 170px; }
+  .pickup-toast { font-size: 9px; padding: 4px 6px; }
+}
+
+/* The command rail sits at the lower quarter, not the lower third. */
+.sf-menu { padding-bottom: clamp(72px, 25vh, 250px); }
+.sf-showcase #menuCanvas { height: min(54vh, 500px); }
+@media (max-width: 620px) and (orientation: portrait) {
+  .sf-menu { padding-bottom: 0; }
+}
+
+/* With the side column gone, let the battlefield take the available width. */
+.battle-frame { width: min(100%, calc((100svh - 200px) * 1.6667)); }
+@media (max-width: 1100px) {
+  .battle-frame { width: min(100%, calc((100svh - 188px) * 1.6667)); }
+}

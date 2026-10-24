@@ -7,7 +7,7 @@
   <title>钢铁余烬 // STEEL EMBERS</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261024-49">
+  <link rel="stylesheet" href="css/style.css?v=20261024-54">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -192,6 +192,7 @@
               </div>
               <div class="hud-pilot__line"><span>装甲</span><i class="hud-meter hud-meter--hp"><b id="hpMeter"></b></i><em id="hpText">190 / 190</em></div>
               <div class="hud-pilot__line"><span>余烬</span><i class="hud-meter hud-meter--xp"><b id="xpMeter"></b></i><em id="xpText">0 / 12</em></div>
+              <div id="p1Feed" class="hud-pilot__feed" aria-live="polite"></div>
             </div>
 
             <div id="coopPanel" class="hud-pilot hud-pilot--p2 is-hidden">
@@ -204,6 +205,7 @@
               <div class="hud-pilot__line"><span>装甲</span><i class="hud-meter hud-meter--hp"><b id="coopMeter2"></b></i><em id="coopHp2">190 / 190</em></div>
               <div class="hud-pilot__line"><span>余烬</span><i class="hud-meter hud-meter--xp"><b id="coopXpMeter2"></b></i><em id="coopXp2">0 / 9</em></div>
               <div id="coopBuild2" class="hud-pilot__build">P2 // 主炮 Lv.1</div>
+              <div id="p2Feed" class="hud-pilot__feed hud-pilot__feed--p2" aria-live="polite"></div>
             </div>
 
             <div class="hud-base" id="hudBase">
@@ -542,10 +544,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261024-49"></script>
-  <script src="js/icons.js?v=20261024-49"></script>
-  <script src="js/audio.js?v=20261024-49"></script>
-  <script src="js/game.js?v=20261024-49"></script>
-  <script src="js/main.js?v=20261024-49"></script>
+  <script src="js/content.js?v=20261024-54"></script>
+  <script src="js/icons.js?v=20261024-54"></script>
+  <script src="js/audio.js?v=20261024-54"></script>
+  <script src="js/game.js?v=20261024-54"></script>
+  <script src="js/main.js?v=20261024-54"></script>
 </body>
 </html>

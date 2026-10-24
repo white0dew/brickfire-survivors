@@ -2832,9 +2832,11 @@
     if (U.deckHint) U.deckHint.innerHTML = G.twoPlayer ? '<span>P1 WASD + 鼠标</span> 移动/瞄准 <b>/</b> <span>P2 左摇杆/方向键 + 右摇杆</span> 移动/瞄准 <b>/</b> <span>SPACE / A</span> 冲刺' : '<span>WASD</span> 移动 <b>/</b> <span>鼠标 / 右摇杆</span> 瞄准 <b>/</b> <span>SPACE / A</span> 冲刺 <b>/</b> <span>ESC / START</span> 暂停';
     const p = U.primaryIcon; if (p) { p.innerHTML = '<canvas data-icon="cannon" data-color="#ffb52d" data-size="36"></canvas>'; ICONS.applyAll(p); }
     renderLoadout();
+    if (U.p1Feed) U.p1Feed.innerHTML = '';
+    if (U.p2Feed) U.p2Feed.innerHTML = '';
     updateHUD();
     AUDIO.init();
-    AUDIO.startMusic();
+    AUDIO.startMusic(G.arenaIndex);
     AUDIO.setIntensity(0);
     showToast(G.endless
       ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
@@ -5662,12 +5664,12 @@
         if ((G.core.turrets || 0) < max) {
           G.core.turrets = (G.core.turrets || 0) + 1;
           addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 46, life: .55, maxLife: .55, color: '#8fffe6' });
-          showToast(`基地防御塔 ${G.core.turrets} / ${max} // 自动索敌启用`, 'cyan');
+          showPickupToast(p, `基地防御塔 ${G.core.turrets} / ${max} // 自动索敌启用`);
           AUDIO.item();
         } else {
           const heal = G.core.maxHp * .1;
           G.core.hp = Math.min(G.core.maxHp, G.core.hp + heal);
-          showToast('防御塔已满 // 基地装甲 +10%', 'cyan');
+          showPickupToast(p, '防御塔已满 // 基地装甲 +10%');
           AUDIO.tick();
         }
       }
@@ -5678,7 +5680,7 @@
         const heal = G.core.maxHp * .24;
         G.core.hp = Math.min(G.core.maxHp, G.core.hp + heal);
         addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 44, life: .6, maxLife: .6, color: '#5ff0ce' });
-        showToast(`基地维修 // 装甲 +${Math.round(heal)}`, 'cyan');
+        showPickupToast(p, `基地维修 // 装甲 +${Math.round(heal)}`);
         AUDIO.tick();
       }
       return;
@@ -5721,7 +5723,7 @@
     }
     G.loadoutDirty = true;
     AUDIO.item();
-    showToast(`${item.name} // ${item.desc}`, 'cyan');
+    showPickupToast(p, `${item.name} // ${item.desc}`);
     addEffect({ type: 'ring', x: pk.x, y: pk.y, radius: 26, life: .4, maxLife: .4, color: item.color });
   }
   function addXp(amount, sourceP) {
@@ -6131,6 +6133,17 @@
     el.textContent = text;
     U.toastStack.appendChild(el);
     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
+  }
+
+  function showPickupToast(p, text) {
+    const feed = p === (G.players && G.players[1]) ? U.p2Feed : U.p1Feed;
+    if (!feed) { showToast(text, 'cyan'); return; }
+    while (feed.children.length > 2) feed.removeChild(feed.firstChild);
+    const el = document.createElement('div');
+    el.className = 'pickup-toast';
+    el.textContent = text;
+    feed.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3400);
   }
 
   function updateHUD() {
@@ -7226,7 +7239,7 @@
   function cacheUI() {
     const ids = ['app', 'menuScreen', 'menuCanvas', 'padState', 'padHint', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
       'gameLayout', 'slotCount', 'passiveCount', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
-      'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
+      'battleFrame', 'gameCanvas', 'toastStack', 'p1Feed', 'p2Feed', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
@@ -7458,7 +7471,7 @@
           e.preventDefault();
           const navItem = document.activeElement && document.activeElement.closest && document.activeElement.closest('.sf-nav__item');
           if (navItem) { navItem.click(); return; }
-          AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected);
+          AUDIO.init(); AUDIO.confirm(); openStageScreen();
         }
         return;
       }
@@ -7897,7 +7910,7 @@
         if (just(1)) backPadContext();
         if (just(9)) {
           // START belongs to the current focus context, not the background menu.
-          if (ctx.key === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
+          if (ctx.key === 'menu') { AUDIO.init(); AUDIO.confirm(); openStageScreen(); }
           else if (ctx.key === 'pause') resumeGame();
           else if (ctx.key === 'result') returnToMenu();
         }
