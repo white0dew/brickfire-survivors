@@ -2969,3 +2969,17 @@ body.pad-connected .sf-hint { display: flex; }
   .tutorial__foot { flex-direction: column; align-items: stretch; }
   .tutorial__foot .cta { width: 100%; }
 }
+/* 局内设置：整行高亮，明确当前正在调整哪一项。 */
+.settings-row { transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.settings-row.is-selected,
+.settings-row:focus-within {
+  border-color: rgba(255,181,45,.78);
+  background: rgba(255,181,45,.075);
+  box-shadow: inset 3px 0 0 var(--amber), 0 0 0 1px rgba(255,181,45,.12);
+}
+.settings-row.is-selected .settings-row__copy strong,
+.settings-row:focus-within .settings-row__copy strong { color: var(--amber); }
+.settings-row.is-selected .settings-toggle,
+.settings-row:focus-within .settings-toggle { border-color: rgba(255,181,45,.58); }
+.settings-row.is-selected .settings-range,
+.settings-row:focus-within .settings-range { filter: drop-shadow(0 0 5px rgba(255,181,45,.25)); }

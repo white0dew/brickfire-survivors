@@ -142,6 +142,8 @@
     warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 }
   };
 
+  let settingsFocusIndex = 0;
+
   const G = {
     mode: 'menu',
     arenaIndex: 0,
@@ -7083,10 +7085,13 @@
     if (U.settingsDoneLabel) U.settingsDoneLabel.textContent = G.mode === 'paused' ? '返回战场' : '返回机库';
     syncSettingsUI();
     U.settingsScreen.classList.remove('hidden');
+    setSettingsFocus(0);
     AUDIO.init(); AUDIO.tick();
   }
   function closeSettings() {
     if (U.settingsScreen) U.settingsScreen.classList.add('hidden');
+    clearSettingsFocus();
+    clearPadFocus();
     AUDIO.tick();
   }
 
@@ -7719,7 +7724,27 @@
     if (U.pauseFusionBtn) U.pauseFusionBtn.addEventListener('click', openFusionScreen);
     if (U.settingsClose) U.settingsClose.addEventListener('click', closeSettings);
     if (U.settingsDone) U.settingsDone.addEventListener('click', closeSettings);
-    if (U.settingsScreen) U.settingsScreen.addEventListener('click', e => { if (e.target === U.settingsScreen || e.target.classList.contains('overlay__backdrop')) closeSettings(); });
+    if (U.settingsScreen) {
+      U.settingsScreen.addEventListener('click', e => {
+        const row = e.target.closest && e.target.closest('.settings-row');
+        if (row) {
+          const i = settingsRows().indexOf(row);
+          if (i >= 0) {
+            settingsFocusIndex = i;
+            settingsRows().forEach((r, n) => r.classList.toggle('is-selected', n === i));
+          }
+        } else if (e.target === U.settingsScreen || e.target.classList.contains('overlay__backdrop')) closeSettings();
+      });
+      U.settingsScreen.addEventListener('focusin', e => {
+        const row = e.target.closest && e.target.closest('.settings-row');
+        if (!row) return;
+        const i = settingsRows().indexOf(row);
+        if (i >= 0) {
+          settingsFocusIndex = i;
+          settingsRows().forEach((r, n) => r.classList.toggle('is-selected', n === i));
+        }
+      });
+    }
     if (U.settingsFullscreen) U.settingsFullscreen.addEventListener('click', () => { AUDIO.init(); toggleFullscreen(); });
     if (U.padSwapBtn) U.padSwapBtn.addEventListener('click', () => {
       if (!Input.gamepad.connected || !Input.gamepad2.connected) {
@@ -7786,6 +7811,10 @@
         if (G.mode === 'result') { returnToMenu(); return; }
         return;
       }
+      if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden') && handleSettingsKey(e)) return;
+      if (G.mode === 'menu' || G.mode === 'paused' || G.mode === 'result') {
+        if (handleOverlayNavKey(e, uiContext())) return;
+      }
       if (G.mode === 'levelup') {
         const g = Input.gamepad;
         if (G.levelupPlayer && G.levelupPlayer.index === 0) {
@@ -7809,9 +7838,15 @@
         }
         if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden')) return;
         if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden') || !U.codexScreen.classList.contains('hidden') || (U.artScreen && !U.artScreen.classList.contains('hidden')) || !U.itemScreen.classList.contains('hidden') || !U.saveScreen.classList.contains('hidden')) return;
-        if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+        const menuDir = {
+          ArrowLeft: [-1, 0], KeyA: [-1, 0],
+          ArrowRight: [1, 0], KeyD: [1, 0],
+          ArrowUp: [0, -1], KeyW: [0, -1],
+          ArrowDown: [0, 1], KeyS: [0, 1]
+        }[e.code];
+        if (menuDir) {
           e.preventDefault();
-          movePadFocus(e.code === 'ArrowLeft' ? -1 : e.code === 'ArrowRight' ? 1 : 0, e.code === 'ArrowUp' ? -1 : e.code === 'ArrowDown' ? 1 : 0);
+          movePadFocus(menuDir[0], menuDir[1]);
           return;
         }
         if (e.code === 'Enter' || e.code === 'Space') {
@@ -8076,6 +8111,82 @@
     return null;
   }
 
+  function settingsRows() {
+    return U.settingsScreen ? Array.from(U.settingsScreen.querySelectorAll('.settings-row')) : [];
+  }
+
+  function settingsRowControl(row) {
+    return row ? row.querySelector('.settings-toggle, input[type="range"], button') : null;
+  }
+
+  function setSettingsFocus(index) {
+    const rows = settingsRows();
+    if (!rows.length) return null;
+    settingsFocusIndex = Math.max(0, Math.min(rows.length - 1, index));
+    rows.forEach((row, i) => row.classList.toggle('is-selected', i === settingsFocusIndex));
+    const target = settingsRowControl(rows[settingsFocusIndex]);
+    if (target) setPadFocus(target);
+    return target;
+  }
+
+  function clearSettingsFocus() {
+    settingsRows().forEach(row => row.classList.remove('is-selected'));
+    settingsFocusIndex = 0;
+  }
+
+  function moveSettingsFocus(delta) {
+    if (!U.settingsScreen || U.settingsScreen.classList.contains('hidden')) return;
+    setSettingsFocus(settingsFocusIndex + delta);
+    AUDIO.tick();
+  }
+
+  function adjustSettingsRange(delta) {
+    const row = settingsRows()[settingsFocusIndex];
+    const range = row && row.querySelector('input[type="range"]');
+    if (!range) return false;
+    const step = range.step && range.step !== 'any' ? Number(range.step) : 1;
+    const next = Math.max(Number(range.min || 0), Math.min(Number(range.max || 100), Number(range.value) + delta * Math.max(step, 5)));
+    range.value = String(next);
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+    AUDIO.tick();
+    return true;
+  }
+
+  function handleSettingsKey(e) {
+    if (!U.settingsScreen || U.settingsScreen.classList.contains('hidden')) return false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); moveSettingsFocus(-1); return true; }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); moveSettingsFocus(1); return true; }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { e.preventDefault(); adjustSettingsRange(-1); return true; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); adjustSettingsRange(1); return true; }
+    if (e.code === 'Enter' || e.code === 'Space') {
+      const row = settingsRows()[settingsFocusIndex];
+      const button = row && row.querySelector('.settings-toggle');
+      if (button) { e.preventDefault(); button.click(); return true; }
+    }
+    return false;
+  }
+
+  function handleOverlayNavKey(e, ctx) {
+    if (!ctx || ctx.key === 'menu' || ctx.key === 'settings' || ctx.key === 'levelup' || ctx.key === 'how') return false;
+    const dir = {
+      ArrowLeft: [-1, 0], KeyA: [-1, 0],
+      ArrowRight: [1, 0], KeyD: [1, 0],
+      ArrowUp: [0, -1], KeyW: [0, -1],
+      ArrowDown: [0, 1], KeyS: [0, 1]
+    }[e.code];
+    if (dir) {
+      e.preventDefault();
+      movePadFocus(dir[0], dir[1]);
+      return true;
+    }
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      activatePadFocus();
+      return true;
+    }
+    return false;
+  }
+
   function padFocusables(root) {
     if (!root) return [];
     return Array.from(root.querySelectorAll('button:not([disabled]), input[type="range"]:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter(el => {
@@ -8107,7 +8218,7 @@
     if (ctx.key === 'tutorial') return U.tutorialStart;
     if (ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
-    if (ctx.key === 'settings') return U.sfxVolume || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
+    if (ctx.key === 'settings') return settingsRowControl(settingsRows()[settingsFocusIndex]) || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
     if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
     const list = padFocusables(ctx.root);
     if (ctx.key === 'stage') {
@@ -8150,6 +8261,11 @@
     const g = Input.gamepad;
     const ctx = syncPadContext(false);
     if (!ctx) return;
+    if (ctx.key === 'settings') {
+      if (dy) { moveSettingsFocus(dy); return; }
+      if (dx && adjustSettingsRange(dx)) return;
+      return;
+    }
     const list = padFocusables(ctx.root);
     if (!list.length) return;
     if (!g.focusEl || !list.includes(g.focusEl)) { setPadFocus(list[0]); return; }
