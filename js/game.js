@@ -7821,8 +7821,8 @@
           if (e.code === 'Digit1' || e.code === 'Numpad1') chooseUpgrade(0, 'P1');
           else if (e.code === 'Digit2' || e.code === 'Numpad2') chooseUpgrade(1, 'P1');
           else if (e.code === 'Digit3' || e.code === 'Numpad3') chooseUpgrade(2, 'P1');
-          else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') { e.preventDefault(); moveLevelupSelection(-1, 'P1'); }
-          else if (e.code === 'ArrowRight' || e.code === 'ArrowDown') { e.preventDefault(); moveLevelupSelection(1, 'P1'); }
+          else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'KeyA' || e.code === 'KeyW') { e.preventDefault(); moveLevelupSelection(-1, 'P1'); }
+          else if (e.code === 'ArrowRight' || e.code === 'ArrowDown' || e.code === 'KeyD' || e.code === 'KeyS') { e.preventDefault(); moveLevelupSelection(1, 'P1'); }
           else if (e.code === 'Enter' || e.code === 'Space') {
             e.preventDefault();
             if (g.selectedCard < 0) { AUDIO.deny(); return; }
