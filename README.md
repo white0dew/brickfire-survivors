@@ -99,9 +99,9 @@ python3 -m http.server 4173
 
 ## 关卡 BGM
 
-- 12 个星区各有一首独立循环 BGM，进入关卡时先播放部署提示再渐入；主界面使用原第三关曲目循环播放，静音按钮会同步静音。
+- 12 个星区各有一首独立循环 BGM；进入关卡时先播放 7 秒部署提示音，再渐入当前关卡 BGM。主界面使用原第三关曲目循环播放，静音按钮会同步静音。
 - 音频文件位于 `assets/audio/bgm/`，统一裁剪为约 90 秒、96 kbps 的循环段落，避免整首长曲拖慢加载。
-- 曲目来自 Pixabay Music，按 Pixabay Content License 使用；来源、作者与对应关卡记录在 `assets/audio/bgm/CREDITS.md`。
+- 关卡与主菜单曲目来自 Pixabay Music，按 Pixabay Content License 使用；部署提示音为参考视频的 7 秒片段。来源、作者与对应关卡记录在 `assets/audio/bgm/CREDITS.md`。
 - 没有网络或首次加载音频失败时，会自动回退到原有的程序化合成配乐。
 
 ## 内容
@@ -116,7 +116,7 @@ python3 -m http.server 4173
 - 技能按科技侧分工：轨道光矛负责持续远程重炮；天基动能棒负责延迟重击与首领点杀；电磁脉冲矩阵负责近场反弹幕与瘫痪；环绕蜂群负责贴身索敌、拦截敌弹并形成移动屏障；哨戒壁垒负责嘲讽、承伤和守区；不再使用流星召唤类幻想技能。
 - 16 条进化路线：每把武器都有一条独立融合；对应武器 Lv.6 且被动 Lv.2 后，升级卡会出现合成协议。菜单「合成表」可查看全部路线。
 - 6 波常规潮汐 + 精英破城者 + 泰坦 BOSS；泰坦阶段仍持续刷怪，Boss 会使用重炮、扇形弹幕、震荡波和召唤编队。
-- 程序化像素图标与程序化音效；12 首关卡 BGM 和 1 首主界面 BGM 使用本地音频文件，并提供程序化回退。
+- 程序化像素图标与大部分音效；12 首关卡 BGM、1 首主界面 BGM 和 1 段 7 秒部署提示音使用本地音频文件，并提供程序化回退。
 - 本地记录：最高生存、最高等级、成功撤离次数；战役解锁/通关与难度、P1/P2 机型、坦克解锁、合金核心、敌人图鉴持久化。
 
 ## 技术结构
@@ -131,7 +131,7 @@ python3 -m http.server 4173
 | `js/game.js` | 主循环、输入、战斗、AI、升级、HUD、渲染 |
 | `js/main.js` | 启动入口与错误捕获 |
 
-渲染使用 960×576 内部分辨率、32px 瓦片、Canvas 2D，CSS 以 `image-rendering: pixelated` 放大；战场按视口宽高比自适应，2K/4K 下会移除旧的 1500px 上限并放大 HUD 字号。敌方寻路使用 Dijkstra + 最小堆流场；砖墙可挖掘、钢墙/水域/撤离信标阻断。音效与回退音乐实时合成；12 首关卡 BGM + 1 首主界面 BGM 为本地音频文件，进入关卡时播放并循环。
+渲染使用 960×576 内部分辨率、32px 瓦片、Canvas 2D，CSS 以 `image-rendering: pixelated` 放大；战场按视口宽高比自适应，2K/4K 下会移除旧的 1500px 上限并放大 HUD 字号。敌方寻路使用 Dijkstra + 最小堆流场；砖墙可挖掘、钢墙/水域/撤离信标阻断。音效与回退音乐实时合成；12 首关卡 BGM、1 首主界面 BGM 与 1 段部署提示音为本地音频文件，进入关卡时先播放提示音再循环 BGM。
 
 ## 浏览器
 
@@ -139,6 +139,6 @@ python3 -m http.server 4173
 
 ## 资产与致敬
 
-- 坦克、图标、地图、特效和音效均为本项目程序化原创，不包含《Battle City》原作的图片、音频或代码。关卡 BGM 来自 Pixabay Music，按 Pixabay Content License 使用，详见 `assets/audio/bgm/CREDITS.md`。
+- 坦克、图标、地图、特效和大部分音效为本项目程序化原创；部署提示音截取自 Dr_Hope 的《任天堂坦克90全音效 Battle City 90 Namco》参考视频前 7 秒，来源见 `assets/audio/bgm/CREDITS.md`。关卡 BGM 来自 Pixabay Music，按 Pixabay Content License 使用。
 - 玩法致敬 Namco 1985 年的《Battle City》；相关商标归其权利人所有。
 - 字体 Chakra Petch 与 Silkscreen 按 SIL Open Font License 1.1 分发，详见 `THIRD_PARTY_NOTICES.md` 与 `assets/fonts/OFL-*.txt`。

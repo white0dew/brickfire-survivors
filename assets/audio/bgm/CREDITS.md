@@ -1,10 +1,11 @@
 # Stage BGM credits
 
-All tracks are sourced from Pixabay Music and used under the
+All stage and menu tracks are sourced from Pixabay Music and used under the
 [Pixabay Content License](https://pixabay.com/service/license-summary/):
 free for commercial and non-commercial use, no attribution required.
 Tracks were trimmed to roughly 90-second loops and re-encoded at 96 kbps
-for this game. The source pages are listed below for provenance.
+for this game. The deployment sting is documented separately below.
+The source pages are listed below for provenance.
 
 | Use | File | Track | Author | Source |
 | --- | --- | --- | --- | --- |
@@ -21,3 +22,11 @@ for this game. The source pages are listed below for provenance.
 | 10 Abyss Pump | `10-abyss.mp3` | 3 Strike \| Battle Game BGM | bluelike_u | https://pixabay.com/music/metal-3-strike-battle-game-bgm-261231/ |
 | 11 Solar Rift | `11-solar.mp3` | Upbeat RPG Battle | vespidaze | https://pixabay.com/music/video-games-upbeat-rpg-battle-460971/ |
 | 12 Border Throne | `12-throne.mp3` | Epic Boss Battle Instrumental Metal - "Blood Ascendant" | DavidJBarrios | https://pixabay.com/music/metal-epic-boss-battle-instrumental-metal-quotblood-ascendantquot-515739/ |
+
+## Deployment sting
+
+`deploy-intro.mp3` is a 7-second excerpt taken from the opening notes of
+"任天堂坦克90全音效 Battle City 90 Namco" by Dr_Hope:
+https://www.youtube.com/watch?v=_vgaq3LmVak
+The source video begins with about 2.6 seconds of title-card silence; the clip
+starts at the first audible note and fades over the final 0.28 seconds.

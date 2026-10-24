@@ -8,7 +8,9 @@
     '09-citadel.mp3', '10-abyss.mp3', '11-solar.mp3', '12-throne.mp3'
   ];
   const MENU_TRACK = '00-menu.mp3';
-  const BGM_VERSION = '20261024-61';
+  const INTRO_TRACK = 'deploy-intro.mp3';
+  const INTRO_MS = 7000;
+  const BGM_VERSION = '20261024-66';
 
   class AudioEngine {
     constructor() {
@@ -30,6 +32,10 @@
       this.menuMusicOn = false;
       this.bgmKind = 'stage';
       this.introTimer = null;
+      this.introEl = null;
+      this.introGain = null;
+      this.introToken = 0;
+      this.introDone = null;
       this.sfxVolume = this.readVolume('bf.sfxVolume', 1);
       this.bgmVolume = this.readVolume('bf.bgmVolume', 1);
     }
@@ -69,6 +75,17 @@
         this.bgmGain.connect(this.musicBus);
       } catch (e) {
         this.bgmEl.volume = .55;
+      }
+      this.introEl = new Audio(`assets/audio/bgm/${INTRO_TRACK}?v=${BGM_VERSION}`);
+      this.introEl.preload = 'auto';
+      try {
+        const introSrc = this.ctx.createMediaElementSource(this.introEl);
+        this.introGain = this.ctx.createGain();
+        this.introGain.gain.value = .9;
+        introSrc.connect(this.introGain);
+        this.introGain.connect(this.musicBus);
+      } catch (e) {
+        this.introEl.volume = .55;
       }
     }
 
@@ -237,8 +254,45 @@
 
     startDeployIntro(done) {
       this.stopIntro();
-      // Five-note rising deployment sting: an original nod to arcade tank
-      // stage-start jingles, not a sample of the original Battle City audio.
+      // This is the requested 7-second opening from the Battle City piano
+      // reference. The source starts with ~2.6s of title-card silence, so the
+      // playable sting begins at the first note rather than delaying the run.
+      if (!this.introEl) {
+        this.startSynthDeployIntro(done);
+        return;
+      }
+      const token = ++this.introToken;
+      const finish = () => {
+        if (token !== this.introToken || this.introDone !== finish) return;
+        if (this.introTimer) clearTimeout(this.introTimer);
+        this.introTimer = null;
+        this.introDone = null;
+        if (this.introEl) this.introEl.onended = null;
+        if (typeof done === 'function') done();
+      };
+      this.introDone = finish;
+      this.introEl.onended = finish;
+      try { this.introEl.pause(); this.introEl.currentTime = 0; } catch (e) {}
+      if (this.introGain) {
+        try {
+          this.introGain.gain.cancelScheduledValues(this.t);
+          this.introGain.gain.setValueAtTime(.0001, this.t);
+          this.introGain.gain.linearRampToValueAtTime(.9, this.t + .04);
+        } catch (e) {}
+      }
+      const play = this.introEl.play();
+      if (play && play.catch) play.catch(() => {
+        if (token !== this.introToken) return;
+        this.stopIntro();
+        this.startSynthDeployIntro(done);
+      });
+      // onended normally wins; the timer only protects against a stalled
+      // media element so a run can never sit on the deployment screen.
+      this.introTimer = setTimeout(finish, INTRO_MS + 180);
+    }
+
+    startSynthDeployIntro(done) {
+      // Fallback for browsers where the media element cannot start.
       const notes = [130.81, 164.81, 196.00, 261.63, 329.63];
       notes.forEach((freq, i) => {
         const delay = i * .18;
@@ -255,8 +309,14 @@
     }
 
     stopIntro() {
+      this.introToken += 1;
+      this.introDone = null;
       if (this.introTimer) clearTimeout(this.introTimer);
       this.introTimer = null;
+      if (this.introEl) {
+        this.introEl.onended = null;
+        try { this.introEl.pause(); this.introEl.currentTime = 0; } catch (e) {}
+      }
     }
 
     startMusic(stageIndex, opts) {
