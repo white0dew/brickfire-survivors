@@ -2597,3 +2597,4 @@ body.pad-connected .sf-hint { display: flex; }
   .settings__foot .cta { min-width: 250px; }
   .settings__note { font-size: 12px; }
 }
+.settings-toggle:disabled { opacity: .38; cursor: not-allowed; }

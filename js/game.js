@@ -231,8 +231,9 @@
     keys: new Set(),
     mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
-    gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
-    gamepad2: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [] },
+    gamepad: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
+    gamepad2: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [] },
+    padSlots: { p1: { ref: null, index: -1, id: '' }, p2: { ref: null, index: -1, id: '' } },
     dashQueued: false,
     dashQueued2: false
   };
@@ -7314,7 +7315,7 @@
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
-      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
+      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
@@ -7335,12 +7336,12 @@
     window.addEventListener('pointerdown', kickMenuAudio, { passive: true });
     window.addEventListener('keydown', kickMenuAudio);
     document.addEventListener('fullscreenchange', syncFullscreenUI);
-    window.addEventListener('gamepadconnected', () => {
-      Input.gamepad.connected = true;
+    window.addEventListener('gamepadconnected', e => {
+      adoptPad(e.gamepad);
       syncPadState();
     });
-    window.addEventListener('gamepaddisconnected', () => {
-      Input.gamepad.connected = false;
+    window.addEventListener('gamepaddisconnected', e => {
+      forgetPad(e.gamepad);
       syncPadState();
     });
     U.modeCards.forEach(card => card.addEventListener('click', () => { AUDIO.init(); selectCoop(card.dataset.coop === '1'); AUDIO.tick(); }));
@@ -7645,6 +7646,49 @@
     }
   }
 
+  function markPadSlot(which, gp) {
+    const slot = Input.padSlots[which];
+    if (!slot || !gp) return;
+    slot.ref = gp;
+    slot.index = gp.index;
+    slot.id = gp.id || '';
+  }
+
+  function clearPadSlot(which) {
+    const slot = Input.padSlots[which];
+    if (!slot) return;
+    slot.ref = null; slot.index = -1; slot.id = '';
+  }
+
+  function adoptPad(gp) {
+    if (!gp) return;
+    const s1 = Input.padSlots.p1, s2 = Input.padSlots.p2;
+    if (s1.ref === gp || s2.ref === gp) return;
+    if (!s1.ref && s1.index < 0) markPadSlot('p1', gp);
+    else if (!s2.ref && s2.index < 0) markPadSlot('p2', gp);
+  }
+
+  function forgetPad(gp) {
+    if (!gp) return;
+    for (const which of ['p1', 'p2']) {
+      const slot = Input.padSlots[which];
+      if (slot && (slot.ref === gp || (slot.index === gp.index && slot.id === (gp.id || '')))) {
+        clearPadSlot(which);
+      }
+    }
+  }
+
+  function swapPadSlots() {
+    const p1 = Input.padSlots.p1;
+    Input.padSlots.p1 = Input.padSlots.p2;
+    Input.padSlots.p2 = p1;
+    for (const state of [Input.gamepad, Input.gamepad2]) {
+      state.prevButtons = [];
+      state.selectedCard = -1;
+      state.levelupNeedsNeutral = true;
+    }
+  }
+
   function rumble(strength, duration) {
     try {
       const pads = gamepadList();
@@ -7665,13 +7709,22 @@
     const el = document.getElementById('padState');
     if (!el) return;
     const supported = !!(navigator.getGamepads || navigator.webkitGetGamepads);
-    el.textContent = !supported ? 'PAD / 不支持' : Input.gamepad.connected ? 'PAD / ONLINE' : 'PAD / 按手柄键';
+    const p1 = Input.gamepad.connected ? (Input.gamepad.id || 'Controller') : '';
+    const p2 = Input.gamepad2.connected ? (Input.gamepad2.id || 'Controller') : '';
+    el.textContent = !supported ? 'PAD / 不支持'
+      : p1 && p2 ? 'PAD / P1 + P2'
+        : p1 ? 'PAD / ONLINE' : 'PAD / 按手柄键';
     el.title = !supported
       ? '当前浏览器不支持 Gamepad API；请使用 Chrome / Edge 等支持手柄的浏览器。'
-      : Input.gamepad.connected
-        ? `已识别手柄：${Input.gamepad.id || 'Controller'}`
+      : p1
+        ? `P1：${p1}${p2 ? `\nP2：${p2}` : ''}\nP1 为第一只连接的手柄，P2 为第二只。`
         : '未检测到手柄。连接后按任意键；浏览器需支持 Gamepad API 并保持页面聚焦。';
-    el.classList.toggle('is-on', Input.gamepad.connected);
+    el.classList.toggle('is-on', !!p1);
+    if (U.padSwapBtn) {
+      const canSwap = !!Input.gamepad.connected && !!Input.gamepad2.connected;
+      U.padSwapBtn.disabled = !canSwap;
+      U.padSwapBtn.setAttribute('aria-disabled', canSwap ? 'false' : 'true');
+    }
     document.body.classList.toggle('pad-connected', !!Input.gamepad.connected);
     syncPadCues();
     if (!Input.gamepad.connected) updatePadHint(null);
@@ -7903,15 +7956,48 @@
   function pollGamepad() {
     const g = Input.gamepad;
     const g2 = Input.gamepad2;
-    const pads = Array.from(gamepadList()).filter(p => p && p.connected);
-    const primary = pads[0] || null;
-    const secondary = pads[1] || null;
+    const connected = Array.from(gamepadList()).filter(p => p && p.connected);
+    const slots = Input.padSlots;
+    const resolveSlot = (slot, exclude) => {
+      if (!slot) return null;
+      if (slot.ref) {
+        const found = connected.find(p => p === slot.ref && p !== exclude);
+        if (found) return found;
+      }
+      // Browsers can renumber a newly connected pad. Match the remembered
+      // id before falling back to the raw array index.
+      if (slot.id) {
+        const found = connected.find(p => p !== exclude && p.id === slot.id);
+        if (found) return found;
+      }
+      if (slot.index >= 0) {
+        const found = connected.find(p => p !== exclude && p.index === slot.index && (!slot.id || p.id === slot.id));
+        if (found) return found;
+      }
+      return null;
+    };
+    let p1 = resolveSlot(slots.p1, null);
+    let p2 = resolveSlot(slots.p2, p1);
+    if (p1 === p2) p2 = null;
+    if (!p1) {
+      const candidate = connected.find(p => p !== p2);
+      if (candidate) { markPadSlot('p1', candidate); p1 = candidate; }
+      else clearPadSlot('p1');
+    }
+    if (!p2) {
+      const candidate = connected.find(p => p !== p1);
+      if (candidate) { markPadSlot('p2', candidate); p2 = candidate; }
+      else clearPadSlot('p2');
+    }
+    const primary = p1 || null;
+    const secondary = p2 || null;
     const resetPad = (state) => {
-      state.connected = false; state.id = ''; state.x = 0; state.y = 0;
+      state.connected = false; state.id = ''; state.index = -1; state.x = 0; state.y = 0;
       state.aimActive = false; state.aimX = 0; state.aimY = 0; state.fire = false;
       state.prevButtons = [];
     };
     if (!primary) {
+      clearPadSlot('p1'); clearPadSlot('p2');
       if (g.connected) {
         resetPad(g);
         syncPadState();
@@ -7925,10 +8011,9 @@
     }
 
     const readPad = (gp, state) => {
-      if (!state.connected) {
-        state.connected = true;
-        state.id = gp.id || 'Xbox Controller';
-      }
+      if (!state.connected) state.connected = true;
+      state.id = gp.id || 'Xbox Controller';
+      state.index = gp.index;
       const dz = .2;
       let x = gp.axes[0] || 0, y = gp.axes[1] || 0;
       const mag = Math.hypot(x, y);
@@ -8143,7 +8228,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
