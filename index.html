@@ -7,7 +7,7 @@
   <title>钢铁余烬</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261024-76">
+  <link rel="stylesheet" href="css/style.css?v=20261024-77">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -701,13 +701,39 @@
       </div>
     </section>
 
+    <!-- ================= FIRST ITEM TUTORIAL ================= -->
+    <section id="itemTutorialScreen" class="overlay tutorial item-tutorial hidden" aria-modal="true" role="dialog" aria-labelledby="itemTutorialTitle" aria-hidden="true">
+      <div class="overlay__backdrop"></div>
+      <div class="tutorial__panel item-tutorial__panel">
+        <button id="itemTutorialClose" class="close-btn tutorial__close" type="button" aria-label="关闭道具教学">×</button>
+        <div class="tutorial__eyebrow"><i></i> FIELD SUPPLY // 首次掉落</div>
+        <div class="tutorial__head">
+          <span class="tutorial__kicker">补给协议 / FIELD KIT</span>
+          <h2 id="itemTutorialTitle">捡起来，<em>继续推进。</em></h2>
+          <p class="tutorial__lead"><b>道具</b>：敌人被击破后可能掉落补给。靠近即自动拾取，拾取立刻生效；<b>基地道具</b>会修复或强化基地装甲。</p>
+        </div>
+        <div id="itemTutorialGrid" class="item-tutorial__grid"></div>
+        <div class="item-tutorial__note">
+          <b>基地类</b>
+          <span>基地维修包</span><i>修复</i>
+          <span>哨戒炮塔</span><i>防御</i>
+          <span>基地强化包</span><i>强化</i>
+          <em>基地装甲归零会立即失守。</em>
+        </div>
+        <div class="tutorial__foot">
+          <div><b>战地补给 · 全部道具</b><small>掉落物会发光，靠近后自动吸附</small></div>
+          <button id="itemTutorialStart" class="cta cta--small" type="button"><span class="cta__copy"><strong>继续战斗</strong></span><span class="cta__arrow">↗</span></button>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= ITEM GUIDE ================= -->
     <section id="itemScreen" class="overlay tank-select hidden" aria-modal="true" role="dialog" aria-labelledby="itemTitle">
       <div class="overlay__backdrop"></div>
       <div class="tank-select__panel codex-panel item-guide-panel">
         <button id="itemClose" class="close-btn" type="button" aria-label="关闭">×</button>
         <div class="tank-select__head">
-          <div class="how__eyebrow">战术档案 · <b>9 件</b></div>
+          <div class="how__eyebrow">战术档案 · <b>10 件</b></div>
           <h2 id="itemTitle">战术与道具</h2>
         </div>
         <div class="manual-brief">
@@ -752,10 +778,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261024-76"></script>
-  <script src="js/icons.js?v=20261024-76"></script>
-  <script src="js/audio.js?v=20261024-76"></script>
-  <script src="js/game.js?v=20261024-76"></script>
-  <script src="js/main.js?v=20261024-76"></script>
+  <script src="js/content.js?v=20261024-77"></script>
+  <script src="js/icons.js?v=20261024-77"></script>
+  <script src="js/audio.js?v=20261024-77"></script>
+  <script src="js/game.js?v=20261024-77"></script>
+  <script src="js/main.js?v=20261024-77"></script>
 </body>
 </html>

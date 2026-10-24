@@ -25,8 +25,9 @@ The source pages are listed below for provenance.
 
 ## Deployment sting
 
-`deploy-intro.mp3` is a 7-second excerpt taken from the opening notes of
+`deploy-intro.mp3` is a 5.1-second excerpt taken from the opening notes of
 "任天堂坦克90全音效 Battle City 90 Namco" by Dr_Hope:
 https://www.youtube.com/watch?v=_vgaq3LmVak
 The source video begins with about 2.6 seconds of title-card silence; the clip
-starts at the first audible note and fades over the final 0.28 seconds.
+starts at the first audible note and fades over the final 0.25 seconds. The
+second phrase that began around 5.1 seconds in the source was removed.

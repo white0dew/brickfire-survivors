@@ -9,7 +9,8 @@
   ];
   const MENU_TRACK = '00-menu.mp3';
   const INTRO_TRACK = 'deploy-intro.mp3';
-  const INTRO_MS = 7000;
+  const INTRO_MS = 5100;
+  const INTRO_VERSION = '20261024-67';
   const BGM_VERSION = '20261024-66';
 
   class AudioEngine {
@@ -76,7 +77,7 @@
       } catch (e) {
         this.bgmEl.volume = .55;
       }
-      this.introEl = new Audio(`assets/audio/bgm/${INTRO_TRACK}?v=${BGM_VERSION}`);
+      this.introEl = new Audio(`assets/audio/bgm/${INTRO_TRACK}?v=${INTRO_VERSION}`);
       this.introEl.preload = 'auto';
       try {
         const introSrc = this.ctx.createMediaElementSource(this.introEl);
@@ -254,9 +255,9 @@
 
     startDeployIntro(done) {
       this.stopIntro();
-      // This is the requested 7-second opening from the Battle City piano
-      // reference. The source starts with ~2.6s of title-card silence, so the
-      // playable sting begins at the first note rather than delaying the run.
+      // This is the trimmed opening from the Battle City piano reference. The
+      // first phrase ends around 4.45s; the later 2s phrase is intentionally
+      // cut so the deploy sting leads straight into the stage loop.
       if (!this.introEl) {
         this.startSynthDeployIntro(done);
         return;

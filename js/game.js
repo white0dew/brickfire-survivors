@@ -211,6 +211,8 @@
     bossDefeated: false,
     victoryTimer: 0,
     freezeTimer: 0,
+    itemTutorialSeen: false,
+    itemTutorialQueued: false,
     weapons: { cannon: 1 },
     passives: {},
     fusions: {},
@@ -2392,6 +2394,11 @@
         } else if (p.type === 'basekit') {
           ctx.fillRect(-6, -5, 12, 10); ctx.fillRect(-1, -8, 2, 16); ctx.fillRect(-8, -1, 16, 2);
           ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -3, 6, 6);
+        } else if (p.type === 'fortify') {
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(7, -3); ctx.lineTo(5, 5); ctx.lineTo(0, 8); ctx.lineTo(-5, 5); ctx.lineTo(-7, -3); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#06100d'; ctx.fillRect(-2, -3, 4, 7); ctx.fillRect(-4, -1, 8, 2);
+        } else if (p.type === 'hover') {
+          ctx.fillRect(-7, -1, 14, 2); ctx.fillRect(-5, -5, 2, 4); ctx.fillRect(-5, 3, 2, 4); ctx.fillRect(3, -5, 2, 4); ctx.fillRect(3, 3, 2, 4);
         } else if (p.type === 'turret') {
           ctx.fillRect(-5, -3, 10, 7); ctx.fillRect(-2, -7, 4, 5); ctx.fillRect(-1, 4, 2, 3);
           ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -1, 6, 2);
@@ -2929,6 +2936,9 @@
     G.pendingLevels = 0;
     G.rerolls = 2;
     G.levelupPlayer = null;
+    try { G.itemTutorialSeen = localStorage.getItem('bf.itemTutorial') === '1'; }
+    catch (_) { G.itemTutorialSeen = false; }
+    G.itemTutorialQueued = false;
     // Give the player one nearby sentry pickup so the base has a clear
     // defensive choice from the first minute instead of firing for free.
     if (G.player) spawnPickup('turret', clamp(G.player.x + 110, 24, W - 24), clamp(G.player.y + 20, 24, H - 24), 0);
@@ -5638,6 +5648,11 @@
         const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank', 'turret'];
         const weights = [15, 15, 15, 13, 15, 20, 10];
         if (G.elapsed >= 60) { itemKeys.push('hover'); weights.push(12); }
+        // Base support enters the pool only when it can matter. Fortify is a
+        // permanent max-armor upgrade; basekit is a repair that keeps a damaged
+        // base alive instead of becoming a dead pickup at full health.
+        if (G.core && G.core.alive && G.core.hp < G.core.maxHp * .9) { itemKeys.push('basekit'); weights.push(10); }
+        if (G.core && G.core.alive) { itemKeys.push('fortify'); weights.push(7); }
         const totalWeight = weights.reduce((sum, n) => sum + n, 0);
         let r = Math.random() * totalWeight, item = 'star';
         for (let i = 0; i < itemKeys.length; i++) { r -= weights[i]; if (r <= 0) { item = itemKeys[i]; break; } }
@@ -5843,6 +5858,9 @@
       type, x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
       value: value || 0, life: 38, seed: rand(TAU), picked: false
     });
+    // The scripted opening turret is not a combat drop; let the first real
+    // item drop (or first pickup) introduce the supply system.
+    if (type !== 'xp' && type !== 'chest' && G.elapsed > .6) queueItemTutorial();
   }
 
   function updatePickups(dt) {
@@ -5887,6 +5905,7 @@
       addParticle(pk.x, pk.y, rand(20, -20), rand(-30, -60), '#aef9e7', 'spark', .35, 1.3);
       return;
     }
+    queueItemTutorial();
     const item = ITEMS[pk.type];
     if (!item) return;
     if (pk.type === 'turret') {
@@ -5913,6 +5932,17 @@
         addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 44, life: .6, maxLife: .6, color: '#5ff0ce' });
         showPickupToast(p, `基地维修 // 装甲 +${Math.round(heal)}`);
         AUDIO.tick();
+      }
+      return;
+    }
+    if (pk.type === 'fortify') {
+      if (G.core && G.core.alive) {
+        const add = Math.round(G.core.maxHp * .15);
+        G.core.maxHp += add;
+        G.core.hp = Math.min(G.core.maxHp, G.core.hp + add);
+        addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 54, life: .7, maxLife: .7, color: '#b896ff' });
+        showPickupToast(p, `基地强化 // 装甲上限 +${add}`);
+        AUDIO.item();
       }
       return;
     }
@@ -7408,7 +7438,7 @@
   function renderItemGuide() {
     if (!U.itemGrid) return;
     U.itemGrid.innerHTML = Object.entries(ITEMS).map(([id, item]) => {
-      const baseItem = id === 'basekit' || id === 'turret';
+      const baseItem = id === 'basekit' || id === 'turret' || id === 'fortify';
       return `<article class="item-guide-card" style="--item-color:${item.color}">
         <span class="item-guide-card__tag">${baseItem ? '基地' : '战地'}</span>
         <div class="item-guide-card__head">
@@ -7517,6 +7547,59 @@
   }
   function hideHow() { U.howScreen.classList.add('hidden'); }
 
+  function renderItemTutorial() {
+    if (!U.itemTutorialGrid) return;
+    const baseIds = new Set(['basekit', 'turret', 'fortify']);
+    U.itemTutorialGrid.innerHTML = Object.entries(ITEMS).map(([id, item]) => `
+      <article class="item-tutorial__card${baseIds.has(id) ? ' is-base' : ''}" style="--item-color:${item.color}">
+        <header>
+          <span class="item-tutorial__glyph">${item.glyph || '◇'}</span>
+          <div class="item-tutorial__title"><strong>${item.name}</strong><small>${item.en}</small></div>
+          <span class="item-tutorial__tag">${baseIds.has(id) ? '基地' : '战地'}</span>
+        </header>
+        <p class="item-tutorial__desc">${item.desc}</p>
+        <small class="item-tutorial__detail">${item.detail || ''}</small>
+      </article>`).join('');
+  }
+
+  function openItemTutorial() {
+    if (!U.itemTutorialScreen || G.itemTutorialSeen || !G.itemTutorialQueued) return;
+    if (G.mode !== 'playing') return;
+    G.itemTutorialQueued = false;
+    G.itemTutorialSeen = true;
+    try { localStorage.setItem('bf.itemTutorial', '1'); } catch (_) {}
+    renderItemTutorial();
+    G.mode = 'itemTutorial';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    Input.dashQueued = false; Input.dashQueued2 = false;
+    U.itemTutorialScreen.classList.remove('hidden');
+    U.itemTutorialScreen.setAttribute('aria-hidden', 'false');
+    clearPadFocus();
+    if (Input.gamepad.connected) setPadFocus(U.itemTutorialStart);
+    AUDIO.init(); AUDIO.tick();
+  }
+
+  function closeItemTutorial() {
+    if (G.mode !== 'itemTutorial') return;
+    U.itemTutorialScreen.classList.add('hidden');
+    U.itemTutorialScreen.setAttribute('aria-hidden', 'true');
+    G.mode = 'playing';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    Input.dashQueued = false; Input.dashQueued2 = false;
+    clearPadFocus();
+    AUDIO.confirm();
+  }
+
+  function queueItemTutorial() {
+    if (G.itemTutorialSeen || G.itemTutorialQueued || G.mode !== 'playing') return;
+    G.itemTutorialQueued = true;
+    openItemTutorial();
+  }
+
   function openTutorial() {
     if (!U.tutorialScreen) return;
     G.mode = 'tutorial';
@@ -7558,7 +7641,7 @@
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
-      'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
+      'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'itemTutorialScreen', 'itemTutorialGrid', 'itemTutorialStart', 'itemTutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
@@ -7714,6 +7797,11 @@
     U.tutorialScreen.addEventListener('click', e => {
       if (e.target === U.tutorialScreen || e.target.classList.contains('overlay__backdrop')) closeTutorial();
     });
+    U.itemTutorialStart.addEventListener('click', () => { AUDIO.init(); closeItemTutorial(); });
+    U.itemTutorialClose.addEventListener('click', () => { AUDIO.init(); closeItemTutorial(); });
+    U.itemTutorialScreen.addEventListener('click', e => {
+      if (e.target === U.itemTutorialScreen || e.target.classList.contains('overlay__backdrop')) closeItemTutorial();
+    });
     U.soundBtnMenu.addEventListener('click', toggleMute);
     U.soundBtn.addEventListener('click', toggleMute);
     U.pauseBtn.addEventListener('click', pauseGame);
@@ -7787,6 +7875,13 @@
     window.addEventListener('keydown', e => {
       if (e.code === 'KeyM') { toggleMute(); return; }
       if (e.code === 'KeyF') { toggleFullscreen(); return; }
+      if (G.mode === 'itemTutorial') {
+        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          closeItemTutorial();
+        }
+        return;
+      }
       if (G.mode === 'tutorial') {
         if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
           e.preventDefault();
@@ -8039,6 +8134,7 @@
     const base = {
       menu: [['方向键', '选择'], ['A', '确认'], ['START', '出击']],
       tutorial: [['A', '开始作战'], ['B', '跳过教学']],
+      itemTutorial: [['A', '继续战斗'], ['B', '关闭']],
       stage: [['方向键', '选择星区'], ['A', '进入'], ['B', '返回']],
       tank: [['方向键', '选择坦克'], ['A', '装备'], ['B', '返回']],
       fusion: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
@@ -8099,7 +8195,7 @@
 
   function uiContext() {
     const overlays = [
-      ['tutorial', U.tutorialScreen], ['levelup', U.levelupScreen], ['settings', U.settingsScreen], ['fusion', U.fusionScreen],
+      ['itemTutorial', U.itemTutorialScreen], ['tutorial', U.tutorialScreen], ['levelup', U.levelupScreen], ['settings', U.settingsScreen], ['fusion', U.fusionScreen],
       ['tank', U.tankScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
       ['stage', U.stageScreen], ['codex', U.codexScreen], ['item', U.itemScreen],
       ['art', U.artScreen], ['save', U.saveScreen], ['how', U.howScreen]
@@ -8216,6 +8312,7 @@
     if (!ctx) return null;
     if (ctx.key === 'menu') return document.querySelector('.sf-nav__item--start') || (U.menuNav && U.menuNav.querySelector('.sf-nav__item--start')) || U.startBtn;
     if (ctx.key === 'tutorial') return U.tutorialStart;
+    if (ctx.key === 'itemTutorial') return U.itemTutorialStart;
     if (ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
     if (ctx.key === 'settings') return settingsRowControl(settingsRows()[settingsFocusIndex]) || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
@@ -8308,6 +8405,7 @@
     if (!ctx || ctx.key === 'menu') return false;
     if (ctx.key === 'levelup') return false;
     if (ctx.key === 'tutorial') closeTutorial();
+    else if (ctx.key === 'itemTutorial') closeItemTutorial();
     else if (ctx.key === 'stage') closeStageScreen();
     else if (ctx.key === 'tank') closeTankScreen();
     else if (ctx.key === 'fusion') closeFusionScreen();
@@ -8631,7 +8729,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, spawnPickup, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, queueItemTutorial, openItemTutorial, closeItemTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
