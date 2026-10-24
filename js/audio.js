@@ -7,6 +7,7 @@
     '05-foundry.mp3', '06-graveyard.mp3', '07-reactor.mp3', '08-dome.mp3',
     '09-citadel.mp3', '10-abyss.mp3', '11-solar.mp3', '12-throne.mp3'
   ];
+  const MENU_TRACK = '00-menu.mp3';
 
   class AudioEngine {
     constructor() {
@@ -25,6 +26,20 @@
       this.bgmGain = null;
       this.bgmToken = 0;
       this.currentStage = -1;
+      this.menuMusicOn = false;
+      this.bgmKind = 'stage';
+      this.introTimer = null;
+      this.sfxVolume = this.readVolume('bf.sfxVolume', 1);
+      this.bgmVolume = this.readVolume('bf.bgmVolume', 1);
+    }
+
+    readVolume(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw === null || raw === '') return fallback;
+        const n = Number(raw);
+        return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback;
+      } catch (e) { return fallback; }
     }
 
     init() {
@@ -36,8 +51,8 @@
       comp.threshold.value = -18; comp.knee.value = 14; comp.ratio.value = 5; comp.attack.value = .004; comp.release.value = .18;
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : .48;
-      this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = .34;
-      this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = .82;
+      this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = .34 * this.bgmVolume;
+      this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = .82 * this.sfxVolume;
       this.musicBus.connect(this.master);
       this.sfxBus.connect(this.master);
       this.master.connect(comp); comp.connect(this.ctx.destination);
@@ -73,8 +88,33 @@
         this.master.gain.cancelScheduledValues(this.t);
         this.master.gain.linearRampToValueAtTime(this.muted ? 0 : .48, this.t + .08);
       }
-      if (this.bgmEl && !this.bgmGain) this.bgmEl.volume = this.muted ? 0 : .55;
+      if (this.bgmEl && !this.bgmGain) this.bgmEl.volume = this.muted ? 0 : .55 * this.bgmVolume;
       return this.muted;
+    }
+
+    setSfxVolume(v) {
+      const n = Number(v);
+      this.sfxVolume = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+      try { localStorage.setItem('bf.sfxVolume', String(this.sfxVolume)); } catch (e) {}
+      if (this.sfxBus && this.ctx) {
+        this.sfxBus.gain.cancelScheduledValues(this.t);
+        this.sfxBus.gain.setValueAtTime(this.sfxBus.gain.value || .0001, this.t);
+        this.sfxBus.gain.linearRampToValueAtTime(.82 * this.sfxVolume, this.t + .08);
+      }
+      return this.sfxVolume;
+    }
+
+    setBgmVolume(v) {
+      const n = Number(v);
+      this.bgmVolume = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+      try { localStorage.setItem('bf.bgmVolume', String(this.bgmVolume)); } catch (e) {}
+      if (this.musicBus && this.ctx) {
+        this.musicBus.gain.cancelScheduledValues(this.t);
+        this.musicBus.gain.setValueAtTime(this.musicBus.gain.value || .0001, this.t);
+        this.musicBus.gain.linearRampToValueAtTime(.34 * this.bgmVolume, this.t + .08);
+      }
+      if (this.bgmEl && !this.bgmGain) this.bgmEl.volume = this.muted ? 0 : .55 * this.bgmVolume;
+      return this.bgmVolume;
     }
 
     toggleMute() { return this.setMuted(!this.muted); }
@@ -175,28 +215,88 @@
     }
     tick() { this.tone(560, .03, 'square', .012, 540); }
 
-    startMusic(stageIndex) {
-      if (!this.ctx || this.musicOn) return;
-      this.musicOn = true;
-      this.currentStage = stageIndex | 0;
-      const file = BGM_TRACKS[this.currentStage];
+    playBgmFile(file, token, fade, fallback) {
       if (this.bgmEl && file) {
-        const token = ++this.bgmToken;
         this.bgmEl.src = `assets/audio/bgm/${file}`;
         this.bgmEl.currentTime = 0;
         if (this.bgmGain) {
           this.bgmGain.gain.cancelScheduledValues(this.t);
           this.bgmGain.gain.setValueAtTime(.0001, this.t);
-          this.bgmGain.gain.linearRampToValueAtTime(.9, this.t + .9);
+          this.bgmGain.gain.linearRampToValueAtTime(.9, this.t + fade);
         }
         const play = this.bgmEl.play();
         if (play && play.catch) play.catch(() => {
-          if (token !== this.bgmToken || !this.musicOn) return;
-          this.startProceduralMusic();
+          if (token !== this.bgmToken) return;
+          if (fallback && this.musicOn) this.startProceduralMusic();
         });
         return;
       }
-      this.startProceduralMusic();
+      if (fallback && this.musicOn) this.startProceduralMusic();
+    }
+
+    startDeployIntro(done) {
+      this.stopIntro();
+      // Five-note rising deployment sting: an original nod to arcade tank
+      // stage-start jingles, not a sample of the original Battle City audio.
+      const notes = [130.81, 164.81, 196.00, 261.63, 329.63];
+      notes.forEach((freq, i) => {
+        const delay = i * .18;
+        this.tone(freq, .13, 'square', .065, freq * 1.01, delay);
+        this.tone(freq / 2, .18, 'sawtooth', .038, freq / 2, delay);
+        this.burst(.04, .028, 'highpass', 1700, delay, .8);
+      });
+      this.tone(65.41, .52, 'sine', .09, 32, .9);
+      this.tone(523.25, .55, 'triangle', .032, 523.25, 1.04);
+      this.introTimer = setTimeout(() => {
+        this.introTimer = null;
+        if (typeof done === 'function') done();
+      }, 1900);
+    }
+
+    stopIntro() {
+      if (this.introTimer) clearTimeout(this.introTimer);
+      this.introTimer = null;
+    }
+
+    startMusic(stageIndex, opts) {
+      if (!this.ctx) return;
+      this.stopIntro();
+      // Silence the menu track (or the previous stage track) before the
+      // deployment sting. The sting should land in clean air, then the new
+      // stage BGM fades in underneath it.
+      if (this.bgmEl && !this.bgmEl.paused) {
+        try { this.bgmEl.pause(); } catch (e) {}
+      }
+      if (this.bgmGain) {
+        try {
+          this.bgmGain.gain.cancelScheduledValues(this.t);
+          this.bgmGain.gain.setValueAtTime(.0001, this.t);
+        } catch (e) {}
+      }
+      const token = ++this.bgmToken;
+      this.musicOn = true;
+      this.menuMusicOn = false;
+      this.bgmKind = 'stage';
+      this.currentStage = stageIndex | 0;
+      const file = BGM_TRACKS[this.currentStage];
+      const begin = () => {
+        if (token !== this.bgmToken || !this.musicOn) return;
+        this.playBgmFile(file, token, 1.65, true);
+      };
+      if (opts && opts.intro) this.startDeployIntro(begin);
+      else begin();
+    }
+
+    startMenuMusic() {
+      if (!this.ctx) return;
+      if (this.menuMusicOn && this.bgmKind === 'menu') return;
+      this.stopIntro();
+      const token = ++this.bgmToken;
+      this.menuMusicOn = true;
+      this.musicOn = false;
+      this.bgmKind = 'menu';
+      this.currentStage = 2;
+      this.playBgmFile(MENU_TRACK, token, 1.25, false);
     }
     startProceduralMusic() {
       this.step = 0;
@@ -205,6 +305,9 @@
     }
     stopMusic() {
       this.musicOn = false;
+      this.menuMusicOn = false;
+      this.bgmKind = '';
+      this.stopIntro();
       this.bgmToken += 1;
       if (this.musicTimer) clearInterval(this.musicTimer);
       this.musicTimer = null;

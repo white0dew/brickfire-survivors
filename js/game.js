@@ -232,6 +232,7 @@
     mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
     gamepad: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
+    gamepad2: { connected: false, id: '', x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [] },
     dashQueued: false,
     dashQueued2: false
   };
@@ -2815,6 +2816,9 @@
     U.pauseScreen.classList.add('hidden');
     U.resultScreen.classList.add('hidden');
     U.howScreen.classList.add('hidden');
+    if (U.settingsScreen) U.settingsScreen.classList.add('hidden');
+    if (U.fusionScreen) U.fusionScreen.classList.add('hidden');
+    if (U.tankScreen) U.tankScreen.classList.add('hidden');
     if (U.codexScreen) U.codexScreen.classList.add('hidden');
     if (U.saveScreen) U.saveScreen.classList.add('hidden');
     U.bossHud.classList.add('is-hidden');
@@ -2837,7 +2841,7 @@
     if (U.p2Feed) U.p2Feed.innerHTML = '';
     updateHUD();
     AUDIO.init();
-    AUDIO.startMusic(G.arenaIndex);
+    AUDIO.startMusic(G.arenaIndex, { intro: true });
     AUDIO.setIntensity(0);
     showToast(G.endless
       ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
@@ -3192,6 +3196,11 @@
         if (weaponsFor(p).flame) addFlamePool(p.x, p.y, true, p);
       }
     }
+    // Two physical pads: P1 gets the first, P2 gets the second. With one
+    // pad in co-op the pad belongs to P2 and P1 stays on keyboard.
+    const p1Pad = G.twoPlayer ? (Input.gamepad2.connected ? Input.gamepad : null) : Input.gamepad;
+    const p2Pad = Input.gamepad2.connected ? Input.gamepad2 : Input.gamepad;
+    const pad = idx === 0 ? p1Pad : p2Pad;
     let ix = 0, iy = 0;
     if (idx === 0) {
       if (Input.keys.has('KeyA')) ix -= 1;
@@ -3203,16 +3212,15 @@
         if (Input.keys.has('ArrowRight')) ix += 1;
         if (Input.keys.has('ArrowUp')) iy -= 1;
         if (Input.keys.has('ArrowDown')) iy += 1;
-        ix += Input.mobile.x + Input.gamepad.x; iy += Input.mobile.y + Input.gamepad.y;
-      } else {
-        ix += Input.mobile.x; iy += Input.mobile.y;
       }
+      ix += Input.mobile.x; iy += Input.mobile.y;
+      if (p1Pad && p1Pad.connected) { ix += p1Pad.x; iy += p1Pad.y; }
     } else {
       if (Input.keys.has('ArrowLeft')) ix -= 1;
       if (Input.keys.has('ArrowRight')) ix += 1;
       if (Input.keys.has('ArrowUp')) iy -= 1;
       if (Input.keys.has('ArrowDown')) iy += 1;
-      if (Input.gamepad.connected) { ix += Input.gamepad.x; iy += Input.gamepad.y; }
+      if (pad && pad.connected) { ix += pad.x; iy += pad.y; }
     }
     const mag = Math.hypot(ix, iy);
     const onWater = tileAt(p.x, p.y).type === 'water';
@@ -3264,15 +3272,15 @@
     let aimAngle = p.turretAngle;
     let aimPoint = null;
     const mouseManual = idx === 0 && Input.mouse.down && Input.mouse.over;
-    const padManual = (idx === 0 ? !G.twoPlayer : true) && Input.gamepad.connected && Input.gamepad.aimActive;
-    const forceFire = idx === 0 ? (!G.twoPlayer && Input.gamepad.fire) : (Input.gamepad.connected && Input.gamepad.fire);
+    const padManual = !!pad && pad.connected && pad.aimActive;
+    const forceFire = !!pad && pad.connected && pad.fire;
     const manual = mouseManual || padManual;
     const autoTarget = manual ? null : nearestAutoEnemy(p, 560);
     if ((p.index || 0) === 0) G.autoHold = !manual && !autoTarget && !!nearestAttackable(p.x, p.y, 560);
     if (mouseManual) {
       aimAngle = Math.atan2(Input.mouse.y - p.y, Input.mouse.x - p.x);
     } else if (padManual) {
-      aimPoint = { x: p.x + Input.gamepad.aimX * 620, y: p.y + Input.gamepad.aimY * 620 };
+      aimPoint = { x: p.x + pad.aimX * 620, y: p.y + pad.aimY * 620 };
       aimAngle = Math.atan2(aimPoint.y - p.y, aimPoint.x - p.x);
     } else if (autoTarget) {
       const lead = Math.min(.55, dist(p.x, p.y, autoTarget.x, autoTarget.y) / 620);
@@ -5934,8 +5942,14 @@
     return picked;
   }
 
+  function levelupPad() {
+    const p = G.levelupPlayer;
+    if (p && p.index === 1 && Input.gamepad2.connected) return Input.gamepad2;
+    return Input.gamepad;
+  }
+
   function syncLevelupFocus() {
-    const g = Input.gamepad;
+    const g = levelupPad();
     const cards = U.upgradeCards ? U.upgradeCards.querySelectorAll('.upgrade-card') : [];
     const owner = G.levelupPlayer;
     if (!owner) {
@@ -5955,7 +5969,7 @@
   function moveLevelupSelection(dir, owner) {
     const p = G.levelupPlayer;
     if (!p || (owner && owner !== p.label)) { AUDIO.deny(); return; }
-    const g = Input.gamepad;
+    const g = levelupPad();
     const count = Math.max(1, (G.currentChoices || []).length);
     g.levelupOwner = p.label;
     if (g.selectedCard < 0) g.selectedCard = dir > 0 ? 0 : count - 1;
@@ -6000,9 +6014,9 @@
     G.mode = 'levelup';
     G.levelupPlayer = p;
     G.resolvingUpgrade = false;
-    Input.gamepad.selectedCard = -1;
-    Input.gamepad.levelupNeedsNeutral = true;
-    Input.gamepad.levelupOwner = p.label;
+    for (const gp of [Input.gamepad, Input.gamepad2]) {
+      gp.selectedCard = -1; gp.levelupNeedsNeutral = true; gp.levelupOwner = p.label;
+    }
     clearPadFocus();
     G.currentChoices = getUpgradeChoices(p);
     U.newLevel.textContent = String(p.level).padStart(2, '0');
@@ -6118,8 +6132,9 @@
     U.rerollCount.textContent = String(p.rerolls);
     U.rerollBtn.disabled = p.index === 1 || p.rerolls <= 0;
     G.currentChoices = getUpgradeChoices(p);
-    Input.gamepad.selectedCard = -1;
-    Input.gamepad.levelupNeedsNeutral = true;
+    for (const gp of [Input.gamepad, Input.gamepad2]) {
+      gp.selectedCard = -1; gp.levelupNeedsNeutral = true; gp.levelupOwner = p.label;
+    }
     clearPadFocus();
     renderUpgradeCards(G.currentChoices);
     AUDIO.select();
@@ -6529,6 +6544,7 @@
     if (U.stageFootHint) U.stageFootHint.textContent = endlessUnlocked
       ? (camp.unlocked >= MAPS.length ? '全部星区与无尽协议已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 无尽协议已开放。`)
       : (camp.unlocked >= MAPS.length ? '全部星区已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 通关第 2 关解锁无尽协议。`);
+    updateStageRoster();
   }
 
   function drawTankPreview(canvas, tank) {
@@ -6567,7 +6583,18 @@
     if (U.sfTankName) U.sfTankName.textContent = tank.name;
     if (U.sfUnitName) U.sfUnitName.textContent = tank.name;
     if (U.sfUnitRole) U.sfUnitRole.textContent = `${tank.role} / ${tank.en}`;
-    if (U.sfModeName) U.sfModeName.textContent = G.coopSelected ? '双人' : '单人';
+    if (U.sfModeName) U.sfModeName.textContent = G.coopSelected ? '双人模式' : '单人模式';
+  }
+
+  function updateStageRoster() {
+    if (!U.stageTankP1) return;
+    const p1 = TANKS.find(t => t.id === G.tankIds[0]) || TANKS[0];
+    const p2 = TANKS.find(t => t.id === G.tankIds[1]) || TANKS[0];
+    if (U.stageTankNameP1) U.stageTankNameP1.textContent = p1.name;
+    if (U.stageTankRoleP1) U.stageTankRoleP1.textContent = `${p1.role} / ${p1.en}`;
+    if (U.stageTankNameP2) U.stageTankNameP2.textContent = p2.name;
+    if (U.stageTankRoleP2) U.stageTankRoleP2.textContent = `${p2.role} / ${p2.en}`;
+    if (U.stageTankP2) U.stageTankP2.classList.toggle('is-hidden', !G.coopSelected);
   }
 
   function updatePilotCard(slot) {
@@ -6629,6 +6656,7 @@
     if (slot === 0) { G.tankId = tank.id; G.tank = tank; }
     writeTankIds(G.tankIds);
     updatePilotCard(slot);
+    updateStageRoster();
     if (G.tank && !G.twoPlayer) {
       if (U.visualUnit) U.visualUnit.textContent = `${G.tank.name} «${G.tank.en}»`;
       if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ${MAPS[G.arenaIndex].sector}`;
@@ -6683,6 +6711,8 @@
         </article>`;
       }).join('');
     }
+    const fromPause = G.mode === 'paused';
+    if (U.fusionDoneLabel) U.fusionDoneLabel.textContent = fromPause ? '返回战场' : '返回机库';
     U.fusionScreen.classList.remove('hidden');
     AUDIO.init(); AUDIO.tick();
   }
@@ -6786,6 +6816,7 @@
   function returnToMenu() {
     G.mode = 'menu';
     AUDIO.stopMusic();
+    AUDIO.startMenuMusic();
     AUDIO.setIntensity(0);
     U.gameLayout.classList.add('is-hidden');
     U.gameLayout.setAttribute('aria-hidden', 'true');
@@ -6812,6 +6843,36 @@
     updateTankCount();
     selectCoop(G.lastCoop);
     updateBestStats();
+  }
+
+  function syncSettingsUI() {
+    const sfx = Math.round(AUDIO.sfxVolume * 100);
+    const bgm = Math.round(AUDIO.bgmVolume * 100);
+    if (U.sfxVolume) U.sfxVolume.value = String(sfx);
+    if (U.bgmVolume) U.bgmVolume.value = String(bgm);
+    if (U.sfxVolumeValue) U.sfxVolumeValue.textContent = `${sfx}%`;
+    if (U.bgmVolumeValue) U.bgmVolumeValue.textContent = `${bgm}%`;
+    syncFullscreenUI();
+  }
+  function syncFullscreenUI() {
+    const on = !!document.fullscreenElement;
+    if (U.settingsFullscreen) {
+      U.settingsFullscreen.classList.toggle('is-on', on);
+      U.settingsFullscreen.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const span = U.settingsFullscreen.querySelector('span');
+      if (span) span.textContent = on ? '开启' : '关闭';
+    }
+  }
+  function openSettings() {
+    if (!U.settingsScreen) return;
+    if (U.settingsDoneLabel) U.settingsDoneLabel.textContent = G.mode === 'paused' ? '返回战场' : '返回机库';
+    syncSettingsUI();
+    U.settingsScreen.classList.remove('hidden');
+    AUDIO.init(); AUDIO.tick();
+  }
+  function closeSettings() {
+    if (U.settingsScreen) U.settingsScreen.classList.add('hidden');
+    AUDIO.tick();
   }
 
   function pauseGame() {
@@ -6869,6 +6930,7 @@
     if (U.tankPickerBtn2) U.tankPickerBtn2.classList.toggle('is-hidden', !G.coopSelected);
     updatePilotCard(0);
     updatePilotCard(1);
+    updateStageRoster();
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.endlessSelected ? (G.coopSelected ? '双人无尽' : '无尽出击') : (G.coopSelected ? '双人出击' : '点火出击');
     if (U.startBtnSub) U.startBtnSub.textContent = G.endlessSelected ? (G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL') : (G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR');
     syncMenuSelection();
@@ -7246,12 +7308,12 @@
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
-      'restartBtn', 'quitBtn', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
+      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
-      'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone',
-      'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
+      'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone', 'fusionDoneLabel',
+      'stageScreen', 'stagePickerBtn', 'stageClose', 'stageConfirm', 'stageFootHint', 'stageTankP1', 'stageTankP2', 'stageTankNameP1', 'stageTankNameP2', 'stageTankRoleP1', 'stageTankRoleP2', 'stageIndex', 'stageName', 'stageMeta', 'stageTrait', 'stageDifficulty', 'difficultyOptions', 'difficultyHint',
       'baseMeter', 'baseHpText', 'baseHpMeter', 'baseTurretNote', 'codexBtn', 'codexScreen', 'codexProgress', 'codexGrid', 'codexClose', 'codexDone', 'itemBtn', 'itemScreen', 'itemGrid', 'itemClose', 'itemDone', 'artBtn', 'artScreen', 'artClose', 'artDone', 'saveBtn', 'saveScreen', 'saveText', 'saveExportBtn', 'saveCopyBtn', 'saveImportBtn', 'saveClose', 'saveDone', 'saveStatus'];
     for (const id of ids) U[id] = document.getElementById(id);
     U.arenaCards = Array.from(U.arenaOptions ? U.arenaOptions.querySelectorAll('.arena-card') : document.querySelectorAll('.arena-card'));
@@ -7260,6 +7322,13 @@
   }
 
   function bindUI() {
+    const kickMenuAudio = () => {
+      AUDIO.init();
+      if (G.mode === 'menu') AUDIO.startMenuMusic();
+    };
+    window.addEventListener('pointerdown', kickMenuAudio, { passive: true });
+    window.addEventListener('keydown', kickMenuAudio);
+    document.addEventListener('fullscreenchange', syncFullscreenUI);
     window.addEventListener('gamepadconnected', () => {
       Input.gamepad.connected = true;
       syncPadState();
@@ -7282,6 +7351,7 @@
         else if (action === 'fusion') U.fusionBtn.click();
         else if (action === 'codex') U.codexBtn.click();
         else if (action === 'save') U.saveBtn.click();
+        else if (action === 'settings') openSettings();
       });
     });
     [U.arenaOptions, U.tankGrid, U.itemGrid].forEach(grid => {
@@ -7307,6 +7377,8 @@
       });
     });
     U.stagePickerBtn.addEventListener('click', openStageScreen);
+    if (U.stageTankP1) U.stageTankP1.addEventListener('click', () => openTankScreen(0));
+    if (U.stageTankP2) U.stageTankP2.addEventListener('click', () => openTankScreen(1));
     if (U.difficultyOptions) U.difficultyOptions.addEventListener('click', e => {
       const btn = e.target.closest('.difficulty-card');
       if (!btn) return;
@@ -7392,6 +7464,23 @@
     U.fullBtn.addEventListener('click', toggleFullscreen);
     if (U.fullBtnMenu) U.fullBtnMenu.addEventListener('click', toggleFullscreen);
     U.resumeBtn.addEventListener('click', resumeGame);
+    if (U.pauseSettingsBtn) U.pauseSettingsBtn.addEventListener('click', openSettings);
+    if (U.pauseFusionBtn) U.pauseFusionBtn.addEventListener('click', openFusionScreen);
+    if (U.settingsClose) U.settingsClose.addEventListener('click', closeSettings);
+    if (U.settingsDone) U.settingsDone.addEventListener('click', closeSettings);
+    if (U.settingsScreen) U.settingsScreen.addEventListener('click', e => { if (e.target === U.settingsScreen || e.target.classList.contains('overlay__backdrop')) closeSettings(); });
+    if (U.settingsFullscreen) U.settingsFullscreen.addEventListener('click', () => { AUDIO.init(); toggleFullscreen(); });
+    if (U.sfxVolume) U.sfxVolume.addEventListener('input', () => {
+      AUDIO.init();
+      AUDIO.setSfxVolume(Number(U.sfxVolume.value) / 100);
+      if (U.sfxVolumeValue) U.sfxVolumeValue.textContent = `${U.sfxVolume.value}%`;
+    });
+    if (U.bgmVolume) U.bgmVolume.addEventListener('input', () => {
+      AUDIO.init();
+      AUDIO.setBgmVolume(Number(U.bgmVolume.value) / 100);
+      if (U.bgmVolumeValue) U.bgmVolumeValue.textContent = `${U.bgmVolume.value}%`;
+      if (G.mode === 'menu') AUDIO.startMenuMusic();
+    });
     U.restartBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.lastCoop, G.endless); });
     U.quitBtn.addEventListener('click', returnToMenu);
     U.nextBtn.addEventListener('click', () => { AUDIO.init(); AUDIO.confirm(); startRun(G.nextStageIndex, G.lastCoop, false); });
@@ -7429,9 +7518,12 @@
       if (e.code === 'KeyM') { toggleMute(); return; }
       if (e.code === 'KeyF') { toggleFullscreen(); return; }
       if (e.code === 'Escape') {
-        if (!U.stageScreen.classList.contains('hidden')) { closeStageScreen(); return; }
+        if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden')) { closeSettings(); return; }
+        // Tank/fusion can sit on top of the stage or pause screens, so close
+        // the topmost overlay first.
         if (!U.tankScreen.classList.contains('hidden')) { closeTankScreen(); return; }
         if (!U.fusionScreen.classList.contains('hidden')) { closeFusionScreen(); return; }
+        if (!U.stageScreen.classList.contains('hidden')) { closeStageScreen(); return; }
         if (!U.codexScreen.classList.contains('hidden')) { closeCodexScreen(); return; }
         if (U.artScreen && !U.artScreen.classList.contains('hidden')) { closeArtScreen(); return; }
         if (!U.itemScreen.classList.contains('hidden')) { closeItemGuide(); return; }
@@ -7463,6 +7555,7 @@
           if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); hideHow(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
           return;
         }
+        if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden')) return;
         if (!U.stageScreen.classList.contains('hidden') || !U.tankScreen.classList.contains('hidden') || !U.fusionScreen.classList.contains('hidden') || !U.codexScreen.classList.contains('hidden') || (U.artScreen && !U.artScreen.classList.contains('hidden')) || !U.itemScreen.classList.contains('hidden') || !U.saveScreen.classList.contains('hidden')) return;
         if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
           e.preventDefault();
@@ -7610,6 +7703,7 @@
       how: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
       art: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
       pause: [['A', '继续'], ['B', '返回']],
+      settings: [['方向键', '调整'], ['A', '切换'], ['B', '返回']],
       result: [['A', '再次出击'], ['B', '机库']],
       levelup: [['方向键', '选择'], ['A', '确认'], ['B', '重掷']]
     };
@@ -7627,6 +7721,7 @@
   function padScrollRoot(ctx) {
     if (!ctx) return null;
     const selectors = {
+      settings: '.settings__rows',
       stage: '#arenaOptions',
       tank: '#tankGrid',
       codex: '#codexGrid',
@@ -7659,9 +7754,10 @@
 
   function uiContext() {
     const overlays = [
-      ['levelup', U.levelupScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
-      ['stage', U.stageScreen], ['tank', U.tankScreen], ['fusion', U.fusionScreen],
-      ['codex', U.codexScreen], ['item', U.itemScreen], ['art', U.artScreen], ['save', U.saveScreen], ['how', U.howScreen]
+      ['levelup', U.levelupScreen], ['settings', U.settingsScreen], ['fusion', U.fusionScreen],
+      ['tank', U.tankScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
+      ['stage', U.stageScreen], ['codex', U.codexScreen], ['item', U.itemScreen],
+      ['art', U.artScreen], ['save', U.saveScreen], ['how', U.howScreen]
     ];
     for (const [key, el] of overlays) {
       if (isUiVisible(el)) return { key, root: el };
@@ -7672,7 +7768,7 @@
 
   function padFocusables(root) {
     if (!root) return [];
-    return Array.from(root.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter(el => {
+    return Array.from(root.querySelectorAll('button:not([disabled]), input[type="range"]:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter(el => {
       if (!isUiVisible(el) || el.disabled) return false;
       const r = el.getBoundingClientRect();
       return r.width > 2 && r.height > 2;
@@ -7700,6 +7796,7 @@
     if (ctx.key === 'menu') return document.querySelector('.sf-nav__item--start') || (U.menuNav && U.menuNav.querySelector('.sf-nav__item--start')) || U.startBtn;
     if (ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
+    if (ctx.key === 'settings') return U.sfxVolume || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
     if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
     const list = padFocusables(ctx.root);
     if (ctx.key === 'stage') {
@@ -7723,6 +7820,11 @@
       g.selectedCard = ctx.key === 'levelup' ? -1 : 0;
       g.levelupNeedsNeutral = ctx.key === 'levelup';
       if (ctx.key === 'levelup') g.levelupOwner = G.twoPlayer ? 'P2' : 'P1';
+      if (ctx.key === 'levelup') {
+        Input.gamepad2.selectedCard = -1;
+        Input.gamepad2.levelupNeedsNeutral = true;
+        Input.gamepad2.levelupOwner = G.twoPlayer ? 'P2' : 'P1';
+      }
       const first = defaultPadFocus(ctx);
       if (first) setPadFocus(first); else clearPadFocus();
     } else if (!g.focusEl || !padFocusables(ctx.root).includes(g.focusEl)) {
@@ -7786,6 +7888,7 @@
     else if (ctx.key === 'art') closeArtScreen();
     else if (ctx.key === 'save') closeSaveScreen();
     else if (ctx.key === 'how') hideHow();
+    else if (ctx.key === 'settings') closeSettings();
     else if (ctx.key === 'pause') resumeGame();
     else if (ctx.key === 'result') returnToMenu();
     return true;
@@ -7793,51 +7896,79 @@
 
   function pollGamepad() {
     const g = Input.gamepad;
-    const pads = gamepadList();
-    const gp = Array.from(pads).find(p => p && p.connected);
-    if (!gp) {
+    const g2 = Input.gamepad2;
+    const pads = Array.from(gamepadList()).filter(p => p && p.connected);
+    const primary = pads[0] || null;
+    const secondary = pads[1] || null;
+    const resetPad = (state) => {
+      state.connected = false; state.id = ''; state.x = 0; state.y = 0;
+      state.aimActive = false; state.aimX = 0; state.aimY = 0; state.fire = false;
+      state.prevButtons = [];
+    };
+    if (!primary) {
       if (g.connected) {
-        g.connected = false; g.id = ''; g.x = 0; g.y = 0; g.aimActive = false; g.fire = false; g.prevButtons = [];
+        resetPad(g);
         syncPadState();
         if (G.mode === 'playing') showToast('Xbox 手柄已断开', 'red');
       }
+      if (g2.connected) {
+        resetPad(g2);
+        if (G.mode === 'playing') showToast('P2 手柄已断开', 'red');
+      }
       return;
     }
-    if (!g.connected) {
-      g.connected = true;
-      g.id = gp.id || 'Xbox Controller';
-      syncPadState();
-      if (G.mode === 'playing') showToast('Xbox 手柄已连接 // 左摇杆移动', 'cyan');
-    }
-    const dz = .2;
-    let x = gp.axes[0] || 0, y = gp.axes[1] || 0;
-    const mag = Math.hypot(x, y);
-    if (mag > dz) {
-      const scale = Math.min(1, (mag - dz) / (1 - dz)) / mag;
-      x *= scale; y *= scale;
-    } else { x = 0; y = 0; }
-    const btns = gp.buttons || [];
-    if (btns[12] && btns[12].pressed) y -= 1;
-    if (btns[13] && btns[13].pressed) y += 1;
-    if (btns[14] && btns[14].pressed) x -= 1;
-    if (btns[15] && btns[15].pressed) x += 1;
-    const moveMag = Math.hypot(x, y);
-    if (moveMag > 1) { x /= moveMag; y /= moveMag; }
-    g.x = x; g.y = y;
 
-    const ax = gp.axes[2] || 0, ay = gp.axes[3] || 0;
-    const aimMag = Math.hypot(ax, ay);
-    if (aimMag > .28) {
-      g.aimActive = true;
-      g.aimX = ax / aimMag; g.aimY = ay / aimMag;
+    const readPad = (gp, state) => {
+      if (!state.connected) {
+        state.connected = true;
+        state.id = gp.id || 'Xbox Controller';
+      }
+      const dz = .2;
+      let x = gp.axes[0] || 0, y = gp.axes[1] || 0;
+      const mag = Math.hypot(x, y);
+      if (mag > dz) {
+        const scale = Math.min(1, (mag - dz) / (1 - dz)) / mag;
+        x *= scale; y *= scale;
+      } else { x = 0; y = 0; }
+      const btns = gp.buttons || [];
+      if (btns[12] && btns[12].pressed) y -= 1;
+      if (btns[13] && btns[13].pressed) y += 1;
+      if (btns[14] && btns[14].pressed) x -= 1;
+      if (btns[15] && btns[15].pressed) x += 1;
+      const moveMag = Math.hypot(x, y);
+      if (moveMag > 1) { x /= moveMag; y /= moveMag; }
+      state.x = x; state.y = y;
+      state.buttons = btns;
+
+      const ax = gp.axes[2] || 0, ay = gp.axes[3] || 0;
+      const aimMag = Math.hypot(ax, ay);
+      if (aimMag > .28) {
+        state.aimActive = true;
+        state.aimX = ax / aimMag; state.aimY = ay / aimMag;
+      } else {
+        state.aimActive = false; state.aimX = 0; state.aimY = 0;
+      }
+      state.fire = !!(btns[7] && btns[7].pressed) || !!(btns[6] && btns[6].pressed);
+    };
+
+    const hadPrimary = g.connected;
+    const hadSecondary = g2.connected;
+    readPad(primary, g);
+    if (!g.id) g.id = primary.id || 'Xbox Controller';
+    if (!secondary) {
+      if (g2.connected) resetPad(g2);
     } else {
-      g.aimActive = false; g.aimX = 0; g.aimY = 0;
+      readPad(secondary, g2);
     }
-    g.fire = !!(btns[7] && btns[7].pressed) || !!(btns[6] && btns[6].pressed);
+    if (!hadPrimary || hadSecondary !== g2.connected) syncPadState();
+    if (secondary && !hadSecondary && G.mode === 'playing') showToast('P2 手柄已连接 // 左摇杆移动', 'cyan');
 
-    const pressed = i => !!(btns[i] && btns[i].pressed);
+    const pressed = i => !!(g.buttons[i] && g.buttons[i].pressed);
     const was = i => !!g.prevButtons[i];
     const just = i => pressed(i) && !was(i);
+    const pressed2 = i => !!(g2.buttons && g2.buttons[i] && g2.buttons[i].pressed);
+    const was2 = i => !!g2.prevButtons[i];
+    const just2 = i => g2.connected && pressed2(i) && !was2(i);
     const dpadPressed = pressed(12) || pressed(13) || pressed(14) || pressed(15);
     let padStep = null;
     if (G.mode !== 'playing') {
@@ -7854,8 +7985,8 @@
         }
       } else {
         g.dpadDirX = 0; g.dpadDirY = 0;
-        const ax = Math.abs(x) >= .48 ? Math.sign(x) : 0;
-        const ay = Math.abs(y) >= .48 ? Math.sign(y) : 0;
+        const ax = Math.abs(g.x) >= .48 ? Math.sign(g.x) : 0;
+        const ay = Math.abs(g.y) >= .48 ? Math.sign(g.y) : 0;
         if (ax || ay) {
           const dx = Math.abs(ax) >= Math.abs(ay) ? ax : 0;
           const dy = dx ? 0 : ay;
@@ -7880,30 +8011,47 @@
       clearPadFocus();
       g.uiKey = '';
       if (just(0)) {
-        if (G.twoPlayer) Input.dashQueued2 = true; else Input.dashQueued = true;
+        if (!G.twoPlayer) Input.dashQueued = true;
+        else if (!g2.connected) Input.dashQueued2 = true;
+        else Input.dashQueued = true;
       }
       if (just(3)) recallToBase();
       if (just(9)) pauseGame();
+      if (g2.connected) {
+        if (just2(0)) Input.dashQueued2 = true;
+        if (just2(3)) recallToBase();
+        if (just2(9)) pauseGame();
+      }
     } else {
       const ctx = syncPadContext(false);
       if (ctx && ctx.key === 'levelup') {
         // Do not auto-select the first card: wait for a neutral stick/d-pad state,
         // then require an explicit direction before showing the selection frame.
-        if (g.levelupNeedsNeutral && Math.hypot(g.x, g.y) < .24) g.levelupNeedsNeutral = false;
+        const lp = (G.levelupPlayer && G.levelupPlayer.index === 1 && g2.connected) ? g2 : g;
+        const pressedL = i => !!(lp.buttons && lp.buttons[i] && lp.buttons[i].pressed);
+        const justL = i => pressedL(i) && !(lp.prevButtons && lp.prevButtons[i]);
+        if (lp.levelupNeedsNeutral && Math.hypot(lp.x, lp.y) < .24) lp.levelupNeedsNeutral = false;
         const padOwnerLabel = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
-        if (!g.levelupNeedsNeutral && G.levelupPlayer) {
-          const left = just(14) || just(12) || just(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
-          const right = just(15) || just(13) || just(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
+        if (!lp.levelupNeedsNeutral && G.levelupPlayer) {
+          const left = justL(14) || justL(12) || justL(4) || (padStep && padStep.dx < 0) || (padStep && padStep.dy < 0);
+          const right = justL(15) || justL(13) || justL(5) || (padStep && padStep.dx > 0) || (padStep && padStep.dy > 0);
           if (left) moveLevelupSelection(-1, padOwnerLabel);
           if (right) moveLevelupSelection(1, padOwnerLabel);
-          if (just(0) && g.selectedCard >= 0) { AUDIO.init(); chooseUpgrade(g.selectedCard, padOwnerLabel); }
+          if (justL(0) && lp.selectedCard >= 0) { AUDIO.init(); chooseUpgrade(lp.selectedCard, padOwnerLabel); }
         }
-        if (just(1)) rerollUpgrades(padOwnerLabel);
-        if (g.selectedCard < 0) syncLevelupFocus();
+        if (justL(1)) rerollUpgrades(padOwnerLabel);
+        if (lp.selectedCard < 0) syncLevelupFocus();
       } else if (ctx) {
         if (just(4)) padScrollPage(ctx, -1);
         if (just(5)) padScrollPage(ctx, 1);
-        if (padStep) movePadFocus(padStep.dx, padStep.dy);
+        const slider = ctx.key === 'settings' && g.focusEl && g.focusEl.matches && g.focusEl.matches('.settings-range');
+        if (padStep && slider && padStep.dx && !padStep.dy) {
+          const range = g.focusEl;
+          const step = range.step && range.step !== 'any' ? Number(range.step) : 1;
+          const next = Math.max(Number(range.min || 0), Math.min(Number(range.max || 100), Number(range.value) + padStep.dx * Math.max(step, 5)));
+          range.value = String(next);
+          range.dispatchEvent(new Event('input', { bubbles: true }));
+        } else if (padStep) movePadFocus(padStep.dx, padStep.dy);
         else if (just(12)) movePadFocus(0, -1);
         else if (just(13)) movePadFocus(0, 1);
         else if (just(14)) movePadFocus(-1, 0);
@@ -7923,7 +8071,8 @@
         if (just(9)) returnToMenu();
       }
     }
-    g.prevButtons = Array.from(btns, b => !!(b && b.pressed));
+    g.prevButtons = Array.from(g.buttons || [], b => !!(b && b.pressed));
+    g2.prevButtons = Array.from(g2.buttons || [], b => !!(b && b.pressed));
   }
 
   function init() {
@@ -7949,6 +8098,7 @@
     updatePilotCard(1);
     updateTankCount();
     selectCoop(false);
+    syncSettingsUI();
     updateBestStats();
     syncPadState();
     U.bossMarker.style.left = `${BOSS_AT / TOTAL_TIME * 100}%`;
@@ -7987,7 +8137,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
