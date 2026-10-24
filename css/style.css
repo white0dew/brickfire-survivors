@@ -1246,14 +1246,14 @@ button.is-pad-focus, [tabindex].is-pad-focus, .upgrade-card.is-pad-focus {
   outline: 2px solid var(--cyan) !important;
   outline-offset: 3px !important;
   border-color: var(--cyan) !important;
-  box-shadow: 0 0 0 4px rgba(95,240,206,.12), 0 0 24px rgba(95,240,206,.2) !important;
+  box-shadow: inset 0 0 0 2px rgba(95,240,206,.62), 0 0 0 4px rgba(95,240,206,.12), 0 0 24px rgba(95,240,206,.2) !important;
 }
 
 .upgrade-card.is-pad-focus {
   outline: 1px solid rgba(255,181,45,.88) !important;
   outline-offset: 2px !important;
   border-color: var(--amber) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,181,45,.22), 0 0 26px rgba(255,181,45,.13) !important;
+  box-shadow: inset 0 0 0 2px rgba(255,181,45,.55), 0 0 26px rgba(255,181,45,.13) !important;
 }
 
 /* topbar objective + single thruster deck */
@@ -1536,3 +1536,50 @@ body.ai-art #menuScreen > * { position: relative; z-index: 1; }
 .arena-card--endless.is-locked { border-style: dashed; }
 .arena-card__diff--endless { color: var(--cyan); }
 .stage-grid .arena-card--endless { grid-column: span 2; }
+
+
+/* Controller-native UI: visible focus is a first-class state, not hover. */
+.pad-hint {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 120;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 14px;
+  border: 1px solid rgba(95, 240, 206, .34);
+  background: rgba(4, 10, 9, .92);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(95, 240, 206, .06);
+  color: var(--paper-dim);
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+}
+body.pad-connected .pad-hint.is-visible { display: flex; }
+.pad-hint span { display: inline-flex; align-items: center; gap: 5px; }
+.pad-hint span + span { padding-left: 12px; border-left: 1px solid var(--line); }
+.pad-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid rgba(95, 240, 206, .38);
+  background: rgba(95, 240, 206, .08);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 8px;
+  line-height: 1;
+}
+@media (max-width: 620px) {
+  .pad-hint { gap: 8px; padding: 7px 10px; font-size: 7px; }
+  .pad-hint span + span { padding-left: 8px; }
+  .pad-hint kbd { min-width: 17px; height: 16px; padding: 0 4px; font-size: 7px; }
+}

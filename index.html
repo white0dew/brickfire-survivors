@@ -7,7 +7,7 @@
   <title>钢铁余烬 // STEEL EMBERS</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。活过六分钟，碾碎钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261024-24">
+  <link rel="stylesheet" href="css/style.css?v=20261024-26">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -357,7 +357,7 @@
         </div>
         <div class="how__legend"><span><i class="chip chip--star"></i> 星星：立即升级主炮</span><span><i class="chip chip--bomb"></i> 手雷：清屏爆破</span><span><i class="chip chip--shield"></i> 头盔：无敌护盾</span><span><i class="chip chip--time"></i> 时钟：冻结敌军</span><span><i class="chip chip--shovel"></i> 维修：修复车体</span></div>
         <div class="how__pad" style="margin-top:8px;opacity:.9">完整道具效果与基地道具说明，请在机库打开「道具说明」。</div>
-        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · Y 回程 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回；升级界面先推方向才会出现选择框，避免误触<br>双人同屏 // P1 键鼠 · P2 手柄；升级时 P1 按 1/2/3，P2 用十字键/左摇杆 + A，任一人确认即可，双方共享模块</div>
+        <div class="how__pad">XBOX 手柄 // 左摇杆移动 · 右摇杆瞄准 · RT 开火 · A 冲刺 · Y 回程 · START 暂停<br>界面导航 // 十字键 / 左摇杆选择 · A 确认 · B 返回 · LB/RB 翻页；升级界面先推方向才会出现选择框，避免误触<br>双人同屏 // P1 键鼠 · P2 手柄；升级时 P1 按 1/2/3，P2 用十字键/左摇杆 + A，任一人确认即可，双方共享模块</div>
         <button id="howStart" class="cta cta--small" type="button"><span class="cta__copy"><strong>明白了，出击</strong><small>DEPLOY NOW</small></span><span class="cta__arrow">↗</span></button>
       </div>
     </section>
@@ -524,7 +524,7 @@
           <h2 id="saveTitle">把战场进度带走</h2>
           <p>导出包含战役星图、底盘解锁、合金核心、记录和敌人图鉴。导入会覆盖本机现有存档，建议先下载备份。</p>
         </div>
-        <textarea id="saveText" class="save-text" spellcheck="false" placeholder="点击“导出”生成存档 JSON，或粘贴存档 JSON 后点“导入覆盖”。"></textarea>
+        <textarea id="saveText" class="save-text" spellcheck="false" placeholder="选择“导出”生成存档 JSON，或粘贴存档 JSON 后选择“导入覆盖”。"></textarea>
         <div class="save-actions">
           <button id="saveExportBtn" class="cta cta--small" type="button"><span class="cta__copy"><strong>导出并下载</strong><small>EXPORT SAVE</small></span><span class="cta__arrow">↓</span></button>
           <button id="saveCopyBtn" class="text-btn" type="button">复制 JSON</button>
@@ -538,13 +538,14 @@
       </div>
     </section>
 
+    <div id="padHint" class="pad-hint" aria-live="polite" aria-atomic="true"></div>
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261024-24"></script>
-  <script src="js/icons.js?v=20261024-24"></script>
-  <script src="js/audio.js?v=20261024-24"></script>
-  <script src="js/game.js?v=20261024-24"></script>
-  <script src="js/main.js?v=20261024-24"></script>
+  <script src="js/content.js?v=20261024-26"></script>
+  <script src="js/icons.js?v=20261024-26"></script>
+  <script src="js/audio.js?v=20261024-26"></script>
+  <script src="js/game.js?v=20261024-26"></script>
+  <script src="js/main.js?v=20261024-26"></script>
 </body>
 </html>

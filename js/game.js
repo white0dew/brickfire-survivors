@@ -7135,7 +7135,7 @@
 
   /* ---------------- input / lifecycle ---------------- */
   function cacheUI() {
-    const ids = ['app', 'menuScreen', 'menuCanvas', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
+    const ids = ['app', 'menuScreen', 'menuCanvas', 'padState', 'padHint', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
       'gameLayout', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'slotCount', 'loadoutList',
@@ -7430,6 +7430,78 @@
         ? `已识别手柄：${Input.gamepad.id || 'Controller'}`
         : '未检测到手柄。连接后按任意键；浏览器需支持 Gamepad API 并保持页面聚焦。';
     el.classList.toggle('is-on', Input.gamepad.connected);
+    document.body.classList.toggle('pad-connected', !!Input.gamepad.connected);
+    syncPadCues();
+    if (!Input.gamepad.connected) updatePadHint(null);
+  }
+
+  function syncPadCues() {
+    const on = !!Input.gamepad.connected;
+    const stageCta = document.querySelector('.stage-picker-card__cta');
+    if (stageCta) stageCta.innerHTML = on ? 'A 打开星图' : '打开星图 <b>↗</b>';
+    document.querySelectorAll('.pilot-card__cta').forEach(el => {
+      el.innerHTML = on ? 'A 更换' : '更换 <b>↗</b>';
+    });
+    const startArrow = U.startBtn && U.startBtn.querySelector('.cta__arrow');
+    if (startArrow) startArrow.textContent = on ? 'A' : '↗';
+  }
+
+  function updatePadHint(ctx) {
+    const el = U.padHint;
+    const g = Input.gamepad;
+    if (!el) return;
+    if (!g.connected || !ctx) {
+      el.classList.remove('is-visible');
+      el.innerHTML = '';
+      g.hintKey = '';
+      return;
+    }
+    const base = {
+      menu: [['方向键', '选择'], ['A', '确认'], ['START', '出击']],
+      stage: [['方向键', '选择星区'], ['A', '进入'], ['B', '返回']],
+      tank: [['方向键', '选择坦克'], ['A', '装备'], ['B', '返回']],
+      fusion: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      codex: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      item: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      save: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      how: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      art: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
+      pause: [['A', '继续'], ['B', '返回']],
+      result: [['A', '再次出击'], ['B', '机库']],
+      levelup: [['方向键', '选择'], ['A', '确认'], ['B', '重掷']]
+    };
+    const scrollable = !!padScrollRoot(ctx);
+    const hintKey = `${ctx.key}:${scrollable ? 1 : 0}`;
+    if (g.hintKey === hintKey && el.classList.contains('is-visible')) return;
+    g.hintKey = hintKey;
+    const parts = (base[ctx.key] || base.menu).slice();
+    if (scrollable) parts.splice(2, 0, ['LB/RB', '翻页']);
+    const html = parts.map(([key, label]) => `<span><kbd>${key}</kbd>${label}</span>`).join('');
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.classList.add('is-visible');
+  }
+
+  function padScrollRoot(ctx) {
+    if (!ctx) return null;
+    const selectors = {
+      codex: '#codexGrid',
+      item: '#itemGrid',
+      how: '.how__panel',
+      fusion: '.how__panel',
+      art: '.art-panel'
+    };
+    const selector = selectors[ctx.key];
+    if (!selector) return null;
+    const el = ctx.root.querySelector(selector);
+    if (!el || el.scrollHeight <= el.clientHeight + 4) return null;
+    return el;
+  }
+
+  function padScrollPage(ctx, dir) {
+    const el = padScrollRoot(ctx);
+    if (!el) return false;
+    el.scrollBy({ top: Math.max(90, el.clientHeight * .72) * dir, behavior: 'auto' });
+    return true;
   }
 
   function isUiVisible(el) {
@@ -7442,7 +7514,7 @@
     const overlays = [
       ['levelup', U.levelupScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
       ['stage', U.stageScreen], ['tank', U.tankScreen], ['fusion', U.fusionScreen],
-      ['codex', U.codexScreen], ['item', U.itemScreen], ['save', U.saveScreen], ['how', U.howScreen]
+      ['codex', U.codexScreen], ['item', U.itemScreen], ['art', U.artScreen], ['save', U.saveScreen], ['how', U.howScreen]
     ];
     for (const [key, el] of overlays) {
       if (isUiVisible(el)) return { key, root: el };
@@ -7467,6 +7539,7 @@
     g.focusEl = el;
     el.classList.add('is-pad-focus');
     try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+    try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
   }
 
   function clearPadFocus() {
@@ -7482,6 +7555,14 @@
     if (ctx.key === 'pause') return U.resumeBtn;
     if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
     const list = padFocusables(ctx.root);
+    if (ctx.key === 'stage') {
+      return list.find(el => el.classList.contains('arena-card') && el.classList.contains('is-active')) ||
+        list.find(el => el.classList.contains('arena-card')) || list[0] || null;
+    }
+    if (ctx.key === 'tank') {
+      return list.find(el => el.classList.contains('tank-card') && el.classList.contains('is-active')) ||
+        list.find(el => el.classList.contains('tank-card')) || list[0] || null;
+    }
     return list.find(el => el.classList.contains('arena-card') || el.classList.contains('tank-card')) ||
       list.find(el => el.classList.contains('cta') && !el.classList.contains('close-btn')) || list[0] || null;
   }
@@ -7489,7 +7570,7 @@
   function syncPadContext(force) {
     const g = Input.gamepad;
     const ctx = uiContext();
-    if (!ctx) { g.uiKey = ''; clearPadFocus(); return null; }
+    if (!ctx) { g.uiKey = ''; clearPadFocus(); updatePadHint(null); return null; }
     if (force || ctx.key !== g.uiKey) {
       g.uiKey = ctx.key;
       g.selectedCard = ctx.key === 'levelup' ? -1 : 0;
@@ -7501,6 +7582,7 @@
       const first = defaultPadFocus(ctx);
       if (first) setPadFocus(first); else clearPadFocus();
     }
+    updatePadHint(ctx);
     return ctx;
   }
 
@@ -7525,11 +7607,9 @@
       const score = primary + perp * 2.1;
       if (score < bestScore) { bestScore = score; best = el; }
     }
-    if (best) { setPadFocus(best); return; }
-    // Keep short lists usable at the edges: wrap to the nearest item in the
-    // requested direction rather than dropping input.
-    if (dx) setPadFocus(dx > 0 ? list[0] : list[list.length - 1]);
-    else setPadFocus(dy > 0 ? list[0] : list[list.length - 1]);
+    // Controller convention: edges are hard stops. Wrapping from the last
+    // stage card back to the first one feels like a teleport, not navigation.
+    if (best) setPadFocus(best);
   }
 
   function activatePadFocus() {
@@ -7556,6 +7636,7 @@
     else if (ctx.key === 'fusion') closeFusionScreen();
     else if (ctx.key === 'codex') closeCodexScreen();
     else if (ctx.key === 'item') closeItemGuide();
+    else if (ctx.key === 'art') closeArtScreen();
     else if (ctx.key === 'save') closeSaveScreen();
     else if (ctx.key === 'how') hideHow();
     else if (ctx.key === 'pause') resumeGame();
@@ -7612,25 +7693,40 @@
     const just = i => pressed(i) && !was(i);
     const dpadPressed = pressed(12) || pressed(13) || pressed(14) || pressed(15);
     let padStep = null;
-    if (G.mode !== 'playing' && !dpadPressed) {
-      const ax = Math.abs(x) >= .48 ? Math.sign(x) : 0;
-      const ay = Math.abs(y) >= .48 ? Math.sign(y) : 0;
-      if (ax || ay) {
-        const dx = Math.abs(ax) >= Math.abs(ay) ? ax : 0;
-        const dy = dx ? 0 : ay;
+    if (G.mode !== 'playing') {
+      if (dpadPressed) {
+        const dx = (pressed(15) ? 1 : 0) - (pressed(14) ? 1 : 0);
+        const dy = (pressed(13) ? 1 : 0) - (pressed(12) ? 1 : 0);
         const nowMs = performance.now();
-        if (dx !== g.uiDirX || dy !== g.uiDirY) {
-          g.uiDirX = dx; g.uiDirY = dy; g.uiRepeatAt = nowMs + 340;
+        if (dx !== g.dpadDirX || dy !== g.dpadDirY) {
+          g.dpadDirX = dx; g.dpadDirY = dy; g.dpadRepeatAt = nowMs + 340;
           padStep = { dx, dy };
-        } else if (nowMs >= g.uiRepeatAt) {
-          g.uiRepeatAt = nowMs + 150;
+        } else if (nowMs >= g.dpadRepeatAt) {
+          g.dpadRepeatAt = nowMs + 140;
           padStep = { dx, dy };
         }
       } else {
-        g.uiDirX = 0; g.uiDirY = 0;
+        g.dpadDirX = 0; g.dpadDirY = 0;
+        const ax = Math.abs(x) >= .48 ? Math.sign(x) : 0;
+        const ay = Math.abs(y) >= .48 ? Math.sign(y) : 0;
+        if (ax || ay) {
+          const dx = Math.abs(ax) >= Math.abs(ay) ? ax : 0;
+          const dy = dx ? 0 : ay;
+          const nowMs = performance.now();
+          if (dx !== g.uiDirX || dy !== g.uiDirY) {
+            g.uiDirX = dx; g.uiDirY = dy; g.uiRepeatAt = nowMs + 340;
+            padStep = { dx, dy };
+          } else if (nowMs >= g.uiRepeatAt) {
+            g.uiRepeatAt = nowMs + 150;
+            padStep = { dx, dy };
+          }
+        } else {
+          g.uiDirX = 0; g.uiDirY = 0;
+        }
       }
-    } else if (G.mode === 'playing') {
+    } else {
       g.uiDirX = 0; g.uiDirY = 0;
+      g.dpadDirX = 0; g.dpadDirY = 0;
     }
 
     if (G.mode === 'playing') {
@@ -7658,6 +7754,8 @@
         if (just(1)) rerollUpgrades(padOwnerLabel);
         if (g.selectedCard < 0) syncLevelupFocus();
       } else if (ctx) {
+        if (just(4)) padScrollPage(ctx, -1);
+        if (just(5)) padScrollPage(ctx, 1);
         if (padStep) movePadFocus(padStep.dx, padStep.dy);
         else if (just(12)) movePadFocus(0, -1);
         else if (just(13)) movePadFocus(0, 1);
@@ -7666,9 +7764,10 @@
         if (just(0)) activatePadFocus();
         if (just(1)) backPadContext();
         if (just(9)) {
-          if (G.mode === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
-          else if (G.mode === 'paused') resumeGame();
-          else if (G.mode === 'result') returnToMenu();
+          // START belongs to the current focus context, not the background menu.
+          if (ctx.key === 'menu') { AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); }
+          else if (ctx.key === 'pause') resumeGame();
+          else if (ctx.key === 'result') returnToMenu();
         }
       } else if (G.mode === 'paused') {
         if (just(0) || just(9)) resumeGame();
