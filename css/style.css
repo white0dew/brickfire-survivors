@@ -2688,6 +2688,6 @@ body.pad-connected .sf-hint { display: flex; }
 @media (max-width: 1100px) {
   .hud-base { width: min(360px, 32vw); }
 }
-@media (max-width: 740px) {
+@media (max-width: 700px) {
   .hud-base { display: none; }
 }
