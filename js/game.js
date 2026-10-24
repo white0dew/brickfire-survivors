@@ -320,9 +320,10 @@
         if (ART.stage !== requestStage) return;
         ART.images[key] = img;
         if (key === 'floor' && G.mode === 'playing' && G.arena && G.arena.id === requestStage) buildGroundCache();
+        if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261023-11`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261024-12`;
     }
   }
 
@@ -1700,7 +1701,7 @@
     }[e.type];
     const hullKey = {
       scout: 'enemyScoutHull', grunt: 'enemyGruntHull', heavy: 'enemyHeavyHull',
-      sniper: 'enemySniperHull', elite: 'enemyEliteHull', mortar: 'enemyMortarHull'
+      sniper: 'enemySniperHull'
     }[e.type];
     if (hullKey) {
       const hull = artImage(hullKey);
@@ -1709,7 +1710,11 @@
       if (hull) return { img: hull, split: true, turret: null };
     }
     const img = fullKey ? artImage(fullKey) : null;
-    return img ? { img, split: false } : null;
+    // Mortar / elite / scrap already contain their gun in the AI sheet. Drawing a
+    // procedural turret on top produced a second barrel, so rotate the complete
+    // sprite instead and let it own the aim direction.
+    const aimWithTurret = e.type === 'mortar' || e.type === 'elite' || e.type === 'scrap';
+    return img ? { img, split: false, aimWithTurret } : null;
   }
 
   function drawGroundEnemyTurret(e) {
@@ -1737,7 +1742,8 @@
     if (!art) return false;
     const size = e.radius * 4.6;
     drawTankShadow(gameCtx, e.x, e.y, e.radius / 14);
-    drawSpriteArt(gameCtx, art.img, e.x, e.y, size, e.bodyAngle + Math.PI / 2, e.hitFlash > 0);
+    const bodyAngle = art.aimWithTurret ? e.turretAngle : e.bodyAngle;
+    drawSpriteArt(gameCtx, art.img, e.x, e.y, size, bodyAngle + Math.PI / 2, e.hitFlash > 0);
     if (art.turret) {
       const recoil = Math.max(0, e.recoil || 0) * 2.2;
       drawSpriteArt(
