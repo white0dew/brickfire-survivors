@@ -2958,7 +2958,7 @@
     U.sectorLabel.textContent = `第 ${index + 1} 区 · ${MAPS[index].name} · ${diff.name}${G.endless ? ' · 无尽' : ''}`;
     U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : '生存至撤离 · 06:00';
     U.sideTip.textContent = G.twoPlayer
-      ? `P1 // ${G.tank.name} · P2 // ${tankData(G.players[1]).name}`
+      ? `P1 · ${G.tank.name} · P2 · ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
     if (U.pilotHudName) U.pilotHudName.textContent = G.tank.name;
     if (U.coopName2 && G.twoPlayer && G.players[1]) U.coopName2.textContent = tankData(G.players[1]).name;
@@ -6465,7 +6465,7 @@
     if (U.mobileRecall) {
       U.mobileRecall.disabled = recallLeft > .03;
       U.mobileRecall.classList.toggle('is-cooling', recallLeft > .03);
-      U.mobileRecall.textContent = recallLeft <= .03 ? 'HOME' : `${Math.ceil(recallLeft)}s`;
+      U.mobileRecall.textContent = recallLeft <= .03 ? '回程' : `${Math.ceil(recallLeft)}s`;
     }
     if (U.coopPanel) {
       U.coopPanel.classList.toggle('is-hidden', !G.twoPlayer);
@@ -6479,7 +6479,7 @@
           if (b) b.textContent = q ? `${Math.ceil(q.hp)} / ${Math.ceil(q.maxHp)}` : '--';
           if (m) m.style.width = `${hp}%`;
           if (st) {
-            st.textContent = !q ? 'OFFLINE' : q.downed ? 'DOWN' : 'ONLINE';
+            st.textContent = !q ? '离线' : q.downed ? '倒地' : '在线';
             st.classList.toggle('is-down', !!q && q.downed);
             st.classList.toggle('is-alive', !!q && !q.downed);
           }
@@ -7899,9 +7899,9 @@
     const supported = !!(navigator.getGamepads || navigator.webkitGetGamepads);
     const p1 = Input.gamepad.connected ? (Input.gamepad.id || 'Controller') : '';
     const p2 = Input.gamepad2.connected ? (Input.gamepad2.id || 'Controller') : '';
-    el.textContent = !supported ? 'PAD / 不支持'
-      : p1 && p2 ? 'PAD / P1 + P2'
-        : p1 ? 'PAD / ONLINE' : 'PAD / 按手柄键';
+    el.textContent = !supported ? '手柄 / 不支持'
+      : p1 && p2 ? '手柄 / P1 + P2'
+        : p1 ? '手柄 / 已连接' : '手柄 / 未连接';
     el.title = !supported
       ? '当前浏览器不支持 Gamepad API；请使用 Chrome / Edge 等支持手柄的浏览器。'
       : p1
