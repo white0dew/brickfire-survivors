@@ -401,7 +401,7 @@
     grunt: {
       name: '突击坦克', en: 'ASSAULT', hp: 44, speed: 35, damage: 8, fire: 2.3, bulletSpeed: 260,
       xp: 3, radius: 13, color: '#b94f43', dark: '#612522', light: '#ff967b', core: '#ff5f4a', class: 'medium',
-      codex: '标准突击单位。火力与机动均衡，会优先逼近最近的车体或基地。'
+      codex: '标准突击单位。火力与机动均衡，会优先逼近车体，基地明显更近时才转火。'
     },
     heavy: {
       name: '重装攻城车', en: 'SIEGE', hp: 150, speed: 23, damage: 14, fire: 3.1, bulletSpeed: 205,

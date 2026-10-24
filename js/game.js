@@ -23,6 +23,11 @@
   const BASE_MAX_HP = 520;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
+  // Enemy target selection leans toward pilots, not the static base. A base
+  // must be meaningfully closer than a pilot before it steals the lock.
+  const ENEMY_TARGET_LOCK = 3.2;
+  const ENEMY_BASE_DIST_MULT = 1.75;
+  const PLAYER_AUTO_RANGE = 560;
   const SHAKE_SCALE = .5;
   const RECALL_CD = 30;
   const MAX_PARTICLES = 620;
@@ -229,10 +234,9 @@
 
   const Input = {
     keys: new Set(),
-    mouse: { x: W / 2, y: H / 2, over: false, down: false },
     mobile: { active: false, x: 0, y: 0 },
-    gamepad: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
-    gamepad2: { connected: false, id: '', index: -1, x: 0, y: 0, aimX: 0, aimY: 0, aimActive: false, fire: false, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [], dpadDirX: 0, dpadDirY: 0, dpadRepeatAt: 0, uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
+    gamepad: { connected: false, id: '', index: -1, x: 0, y: 0, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P1', prevButtons: [], focusEl: null, uiKey: '', uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
+    gamepad2: { connected: false, id: '', index: -1, x: 0, y: 0, selectedCard: -1, levelupNeedsNeutral: false, levelupOwner: 'P2', prevButtons: [], dpadDirX: 0, dpadDirY: 0, dpadRepeatAt: 0, uiDirX: 0, uiDirY: 0, uiRepeatAt: 0 },
     padSlots: { p1: { ref: null, index: -1, id: '' }, p2: { ref: null, index: -1, id: '' } },
     dashQueued: false,
     dashQueued2: false
@@ -2009,15 +2013,6 @@
       ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
       ctx.restore();
     }
-    // aim reticle
-    if (Input.mouse.down && Input.mouse.over) {
-      const mx = Input.mouse.x, my = Input.mouse.y;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = hexA('#ffb52d', .5); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(mx, my, 8, 0, TAU); ctx.stroke();
-      ctx.fillStyle = hexA('#ffb52d', .7); ctx.fillRect(mx - 1, my - 1, 2, 2);
-      ctx.restore();
-    }
   }
 
   function drawBullets(t) {
@@ -2833,7 +2828,6 @@
     G.lastPlayerCell = { x: 0, y: 0 };
     lastHudSignature = '';
     Input.keys.clear();
-    Input.mouse.down = false;
     Input.dashQueued = false; Input.dashQueued2 = false;
     Input.gamepad.selectedCard = -1;
     Input.gamepad.levelupNeedsNeutral = false;
@@ -2900,7 +2894,7 @@
     if (U.visualUnit) U.visualUnit.textContent = `${G.tank.name} «${G.tank.en}»`;
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ${MAPS[index].sector}`;
     if (U.coopPanel) U.coopPanel.classList.toggle('is-hidden', !G.twoPlayer);
-    if (U.deckHint) U.deckHint.innerHTML = G.twoPlayer ? '<span>P1 WASD + 鼠标</span> 移动/瞄准 <b>/</b> <span>P2 左摇杆/方向键 + 右摇杆</span> 移动/瞄准 <b>/</b> <span>SPACE / A</span> 冲刺' : '<span>WASD</span> 移动 <b>/</b> <span>鼠标 / 右摇杆</span> 瞄准 <b>/</b> <span>SPACE / A</span> 冲刺 <b>/</b> <span>ESC / START</span> 暂停';
+    if (U.deckHint) U.deckHint.innerHTML = G.twoPlayer ? '<span>P1 WASD</span> 移动 <b>/</b> <span>P2 左摇杆/方向键</span> 移动 <b>/</b> <span>自动火控</span> 正面优先 <b>/</b> <span>SPACE / A</span> 冲刺' : '<span>WASD</span> 移动 <b>/</b> <span>自动火控</span> 正面优先 <b>/</b> <span>SPACE / A</span> 冲刺 <b>/</b> <span>ESC / START</span> 暂停';
     const p = U.primaryIcon; if (p) { p.innerHTML = '<canvas data-icon="cannon" data-color="#ffb52d" data-size="36"></canvas>'; ICONS.applyAll(p); }
     renderLoadout();
     if (U.p1Feed) U.p1Feed.innerHTML = '';
@@ -3070,17 +3064,55 @@
     };
   }
 
-  function nearestTarget(x, y) {
+  function targetIsValid(target) {
+    if (!target) return false;
+    if (target.isBase) return !!(G.core && G.core.alive && G.core.hp > 0);
+    if (target.isSentry) {
+      const sentry = target.sentry;
+      return !!(sentry && sentry.life > 0 && sentry.hp > 0 && (G.sentries || []).includes(sentry));
+    }
+    return !!target.alive && !target.downed;
+  }
+
+  function nearestTarget(x, y, source) {
+    // Enemy locks are intentionally sticky. Re-evaluating every frame made
+    // enemies flip between a pilot, the base and a taunt sentry, which made
+    // solo play feel like the base was stealing all the aggro.
+    if (source && source.lockedTarget && source.targetLockUntil > G.elapsed) {
+      if (targetIsValid(source.lockedTarget)) return source.lockedTarget;
+    }
+    if (source) {
+      source.lockedTarget = null;
+      source.targetLockUntil = 0;
+    }
+
     // A deployed bastion is a deliberate fire magnet: enemies inside its
-    // taunt ring prefer it over the player or the base.
+    // taunt ring prefer it over the player or the base. Its taunt still wins,
+    // but the chosen sentry is locked like any other target.
     const sentry = nearestTauntSentry(x, y);
-    if (sentry) return sentry;
-    let best = nearestPlayer(x, y);
-    let bd = best ? dist2(x, y, best.x, best.y) : Infinity;
+    if (sentry) {
+      if (source) {
+        source.lockedTarget = sentry;
+        source.targetLockUntil = G.elapsed + ENEMY_TARGET_LOCK;
+      }
+      return sentry;
+    }
+
+    // Compare pilots and the base on weighted distance. The base is treated as
+    // 75% farther away, so a pilot wins unless the base is much closer.
+    let best = null, bestScore = Infinity;
+    for (const p of activePlayers()) {
+      const score = dist(x, y, p.x, p.y);
+      if (score < bestScore) { bestScore = score; best = p; }
+    }
     const b = baseTarget();
     if (b) {
-      const d = dist2(x, y, b.x, b.y);
-      if (d < bd) { bd = d; best = b; }
+      const score = dist(x, y, b.x, b.y) * ENEMY_BASE_DIST_MULT;
+      if (score < bestScore) { bestScore = score; best = b; }
+    }
+    if (source && best) {
+      source.lockedTarget = best;
+      source.targetLockUntil = G.elapsed + ENEMY_TARGET_LOCK;
     }
     return best;
   }
@@ -3094,17 +3126,6 @@
       if (d < r2 && d < bd) { bd = d; best = e; }
     }
     return best;
-  }
-
-  function autoLineClear(x1, y1, x2, y2, phaseSteel) {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const steps = Math.max(2, Math.ceil(len / 10));
-    for (let i = 1; i < steps; i++) {
-      const t = i / steps;
-      const tile = tileAt(lerp(x1, x2, t), lerp(y1, y2, t));
-      if (tile.type === 'brick' || (tile.type === 'steel' && !phaseSteel)) return false;
-    }
-    return true;
   }
 
   function nearestSeal(x, y, range) {
@@ -3125,30 +3146,39 @@
     return dist2(x, y, seal.x, seal.y) <= dist2(x, y, enemy.x, enemy.y) ? seal : enemy;
   }
 
-  // Auto-fire is intentionally cover-aware: it will not spend the player's
-  // cover-breaking shots on a target behind a wall. Manual aim still breaks walls.
-  // Seals are objectives, so auto-fire prioritizes an exposed seal over nearby trash.
-  function nearestAutoEnemy(p, range) {
+  function autoAngleDelta(a, b) {
+    return ((a - b + Math.PI) % TAU + TAU) % TAU - Math.PI;
+  }
+
+  function nearestDirectionalAttackable(p, range) {
+    if (!p) return null;
     const r2 = range * range;
-    const phaseSteel = !!statsFor(p).steelPierce;
-    let sealTarget = null, sealDist = Infinity;
-    for (const s of G.seals || []) {
-      if (s.dead) continue;
-      const d = dist2(p.x, p.y, s.x, s.y);
-      if (d < r2 && d < sealDist && autoLineClear(p.x, p.y, s.x, s.y, phaseSteel)) { sealDist = d; sealTarget = s; }
-    }
-    if (sealTarget) return sealTarget;
-    const candidates = [];
-    for (const e of G.enemies) {
-      if (e.dead || e.spawnTimer > 0) continue;
-      const d = dist2(p.x, p.y, e.x, e.y);
-      if (d < r2) candidates.push({ e, d });
-    }
-    candidates.sort((a, b) => a.d - b.d);
-    for (const c of candidates) {
-      if (autoLineClear(p.x, p.y, c.e.x, c.e.y, phaseSteel)) return c.e;
-    }
-    return null;
+    const facing = Number.isFinite(p.bodyAngle) ? p.bodyAngle : 0;
+    const scan = (front) => {
+      let best = null, bestD = Infinity, bestA = Infinity;
+      const consider = (target) => {
+        if (!target || target.dead) return;
+        const d = dist2(p.x, p.y, target.x, target.y);
+        if (d > r2) return;
+        const rel = Math.abs(autoAngleDelta(Math.atan2(target.y - p.y, target.x - p.x), facing));
+        if ((rel <= Math.PI / 2 + 1e-6) !== front) return;
+        if (d < bestD - 1e-6 || (Math.abs(d - bestD) <= 1e-6 && rel < bestA)) {
+          best = target; bestD = d; bestA = rel;
+        }
+      };
+      for (const e of G.enemies) {
+        if (e.dead || e.spawnTimer > 0) continue;
+        consider(e);
+      }
+      for (const s of G.seals || []) {
+        if (s.dead) continue;
+        consider(s);
+      }
+      return best;
+    };
+    // Front 180 degrees is the primary firing arc; only when it is empty do
+    // we turn the tank's fire control to the rear half.
+    return scan(true) || scan(false);
   }
 
   function fused(id, p) {
@@ -3334,35 +3364,24 @@
       p.moving = false; p.moveX = 0; p.moveY = 0;
       if (mag <= .08) { p.vx = 0; p.vy = 0; }
     }
-    // aim: P1 mouse, P2 right stick; otherwise both auto-lock
+    // Automatic fire control only. The turret prefers targets in the forward
+    // half of the hull's facing; the rear half is used only when the front is
+    // empty, and distance decides inside each half.
     let aimAngle = p.turretAngle;
     let aimPoint = null;
-    const mouseManual = idx === 0 && Input.mouse.down && Input.mouse.over;
-    const padManual = !!pad && pad.connected && pad.aimActive;
-    const forceFire = !!pad && pad.connected && pad.fire;
-    const manual = mouseManual || padManual;
-    const autoTarget = manual ? null : nearestAutoEnemy(p, 560);
-    if ((p.index || 0) === 0) G.autoHold = !manual && !autoTarget && !!nearestAttackable(p.x, p.y, 560);
-    if (mouseManual) {
-      aimAngle = Math.atan2(Input.mouse.y - p.y, Input.mouse.x - p.x);
-    } else if (padManual) {
-      aimPoint = { x: p.x + pad.aimX * 620, y: p.y + pad.aimY * 620 };
-      aimAngle = Math.atan2(aimPoint.y - p.y, aimPoint.x - p.x);
-    } else if (autoTarget) {
+    const autoTarget = nearestDirectionalAttackable(p, PLAYER_AUTO_RANGE);
+    if (autoTarget) {
       const lead = Math.min(.55, dist(p.x, p.y, autoTarget.x, autoTarget.y) / 620);
       const vx = autoTarget.moving ? Math.cos(autoTarget.bodyAngle) * autoTarget.speed : 0;
       const vy = autoTarget.moving ? Math.sin(autoTarget.bodyAngle) * autoTarget.speed : 0;
       aimPoint = { x: autoTarget.x + vx * lead, y: autoTarget.y + vy * lead };
       aimAngle = Math.atan2(aimPoint.y - p.y, aimPoint.x - p.x);
-    } else if (p.moving) {
+    } else {
       aimAngle = p.bodyAngle;
     }
-    p.turretAngle = angleLerp(p.turretAngle, aimAngle, dt * (manual ? 18 : 10));
-    if (p.fireCd <= 0) {
-      if (mouseManual) fireCannon(Input.mouse.x, Input.mouse.y, p);
-      else if (padManual) fireCannon(aimPoint.x, aimPoint.y, p);
-      else if (autoTarget) fireCannon(aimPoint.x, aimPoint.y, p);
-      else if (forceFire) fireCannon(p.x + Math.cos(p.turretAngle) * 300, p.y + Math.sin(p.turretAngle) * 300, p);
+    p.turretAngle = angleLerp(p.turretAngle, aimAngle, dt * 10);
+    if (p.fireCd <= 0 && autoTarget) {
+      fireCannon(aimPoint.x, aimPoint.y, p);
     }
   }
 
@@ -3630,7 +3649,7 @@
       const w = WEAPONS.scatter.levels[Math.min(7, scatterLvl - 1)];
       p.scatterTimer -= dt;
       if (p.scatterTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 560);
+        const target = nearestDirectionalAttackable(p, 560);
         if (target) {
           const baseA = Math.atan2(target.y - p.y, target.x - p.x);
           const pellets = w.pellets + (fused('scatter', p) ? 3 : 0);
@@ -3654,7 +3673,7 @@
       const w = WEAPONS.laser.levels[Math.min(7, laserLvl - 1)];
       p.laserTimer -= dt;
       if (p.laserTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 600);
+        const target = nearestDirectionalAttackable(p, 600);
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
           spawnPlayerBullet(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, a, w.speed, w.damage * (fused('laser', p) ? 1.55 : 1), p, {
@@ -3672,7 +3691,7 @@
       const w = WEAPONS.missile.levels[Math.min(7, missileLvl - 1)];
       p.missileTimer -= dt;
       if (p.missileTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 600);
+        const target = nearestDirectionalAttackable(p, 600);
         if (target) {
           const count = w.count + (fused('missile', p) ? 2 : 0);
           for (let i = 0; i < count; i++) {
@@ -3751,7 +3770,7 @@
       const w = WEAPONS.gravity.levels[Math.min(7, gravityLvl - 1)];
       p.gravityTimer -= dt;
       if (p.gravityTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 560);
+        const target = nearestDirectionalAttackable(p, 560);
         if (target) {
           if (G.vortices.length > 8) G.vortices.shift();
           G.vortices.push({
@@ -3772,7 +3791,7 @@
       const w = WEAPONS.mortar.levels[Math.min(7, mortarLvl - 1)];
       p.mortarTimer -= dt;
       if (p.mortarTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 650);
+        const target = nearestDirectionalAttackable(p, 650);
         if (target) {
           const shells = w.count + (fused('mortar', p) ? 1 : 0);
           const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0 && dist2(p.x, p.y, e.x, e.y) < 650 * 650);
@@ -3855,7 +3874,7 @@
       const w = WEAPONS.rail.levels[Math.min(7, railLvl - 1)];
       p.railTimer -= dt;
       if (p.railTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 650);
+        const target = nearestDirectionalAttackable(p, 650);
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
           spawnPlayerBullet(p.x + Math.cos(a) * 26, p.y + Math.sin(a) * 26, a, w.speed, w.damage * (fused('rail', p) ? 1.35 : 1), p, {
@@ -4275,7 +4294,7 @@
     e.fireCd -= dt;
     e.abilityCd -= dt;
     e.airPhase += dt;
-    const p = nearestTarget(e.x, e.y);
+    const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
     const targetDist = dist(e.x, e.y, p.x, p.y);
     e.turretAngle = angleLerp(e.turretAngle, Math.atan2(p.y - e.y, p.x - e.x), dt * 5);
@@ -4333,7 +4352,7 @@
     e.abilityCd -= dt;
     e.teleportCd -= dt;
     e.airPhase += dt;
-    const p = nearestTarget(e.x, e.y);
+    const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
     const targetDist = dist(e.x, e.y, p.x, p.y);
     e.turretAngle = angleLerp(e.turretAngle, Math.atan2(p.y - e.y, p.x - e.x), dt * 4);
@@ -4391,7 +4410,7 @@
     else e.fireCd = Math.max(e.fireCd, 1.4);
     e.abilityCd -= dt;
     e.recoil = Math.max(0, e.recoil - dt * 6);
-    const p = nearestTarget(e.x, e.y);
+    const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
     const targetMode = p.isBase ? 'base' : 'player';
     const tx = p.x;
@@ -4533,7 +4552,7 @@
   }
 
   function bossFan(e, count, spread, speedMul, damageMul, color, radius) {
-    const p = nearestTarget(e.x, e.y);
+    const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
     const a = Math.atan2(p.y - e.y, p.x - e.x);
     for (let i = 0; i < count; i++) {
@@ -4994,7 +5013,7 @@
   }
 
   function updateBoss(e, dt) {
-    const p = nearestTarget(e.x, e.y);
+    const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
     e.fireCd -= dt;
     e.minionTimer -= dt;
@@ -6280,12 +6299,11 @@
       const bossName = G.boss.bossName || '首领';
       U.phaseLabel.textContent = `首领 · ${bossName}`;
       U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 撑到撤离`;
-      U.sideTip.textContent = G.twoPlayer ? `${bossName}追最近的车体。保持移动，队友别站同一条弹道。` : `${bossName}只追你。保持移动，别被逼进死角。`;
+      U.sideTip.textContent = G.twoPlayer ? `${bossName}优先锁定车体。保持移动，队友别站同一条弹道。` : `${bossName}优先锁定你的车体。保持移动，别被逼进死角。`;
     } else {
       U.phaseLabel.textContent = `第 ${G.waveIndex + 1} 波 · ${wave.label}`;
       U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : `生存至撤离 · ${fmtShort(remain)}`;
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 · 拉开距离，先吃维修包。';
-      else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 · 手动瞄准可拆墙。';
       else if (endless) U.sideTip.textContent = `无尽协议 · 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
       else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 · 保持移动，别被包夹。';
       else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
@@ -6887,7 +6905,6 @@
     if (U.codexScreen) U.codexScreen.classList.add('hidden');
     if (U.saveScreen) U.saveScreen.classList.add('hidden');
     U.bossHud.classList.add('is-hidden');
-    Input.mouse.down = false;
     Input.keys.clear();
     Input.dashQueued = false; Input.dashQueued2 = false;
     menuCache = null;
@@ -6938,7 +6955,6 @@
     if (G.mode !== 'playing') return;
     G.mode = 'paused';
     Input.keys.clear();
-    Input.mouse.down = false;
     Input.dashQueued = false; Input.dashQueued2 = false;
     U.pauseScreen.classList.remove('hidden');
     AUDIO.tick();
@@ -7564,24 +7580,6 @@
     U.pauseScreen.addEventListener('click', e => { if (e.target.classList.contains('overlay__backdrop')) resumeGame(); });
     U.levelupScreen.addEventListener('click', e => { if (e.target.classList.contains('overlay__backdrop')) { /* must choose */ } });
 
-    U.gameCanvas.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Input.mouse.over = true; });
-    U.gameCanvas.addEventListener('pointerleave', () => { Input.mouse.over = false; Input.mouse.down = false; });
-    U.gameCanvas.addEventListener('pointermove', e => {
-      const r = U.gameCanvas.getBoundingClientRect();
-      Input.mouse.x = (e.clientX - r.left) / r.width * W;
-      Input.mouse.y = (e.clientY - r.top) / r.height * H;
-      Input.mouse.over = true;
-    });
-    U.gameCanvas.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-      const r = U.gameCanvas.getBoundingClientRect();
-      Input.mouse.x = (e.clientX - r.left) / r.width * W;
-      Input.mouse.y = (e.clientY - r.top) / r.height * H;
-      Input.mouse.down = true;
-      Input.mouse.over = true;
-      if (G.mode === 'playing' && e.pointerType !== 'mouse') e.preventDefault();
-    });
-    window.addEventListener('pointerup', () => { Input.mouse.down = false; });
     U.gameCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
     window.addEventListener('keydown', e => {
@@ -7663,7 +7661,7 @@
     window.addEventListener('keyup', e => Input.keys.delete(e.code));
     const autoPauseEnabled = !new URLSearchParams(location.search).has('noauto');
     window.addEventListener('blur', () => {
-      Input.keys.clear(); Input.mouse.down = false;
+      Input.keys.clear();
       if (autoPauseEnabled && G.mode === 'playing') pauseGame();
     });
     document.addEventListener('visibilitychange', () => {
@@ -8104,7 +8102,6 @@
     const secondary = p2 || null;
     const resetPad = (state) => {
       state.connected = false; state.id = ''; state.index = -1; state.x = 0; state.y = 0;
-      state.aimActive = false; state.aimX = 0; state.aimY = 0; state.fire = false;
       state.prevButtons = [];
     };
     if (!primary) {
@@ -8142,15 +8139,6 @@
       state.x = x; state.y = y;
       state.buttons = btns;
 
-      const ax = gp.axes[2] || 0, ay = gp.axes[3] || 0;
-      const aimMag = Math.hypot(ax, ay);
-      if (aimMag > .28) {
-        state.aimActive = true;
-        state.aimX = ax / aimMag; state.aimY = ay / aimMag;
-      } else {
-        state.aimActive = false; state.aimX = 0; state.aimY = 0;
-      }
-      state.fire = !!(btns[7] && btns[7].pressed) || !!(btns[6] && btns[6].pressed);
     };
 
     const hadPrimary = g.connected;
@@ -8340,7 +8328,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
