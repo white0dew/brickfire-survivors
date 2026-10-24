@@ -120,9 +120,27 @@
   function pickWaveType(wave) {
     const signatures = MAP_SIGNATURES[G.arena.id] || [];
     const unlocked = signatures.filter(entry => G.elapsed >= entry.at).map(entry => entry.type);
-    if (unlocked.length && chance(.42)) return pick(unlocked);
+    // Every map should feel like its own battlefield, not a recolored generic wave.
+    if (unlocked.length && chance(.62)) return pick(unlocked);
     return pick(wave.types);
   }
+
+  // Attack identity per enemy family. Shape + cadence matter more than color:
+  // a rail slug, a heavy siege shell, a homing orb and a standard shell should
+  // be readable at a glance and demand a different dodge.
+  const ENEMY_ATTACK_STYLE = {
+    scout:     { shape: 'shell', color: '#ff7a58', shots: 1, radius: 3.0, trail: 14 },
+    grunt:     { shape: 'shell', color: '#ff6860', shots: 2, spread: .055, damageMul: .72, radius: 3.1, trail: 16 },
+    heavy:     { shape: 'heavy', color: '#ffb35c', shots: 1, speedMul: .78, radius: 5.4, trail: 28, splash: 34, splashMul: .5 },
+    sniper:    { shape: 'rail',  color: '#9dbbff', shots: 1, speedMul: 1.15, radius: 2.0, trail: 58 },
+    elite:     { shape: 'orb',   color: '#ffd15c', shots: 3, spread: .14, radius: 4.0, trail: 22 },
+    bulwark:   { shape: 'heavy', color: '#ffcf73', shots: 1, speedMul: .82, radius: 5.0, trail: 24, splash: 28, splashMul: .45 },
+    splitter:  { shape: 'blob',  color: '#ff9d5a', shots: 1, radius: 4.0, trail: 20 },
+    drone:     { shape: 'orb',   color: '#7fe8ff', shots: 1, radius: 3.0, trail: 20 },
+    gunship:   { shape: 'heavy', color: '#ffc36b', shots: 2, spread: .12, damageMul: .72, radius: 4.4, trail: 24, splash: 26, splashMul: .4 },
+    saucer:    { shape: 'orb',   color: '#7fe8ff', shots: 1, homing: true, turn: .72, homingDelay: .12, radius: 3.1, trail: 24 },
+    warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 }
+  };
 
   const G = {
     mode: 'menu',
@@ -2024,6 +2042,7 @@
       const trailLen = b.trail || 12;
       const ang = Math.atan2(b.vy, b.vx);
       const r = b.radius;
+      const shape = b.shape || 'shell';
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(ang);
@@ -2040,20 +2059,72 @@
       grad.addColorStop(1, hexA(color, 0));
       ctx.strokeStyle = grad; ctx.lineWidth = Math.max(1, r * 1.05);
       ctx.beginPath(); ctx.moveTo(-r * .4, 0); ctx.lineTo(-trailLen, 0); ctx.stroke();
-      // crisp shell body with a dark pixel outline
+      // Distinct silhouettes, not just recolors: shell / siege / rail / orb / spore.
       ctx.globalCompositeOperation = 'source-over';
-      const w = Math.max(5, r * 2.7), h = Math.max(2.4, r * 1.35);
-      ctx.fillStyle = 'rgba(5,8,7,.92)';
-      ctx.fillRect(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2);
-      ctx.fillStyle = color;
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.fillStyle = isEnemy ? '#ffd4ac' : '#fff3bb';
-      ctx.fillRect(w * .12, -h * .26, w * .36, h * .52);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(w * .40, -1, 2, 2);
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = hexA('#ffffff', .7);
-      ctx.fillRect(-w * .62, -1, 1, 2);
+      if (shape === 'rail') {
+        const len = Math.max(18, r * 9), w = Math.max(1.6, r * .7);
+        ctx.fillStyle = 'rgba(5,8,7,.94)';
+        ctx.fillRect(-len * .76 - 1, -w / 2 - 1, len + 2, w + 2);
+        ctx.fillStyle = hexA(color, .55);
+        ctx.fillRect(-len * .76, -w / 2, len, w);
+        ctx.fillStyle = '#eef8ff';
+        ctx.fillRect(len * .02, -w * .26, len * .3, w * .52);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(len * .18, -1, 2, 2);
+      } else if (shape === 'heavy') {
+        const w = Math.max(9, r * 3.4), h = Math.max(5, r * 1.9);
+        ctx.fillStyle = 'rgba(5,8,7,.95)';
+        ctx.fillRect(-w * .72 - 1, -h * .5 - 1, w + 2, h + 2);
+        ctx.fillStyle = hexA(color, .6);
+        ctx.fillRect(-w * .68, -h * .36, w * .35, h * .72);
+        ctx.fillStyle = color;
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+        ctx.fillStyle = 'rgba(5,8,7,.9)';
+        ctx.fillRect(w * .06, -h * .3, w * .3, h * .6);
+        ctx.fillStyle = hexA('#fff2c0', .95);
+        ctx.fillRect(w * .11, -h * .18, w * .2, h * .36);
+      } else if (shape === 'orb') {
+        ctx.fillStyle = 'rgba(5,8,7,.9)';
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.4, 0, TAU); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.08, 0, TAU); ctx.fill();
+        ctx.fillStyle = hexA('#ffffff', .92);
+        ctx.beginPath(); ctx.arc(r * .2, -r * .2, Math.max(1, r * .36), 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(color, .62); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.8, 0, TAU); ctx.stroke();
+      } else if (shape === 'blob') {
+        const n = 8, rr = r * 1.65;
+        const jag = (scale) => {
+          ctx.beginPath();
+          for (let i = 0; i < n; i++) {
+            const a = i / n * TAU, rad = rr * scale * (i % 2 ? .72 : 1);
+            const px = Math.cos(a) * rad, py = Math.sin(a) * rad;
+            if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+          }
+          ctx.closePath();
+        };
+        ctx.fillStyle = 'rgba(5,8,7,.9)'; jag(1); ctx.fill();
+        ctx.fillStyle = color; jag(.78); ctx.fill();
+        ctx.fillStyle = hexA('#ffffff', .8);
+        ctx.beginPath(); ctx.arc(r * .15, -r * .15, Math.max(1, r * .28), 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(color, .5); ctx.lineWidth = 1; jag(.95); ctx.stroke();
+      } else {
+        // standard shell
+        const w = Math.max(5, r * 2.7), h = Math.max(2.4, r * 1.35);
+        ctx.fillStyle = 'rgba(5,8,7,.92)';
+        ctx.fillRect(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2);
+        ctx.fillStyle = color;
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+        ctx.fillStyle = isEnemy ? '#ffd4ac' : '#fff3bb';
+        ctx.fillRect(w * .12, -h * .26, w * .36, h * .52);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(w * .40, -1, 2, 2);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = hexA('#ffffff', .7);
+        ctx.fillRect(-w * .62, -1, 1, 2);
+      }
       ctx.restore();
     }
   }
@@ -4337,10 +4408,20 @@
       }
     }
     if (e.damage > 0 && e.fireCd <= 0 && targetDist < 480 && e.ai !== 'airBomber') {
+      const st = ENEMY_ATTACK_STYLE[e.type] || {};
       const a = Math.atan2(p.y - e.y, p.x - e.x);
-      fireEnemyBullet(e, e.x + Math.cos(a) * 15, e.y + Math.sin(a) * 15, a, e.bulletSpeed, e.damage, {
-        color: e.ai === 'airGunship' ? '#ffc36b' : '#7fe8ff', radius: 2.8, trail: 18
-      });
+      const shots = Math.max(1, st.shots || 1);
+      const spread = st.spread || 0;
+      for (let i = 0; i < shots; i++) {
+        const aa = a + (i - (shots - 1) / 2) * spread;
+        fireEnemyBullet(e, e.x + Math.cos(aa) * 15, e.y + Math.sin(aa) * 15, aa, e.bulletSpeed * (st.speedMul || 1), e.damage * (st.damageMul || 1), {
+          color: st.color || (e.ai === 'airGunship' ? '#ffc36b' : '#7fe8ff'),
+          radius: st.radius || 2.8, trail: st.trail || 18,
+          shape: st.shape || 'orb', splash: st.splash || 0,
+          splashMul: st.splashMul == null ? .5 : st.splashMul,
+          homing: !!st.homing, turn: st.turn, homingDelay: st.homingDelay
+        });
+      }
       e.fireCd = Math.max(.7, (e.fireInterval || 2.2) * rand(1.2, .8));
       e.recoil = 1;
     }
@@ -4395,10 +4476,20 @@
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 42, life: .45, maxLife: .45, color: '#9b7bff' });
     }
     if (e.damage > 0 && e.fireCd <= 0 && targetDist < 440 && e.ai !== 'xenoBeam') {
+      const st = ENEMY_ATTACK_STYLE[e.type] || {};
       const a = Math.atan2(p.y - e.y, p.x - e.x);
-      fireEnemyBullet(e, e.x + Math.cos(a) * 18, e.y + Math.sin(a) * 18, a, e.bulletSpeed, e.damage, {
-        color: e.ai === 'xenoWarden' ? '#b9a8ff' : '#7fe8ff', radius: 2.8, trail: 22
-      });
+      const shots = Math.max(1, st.shots || 1);
+      const spread = st.spread || 0;
+      for (let i = 0; i < shots; i++) {
+        const aa = a + (i - (shots - 1) / 2) * spread;
+        fireEnemyBullet(e, e.x + Math.cos(aa) * 18, e.y + Math.sin(aa) * 18, aa, e.bulletSpeed * (st.speedMul || 1), e.damage * (st.damageMul || 1), {
+          color: st.color || (e.ai === 'xenoWarden' ? '#b9a8ff' : '#7fe8ff'),
+          radius: st.radius || 2.8, trail: st.trail || 22,
+          shape: st.shape || 'orb', splash: st.splash || 0,
+          splashMul: st.splashMul == null ? .5 : st.splashMul,
+          homing: !!st.homing, turn: st.turn, homingDelay: st.homingDelay
+        });
+      }
       e.fireCd = Math.max(.8, (e.fireInterval || 2.4) * rand(1.15, .8));
       e.recoil = 1;
     }
@@ -4416,6 +4507,7 @@
     const tx = p.x;
     const ty = p.y;
     const targetDist = dist(e.x, e.y, tx, ty);
+    const attackStyle = ENEMY_ATTACK_STYLE[e.type] || {};
     // turret aim
     if (e.type !== 'bomber') {
       e.turretAngle = angleLerp(e.turretAngle, Math.atan2(ty - e.y, tx - e.x), dt * 5);
@@ -4425,7 +4517,7 @@
       e.abilityCd = 8.5;
       for (let i = 0; i < 6; i++) {
         const a = i / 6 * TAU + rand(.15, -.15);
-        fireEnemyBullet(e, e.x + Math.cos(a) * 22, e.y + Math.sin(a) * 22, a, e.bulletSpeed * .48, e.damage * .35, { color: '#ffb52d', radius: 3.4 });
+        fireEnemyBullet(e, e.x + Math.cos(a) * 22, e.y + Math.sin(a) * 22, a, e.bulletSpeed * .48, e.damage * .35, { color: '#ffb52d', radius: 3.4, shape: 'orb' });
       }
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 64, life: .5, maxLife: .5, color: '#ffb52d' });
       addShake(3, .2);
@@ -4453,18 +4545,23 @@
       e.recoil = 1;
     } else if (targetDist < 455 && e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher') {
       const interval = e.fireInterval || ENEMIES[e.type].fire || 2.3;
-      const shots = e.elite ? 3 : 1;
-      const spread = e.elite ? .16 : 0;
-      const lead = targetMode === 'player' ? clamp(dist(e.x, e.y, tx, ty) / e.bulletSpeed, 0, .22) : 0;
+      const shots = Math.max(1, attackStyle.shots || (e.elite ? 3 : 1));
+      const spread = attackStyle.spread != null ? attackStyle.spread : (e.elite ? .16 : 0);
+      const bulletSpeed = e.bulletSpeed * (attackStyle.speedMul || 1);
+      const bulletDamage = e.damage * (attackStyle.damageMul || 1);
+      const lead = targetMode === 'player' ? clamp(dist(e.x, e.y, tx, ty) / bulletSpeed, 0, .22) : 0;
       const px = targetMode === 'player' ? p.x + p.moveX * p.speed * lead : tx;
       const py = targetMode === 'player' ? p.y + p.moveY * p.speed * lead : ty;
       const baseAngle = Math.atan2(py - e.y, px - e.x);
       for (let i = 0; i < shots; i++) {
         const a = baseAngle + (i - (shots - 1) / 2) * spread;
-        fireEnemyBullet(e, e.x + Math.cos(a) * (e.radius + 5), e.y + Math.sin(a) * (e.radius + 5), a, e.bulletSpeed, e.damage, {
-          color: e.type === 'sniper' ? '#9dbbff' : e.elite ? '#ffd15c' : '#ff6860',
-          radius: e.type === 'heavy' || e.elite ? 4.2 : 3.2,
-          trail: e.type === 'sniper' ? 32 : 14
+        fireEnemyBullet(e, e.x + Math.cos(a) * (e.radius + 5), e.y + Math.sin(a) * (e.radius + 5), a, bulletSpeed, bulletDamage, {
+          color: attackStyle.color || (e.elite ? '#ffd15c' : '#ff6860'),
+          radius: attackStyle.radius || (e.elite ? 4.2 : 3.2),
+          trail: attackStyle.trail || 14,
+          shape: attackStyle.shape || (e.elite ? 'orb' : 'shell'),
+          splash: attackStyle.splash || 0,
+          splashMul: attackStyle.splashMul == null ? .5 : attackStyle.splashMul
         });
       }
       e.fireCd = interval * rand(1.15, .8);
@@ -4508,7 +4605,11 @@
             e.turretAngle = e.bodyAngle;
             if (e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher') {
               const bx = (dir.nx + .5) * TILE, by = (dir.ny + .5) * TILE;
-              fireEnemyBullet(e, e.x + Math.cos(e.bodyAngle) * (e.radius + 4), e.y + Math.sin(e.bodyAngle) * (e.radius + 4), e.bodyAngle, e.bulletSpeed, e.damage * 1.1, { color: '#ff8062', radius: 3.2 });
+              fireEnemyBullet(e, e.x + Math.cos(e.bodyAngle) * (e.radius + 4), e.y + Math.sin(e.bodyAngle) * (e.radius + 4), e.bodyAngle, e.bulletSpeed * (attackStyle.speedMul || 1), e.damage * 1.1, {
+                color: attackStyle.color || '#ff8062', radius: attackStyle.radius || 3.2,
+                trail: attackStyle.trail || 14, shape: attackStyle.shape || 'shell',
+                splash: attackStyle.splash || 0, splashMul: attackStyle.splashMul == null ? .5 : attackStyle.splashMul
+              });
               e.fireCd = (e.fireInterval || ENEMIES[e.type].fire || 2.2) * .75;
               e.recoil = 1;
             }
@@ -4539,10 +4640,12 @@
     opts = opts || {};
     if (G.enemyBullets.length > 240) return;
     const life = opts.life || 3;
+    const shape = opts.shape || (e && e.boss ? 'orb' : opts.homing ? 'orb' : 'shell');
     G.enemyBullets.push({
       x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
       radius: opts.radius || 3.2, damage, life, maxLife: life,
       color: opts.color || '#ff6860', trail: opts.trail || 14, enemy: true, ownerId: e.id, hit: null,
+      shape, splash: opts.splash || 0, splashMul: opts.splashMul == null ? .5 : opts.splashMul,
       homing: !!opts.homing, turn: opts.turn || 1.3, homingDelay: opts.homingDelay || 0
     });
     if (!G.lastEnemySound || performance.now() - G.lastEnemySound > 100) {
@@ -4616,7 +4719,7 @@
       const a = Math.atan2(p.y - e.y, p.x - e.x);
       for (let i = -1; i <= 1; i++) {
         const aa = a + i * .2;
-        fireEnemyBullet(e, e.x + Math.cos(aa) * 32, e.y + Math.sin(aa) * 32, aa, e.bulletSpeed, e.damage * .55, { color: '#b9f06a', radius: 3.8, trail: 22 });
+        fireEnemyBullet(e, e.x + Math.cos(aa) * 32, e.y + Math.sin(aa) * 32, aa, e.bulletSpeed, e.damage * .55, { color: '#b9f06a', radius: 3.8, trail: 22, shape: 'blob' });
       }
       e.fireCd = enraged ? 1.5 : 2.1;
       e.recoil = 1;
@@ -5190,6 +5293,24 @@
     addShake(7, .45); G.flash = Math.max(G.flash, .35); G.flashColor = tank.colors.core;
   }
 
+  function hostileShellSplash(b, x, y, direct) {
+    if (!b.splash) return;
+    const radius = b.splash;
+    addEffect({ type: 'ring', x, y, radius, life: .32, maxLife: .32, color: b.color || '#ffb15a' });
+    for (let i = 0; i < 7; i++) addParticle(x, y, rand(95, -95), rand(95, -95), b.color || '#ffb15a', 'spark', .38, 1.8);
+    for (const p of activePlayers()) {
+      if (p === direct) continue;
+      if (dist2(x, y, p.x, p.y) < (radius + p.radius) ** 2) damagePlayer(b.damage * b.splashMul, p);
+    }
+    if (G.core && G.core.alive && G.core !== direct && dist2(x, y, G.core.cx, G.core.cy) < (radius + G.core.radius) ** 2) {
+      damageBase(b.damage * b.splashMul, 'shell');
+    }
+    for (const s of G.sentries || []) {
+      if (s === direct || s.life <= 0 || s.hp <= 0) continue;
+      if (dist2(x, y, s.x, s.y) < (radius + s.radius) ** 2) damageSentry(s, b.damage * b.splashMul, 'shell');
+    }
+  }
+
   function updateBullets(dt) {
     for (const b of G.bullets) {
       if (b.dead) continue;
@@ -5275,9 +5396,11 @@
       const tile = tileAt(b.x, b.y);
       if (tile.type === 'brick') {
         hitTile(tile, b.x, b.y, 8, '#a55335', true);
+        hostileShellSplash(b, b.x, b.y, null);
         b.dead = true; continue;
       } else if (tile.type === 'steel') {
         for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(60, -60), rand(60, -60), '#ffe4ae', 'spark', .24, 1.8);
+        hostileShellSplash(b, b.x, b.y, null);
         b.dead = true; continue;
       }
       let blockDrone = null;
@@ -5290,6 +5413,7 @@
       }
       if (blockDrone) {
         blockDrone.blockFlash = .16;
+        hostileShellSplash(b, b.x, b.y, null);
         b.dead = true;
         addEffect({ type: 'ring', x: b.x, y: b.y, radius: 18, life: .24, maxLife: .24, color: '#bafff0' });
         for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(85, -85), rand(85, -85), '#bafff0', 'spark', .28, 1.5);
@@ -5298,16 +5422,19 @@
       const sentryHit = (G.sentries || []).find(s => s.life > 0 && s.hp > 0 && dist2(b.x, b.y, s.x, s.y) < (s.radius + b.radius + 1) ** 2);
       if (sentryHit) {
         damageSentry(sentryHit, b.damage, 'shell');
+        hostileShellSplash(b, b.x, b.y, sentryHit);
         b.dead = true;
         continue;
       }
       const hit = activePlayers().find(p => dist2(b.x, b.y, p.x, p.y) < (p.radius + b.radius + 1) ** 2);
       if (hit) {
         damagePlayer(b.damage, hit);
+        hostileShellSplash(b, b.x, b.y, hit);
         b.dead = true; continue;
       }
       if (G.core && G.core.alive && dist2(b.x, b.y, G.core.cx, G.core.cy) < (G.core.radius + b.radius + 1) ** 2) {
         damageBase(b.damage, 'shell');
+        hostileShellSplash(b, b.x, b.y, G.core);
         b.dead = true; continue;
       }
     }
@@ -5754,7 +5881,7 @@
         if ((G.core.turrets || 0) < max) {
           G.core.turrets = (G.core.turrets || 0) + 1;
           addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 46, life: .55, maxLife: .55, color: '#8fffe6' });
-          showPickupToast(p, `基地防御塔 ${G.core.turrets} / ${max} // 自动索敌启用`);
+          showPickupToast(p, `基地防御塔 ${G.core.turrets} / ${max} · 自动索敌启用`);
           AUDIO.item();
         } else {
           const heal = G.core.maxHp * .1;
