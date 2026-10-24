@@ -2986,8 +2986,9 @@
     }, 2600);
     setTimeout(() => { if (G.mode === 'playing') showToast('收集青色余烬，升级你的钢铁构筑'); }, 5600);
     if (G.seals.length) setTimeout(() => {
-      if (G.mode === 'playing') showToast(`封印 · 本关 ${G.seals.length} 座封印核心 · 主炮优先索敌 · 受击弹出增援`, 'red');
+      if (G.mode === 'playing') showToast(`封印 · 本关 ${G.seals.length} 座封印核心 · 主炮可索敌 · 受击弹出增援`, 'red');
     }, 4200);
+    if (G.arenaIndex === 0 && !G.endless) openTutorial();
   }
 
   function recalcStats(fullHeal) {
@@ -7500,6 +7501,34 @@
   }
   function hideHow() { U.howScreen.classList.add('hidden'); }
 
+  function openTutorial() {
+    if (!U.tutorialScreen) return;
+    G.mode = 'tutorial';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    Input.dashQueued = false; Input.dashQueued2 = false;
+    U.tutorialScreen.classList.remove('hidden');
+    U.tutorialScreen.setAttribute('aria-hidden', 'false');
+    ICONS.applyAll(U.tutorialScreen);
+    clearPadFocus();
+    if (Input.gamepad.connected) setPadFocus(U.tutorialStart);
+    AUDIO.tick();
+  }
+
+  function closeTutorial() {
+    if (G.mode !== 'tutorial') return;
+    U.tutorialScreen.classList.add('hidden');
+    U.tutorialScreen.setAttribute('aria-hidden', 'true');
+    G.mode = 'playing';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    Input.dashQueued = false; Input.dashQueued2 = false;
+    clearPadFocus();
+    AUDIO.confirm();
+  }
+
   /* ---------------- input / lifecycle ---------------- */
   function cacheUI() {
     const ids = ['app', 'menuScreen', 'menuCanvas', 'padState', 'padHint', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
@@ -7508,7 +7537,7 @@
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
-      'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
+      'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
@@ -7659,6 +7688,11 @@
     U.howClose.addEventListener('click', hideHow);
     U.howStart.addEventListener('click', () => { hideHow(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); });
     U.howScreen.addEventListener('click', e => { if (e.target === U.howScreen || e.target.classList.contains('overlay__backdrop')) hideHow(); });
+    U.tutorialStart.addEventListener('click', () => { AUDIO.init(); closeTutorial(); });
+    U.tutorialClose.addEventListener('click', () => { AUDIO.init(); closeTutorial(); });
+    U.tutorialScreen.addEventListener('click', e => {
+      if (e.target === U.tutorialScreen || e.target.classList.contains('overlay__backdrop')) closeTutorial();
+    });
     U.soundBtnMenu.addEventListener('click', toggleMute);
     U.soundBtn.addEventListener('click', toggleMute);
     U.pauseBtn.addEventListener('click', pauseGame);
@@ -7712,6 +7746,13 @@
     window.addEventListener('keydown', e => {
       if (e.code === 'KeyM') { toggleMute(); return; }
       if (e.code === 'KeyF') { toggleFullscreen(); return; }
+      if (G.mode === 'tutorial') {
+        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          closeTutorial();
+        }
+        return;
+      }
       if (e.code === 'Escape') {
         if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden')) { closeSettings(); return; }
         // Tank/fusion can sit on top of the stage or pause screens, so close
@@ -7946,6 +7987,7 @@
     }
     const base = {
       menu: [['方向键', '选择'], ['A', '确认'], ['START', '出击']],
+      tutorial: [['A', '开始作战'], ['B', '跳过教学']],
       stage: [['方向键', '选择星区'], ['A', '进入'], ['B', '返回']],
       tank: [['方向键', '选择坦克'], ['A', '装备'], ['B', '返回']],
       fusion: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
@@ -8006,7 +8048,7 @@
 
   function uiContext() {
     const overlays = [
-      ['levelup', U.levelupScreen], ['settings', U.settingsScreen], ['fusion', U.fusionScreen],
+      ['tutorial', U.tutorialScreen], ['levelup', U.levelupScreen], ['settings', U.settingsScreen], ['fusion', U.fusionScreen],
       ['tank', U.tankScreen], ['pause', U.pauseScreen], ['result', U.resultScreen],
       ['stage', U.stageScreen], ['codex', U.codexScreen], ['item', U.itemScreen],
       ['art', U.artScreen], ['save', U.saveScreen], ['how', U.howScreen]
@@ -8046,6 +8088,7 @@
   function defaultPadFocus(ctx) {
     if (!ctx) return null;
     if (ctx.key === 'menu') return document.querySelector('.sf-nav__item--start') || (U.menuNav && U.menuNav.querySelector('.sf-nav__item--start')) || U.startBtn;
+    if (ctx.key === 'tutorial') return U.tutorialStart;
     if (ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
     if (ctx.key === 'settings') return U.sfxVolume || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
@@ -8132,7 +8175,8 @@
     const ctx = syncPadContext(false);
     if (!ctx || ctx.key === 'menu') return false;
     if (ctx.key === 'levelup') return false;
-    if (ctx.key === 'stage') closeStageScreen();
+    if (ctx.key === 'tutorial') closeTutorial();
+    else if (ctx.key === 'stage') closeStageScreen();
     else if (ctx.key === 'tank') closeTankScreen();
     else if (ctx.key === 'fusion') closeFusionScreen();
     else if (ctx.key === 'codex') closeCodexScreen();
@@ -8455,7 +8499,7 @@
         if (autoMove) Input.keys.clear();
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / TOTAL_TIME * 100), level: G.level, kills: G.kills };
       };
-      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
+      window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, damageEnemy, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
