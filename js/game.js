@@ -546,27 +546,86 @@
       const c = tank.colors;
       const pulse = .65 + Math.sin(t * 3.2 + seal.seed) * .25;
       const pct = clamp(seal.hp / seal.maxHp, 0, 1);
+      const flash = seal.hitFlash > 0;
       const ctx = gameCtx;
       ctx.save();
       ctx.translate(seal.x, seal.y);
+
+      // Contained core glow.
       ctx.globalCompositeOperation = 'lighter';
-      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 34);
-      g.addColorStop(0, hexA(c.core, .22 * pulse));
-      g.addColorStop(1, hexA(c.core, 0));
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 34, 0, TAU); ctx.fill();
+      const glow = ctx.createRadialGradient(0, 0, 3, 0, 0, 38);
+      glow.addColorStop(0, hexA(c.core, .25 * pulse));
+      glow.addColorStop(.55, hexA(c.core, .08 * pulse));
+      glow.addColorStop(1, hexA(c.core, 0));
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(0, 0, 38, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = hexA(c.core, .35 + pulse * .25); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(0, 0, 22 + Math.sin(t * 2 + seal.ring) * 2, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = hexA(c.core, .2); ctx.setLineDash([4, 4]); ctx.lineDashOffset = -t * 14;
-      ctx.beginPath(); ctx.arc(0, 0, 27, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(3,8,6,.92)'; ctx.fillRect(-14, -14, 28, 28);
-      ctx.fillStyle = hexA(c.dark, .95); ctx.fillRect(-12, -12, 24, 24);
-      ctx.fillStyle = seal.hitFlash > 0 ? '#fff6d8' : c.core; ctx.fillRect(-8, -8, 16, 16);
-      ctx.fillStyle = c.light; ctx.fillRect(-4, -4, 8, 8);
-      ctx.fillStyle = 'rgba(4,10,8,.58)'; ctx.fillRect(-19, -31, 38, 4);
-      ctx.fillStyle = c.core; ctx.fillRect(-19, -31, 38 * pct, 4);
+
+      // Outer containment ring: broken rune circle with three orbiting
+      // shards. The seal reads as a floating monolith, not a wall tile.
+      ctx.strokeStyle = hexA(c.core, .28 + pulse * .22);
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 5]);
+      ctx.lineDashOffset = -t * 16;
+      ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      for (let i = 0; i < 3; i++) {
+        const a = t * .72 + seal.ring + i * TAU / 3;
+        const ox = Math.cos(a) * 25;
+        const oy = Math.sin(a) * 16;
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.fillStyle = flash ? '#fff6d8' : hexA(c.light, .8 + pulse * .15);
+        ctx.beginPath();
+        ctx.moveTo(0, -4); ctx.lineTo(3, 3); ctx.lineTo(-3, 3); ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Dark triangular monolith with a lit inner face.
+      ctx.lineJoin = 'miter';
+      ctx.beginPath();
+      ctx.moveTo(0, -20); ctx.lineTo(-17, 14); ctx.lineTo(17, 14); ctx.closePath();
+      ctx.fillStyle = 'rgba(3,8,6,.94)';
+      ctx.fill();
+      ctx.strokeStyle = flash ? '#fff6d8' : hexA(c.core, .85);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Left/right faces give the pyramid a readable 3D fold at 1x.
+      ctx.beginPath();
+      ctx.moveTo(0, -16); ctx.lineTo(-13, 12); ctx.lineTo(0, 12); ctx.closePath();
+      ctx.fillStyle = hexA(c.dark, .98);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, -16); ctx.lineTo(13, 12); ctx.lineTo(0, 12); ctx.closePath();
+      ctx.fillStyle = flash ? hexA('#fff6d8', .75) : hexA(c.core, .16);
+      ctx.fill();
+
+      // Inner sealed aperture and the unknown-pilot glyph.
+      ctx.beginPath();
+      ctx.moveTo(0, -10); ctx.lineTo(-8, 8); ctx.lineTo(8, 8); ctx.closePath();
+      ctx.fillStyle = 'rgba(3,8,6,.72)';
+      ctx.fill();
+      ctx.strokeStyle = hexA(c.light, .65);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -6); ctx.lineTo(5, 1); ctx.lineTo(0, 9); ctx.lineTo(-5, 1); ctx.closePath();
+      ctx.fillStyle = flash ? '#fff6d8' : hexA(c.core, .92);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(3,8,6,.92)';
+      ctx.font = '12px Silkscreen, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', 0, 1);
+      ctx.textBaseline = 'alphabetic';
+
+      // Nameplate and integrity meter float above the monolith.
+      ctx.fillStyle = 'rgba(4,10,8,.72)'; ctx.fillRect(-19, -34, 38, 3);
+      ctx.fillStyle = flash ? '#fff6d8' : c.core; ctx.fillRect(-19, -34, 38 * pct, 3);
       ctx.font = '7px Silkscreen, monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = hexA(c.light, .9); ctx.fillText(`M-${String(seal.tankIndex + 1).padStart(2, '0')}`, 0, -36);
+      ctx.fillStyle = hexA(c.light, .9); ctx.fillText(`M-${String(seal.tankIndex + 1).padStart(2, '0')}`, 0, -39);
       ctx.restore();
     }
     // Keep the hit flash decay independent of draw cadence.
