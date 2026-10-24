@@ -20,4 +20,4 @@ for this game. The source pages are listed below for provenance.
 | 09 Sky Citadel | `09-citadel.mp3` | Shooting - Shooter Game Music | vaitsez | https://pixabay.com/music/trap-shooting-shooter-game-music-578993/ |
 | 10 Abyss Pump | `10-abyss.mp3` | 3 Strike \| Battle Game BGM | bluelike_u | https://pixabay.com/music/metal-3-strike-battle-game-bgm-261231/ |
 | 11 Solar Rift | `11-solar.mp3` | Upbeat RPG Battle | vespidaze | https://pixabay.com/music/video-games-upbeat-rpg-battle-460971/ |
-| 12 Border Throne | `12-throne.mp3` | Battle Boss Fight Game Music | alex-morgan | https://pixabay.com/music/orchestral-battle-boss-fight-game-music-583276/ |
+| 12 Border Throne | `12-throne.mp3` | Epic Boss Battle Instrumental Metal - "Blood Ascendant" | DavidJBarrios | https://pixabay.com/music/metal-epic-boss-battle-instrumental-metal-quotblood-ascendantquot-515739/ |

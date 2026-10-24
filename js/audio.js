@@ -8,6 +8,7 @@
     '09-citadel.mp3', '10-abyss.mp3', '11-solar.mp3', '12-throne.mp3'
   ];
   const MENU_TRACK = '00-menu.mp3';
+  const BGM_VERSION = '20261024-61';
 
   class AudioEngine {
     constructor() {
@@ -217,7 +218,7 @@
 
     playBgmFile(file, token, fade, fallback) {
       if (this.bgmEl && file) {
-        this.bgmEl.src = `assets/audio/bgm/${file}`;
+        this.bgmEl.src = `assets/audio/bgm/${file}?v=${BGM_VERSION}`;
         this.bgmEl.currentTime = 0;
         if (this.bgmGain) {
           this.bgmGain.gain.cancelScheduledValues(this.t);
