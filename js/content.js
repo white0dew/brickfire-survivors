@@ -595,7 +595,7 @@
     star: { name: '火炮星星', en: 'STAR', color: '#ffb52d', glyph: '✦', desc: '主炮立即提升 1 级', detail: '主炮满级后，随机提升另一把武器；全部满级则修复 25 点装甲。' },
     grenade: { name: '震荡手雷', en: 'GRENADE', color: '#ff5b4a', glyph: '●', desc: '清除全屏敌弹并重创敌军', detail: '对屏幕内所有敌人造成高额伤害，同时清空敌方弹幕。' },
     helmet: { name: '反应头盔', en: 'HELMET', color: '#5ff0ce', glyph: '◒', desc: '获得 8 秒无敌护盾', detail: '持续期间免疫一切伤害；适合强行拾取或穿越弹幕。' },
-    timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', glyph: '◷', desc: '冻结所有敌人 7 秒', detail: '敌人停止移动与开火；Boss 同样受影响。' },
+    timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', glyph: '◷', desc: '冻结所有敌人 7 秒', detail: '敌人停止移动与开火；首领同样受影响。' },
     shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', glyph: '✚', desc: '修复车体 25%，并获得 2 秒无敌', detail: '立即回复最大装甲的 25%，短暂无敌便于脱离包围。' },
     tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', glyph: '▣', desc: '修复车体 45%，并提升 5 最大装甲', detail: '永久增加 5 点最大装甲，并按新上限修复 45%。' },
     basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', glyph: '⌂', desc: '修复基地装甲 24%', detail: '只对基地生效；基地装甲归零会立即失守。' },
@@ -988,7 +988,7 @@
   };
 
   // Role tags make each upgrade card's battlefield job explicit.
-  Object.assign(WEAPONS.cannon, { role:'单体爆发', focus:'Boss / 直线穿透' });
+  Object.assign(WEAPONS.cannon, { role:'单体爆发', focus:'首领 / 直线穿透' });
   Object.assign(WEAPONS.drone, { role:'环绕护卫', focus:'贴身索敌 / 弹幕拦截' });
   Object.assign(WEAPONS.arc, { role:'连锁清场', focus:'密集敌群 / 跳跃' });
   Object.assign(WEAPONS.flame, { role:'区域封锁', focus:'走位 / 持续灼烧' });
@@ -1002,7 +1002,7 @@
   Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
   Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
   Object.assign(WEAPONS.sentry, { role:'嘲讽阵地', focus:'吸引火力 / 基地守区' });
-  Object.assign(WEAPONS.emp, { role:'反弹幕 / 近场控制', focus:'EMP / 瘫痪与清弹' });
+  Object.assign(WEAPONS.emp, { role:'反弹幕 / 近场控制', focus:'电磁脉冲 / 瘫痪与清弹' });
   Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
   Object.assign(PASSIVES.engine, { role:'机动' });
   Object.assign(PASSIVES.armor, { role:'生存' });

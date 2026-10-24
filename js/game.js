@@ -747,7 +747,7 @@
     ctx.fillText('07', 42, H - 50);
     ctx.font = '9px Silkscreen, monospace';
     ctx.fillStyle = hexA(p.steelLight, .12);
-    ctx.fillText('BAY / 07 / ARMORED DIVISION', 44, H - 30);
+    ctx.fillText('机库 / 07 / 装甲分队', 44, H - 30);
     ctx.restore();
     // chips & cracks
     for (let i = 0; i < 14; i++) {
@@ -1101,7 +1101,7 @@
     ctx.strokeRect(c.cx - 26.5, c.y - 14.5, 53, 11);
     ctx.fillStyle = (c.hp / c.maxHp) < .3 ? '#ff8a8d' : hexA(p.core, .92);
     ctx.font = '6px Silkscreen, monospace'; ctx.textAlign = 'center';
-    ctx.fillText('BASE CORE', c.cx, c.y - 6.5);
+    ctx.fillText('基地核心', c.cx, c.y - 6.5);
     if (c.hp < c.maxHp) {
       ctx.fillStyle = 'rgba(3,10,8,.9)'; ctx.fillRect(c.cx - 27, c.y - 2, 54, 3);
       ctx.fillStyle = (c.hp / c.maxHp) < .3 ? '#ff5f4a' : p.core;
@@ -1904,7 +1904,7 @@
       ctx.fillStyle = 'rgba(4,8,7,.88)'; ctx.fillRect(e.x - w / 2, e.y - 50, w, 11);
       ctx.strokeStyle = sealBoss ? 'rgba(95,240,206,.65)' : 'rgba(255,181,45,.55)'; ctx.lineWidth = 1; ctx.strokeRect(e.x - w / 2 + .5, e.y - 49.5, w - 1, 10);
       ctx.fillStyle = sealBoss ? '#8fffe6' : '#ffd176'; ctx.font = '7px Silkscreen, monospace'; ctx.textAlign = 'center';
-      ctx.fillText(sealBoss ? `SEAL // ${e.sealLabel || 'GUARD'}` : 'BREAKER // ELITE', e.x, e.y - 42);
+      ctx.fillText(sealBoss ? `封印守卫 · ${e.sealLabel || ''}` : '精英', e.x, e.y - 42);
       ctx.fillStyle = 'rgba(5,9,7,.9)'; ctx.fillRect(e.x - w / 2, e.y - 36, w, 5);
       ctx.fillStyle = '#ffb52d'; ctx.fillRect(e.x - w / 2 + 1, e.y - 35, (w - 2) * clamp(e.hp / e.maxHp, 0, 1), 3);
     }
@@ -1931,7 +1931,7 @@
       ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(4,8,7,.82)'; ctx.fillRect(p.x - 22, p.y - 39, 44, 11);
       ctx.fillStyle = '#ff6858'; ctx.font = '6px Silkscreen, monospace'; ctx.textAlign = 'center';
-      ctx.fillText(`P${p.index + 1} DOWN`, p.x, p.y - 31);
+      ctx.fillText(`P${p.index + 1} 倒地`, p.x, p.y - 31);
       if (p.reviveProgress > 0) {
         ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(p.x - 18, p.y - 25, 36, 2);
         ctx.fillStyle = '#5ff0ce'; ctx.fillRect(p.x - 18, p.y - 25, 36 * clamp(p.reviveProgress / 2.4, 0, 1), 2);
@@ -2457,9 +2457,9 @@
     drawMenuSilhouette(ctx, 592, 482, .58, p);
     // hangar labels
     ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = hexA(p.steelLight, .32);
-    ctx.fillText(`BAY 07 // ${(G.tank || TANKS[0]).en} MAINTENANCE CRADLE`, 47, 500);
+    ctx.fillText('07 号机库 · 维护中', 47, 500);
     ctx.fillStyle = hexA(p.accent, .45);
-    ctx.fillText('CAUTION // LIVE ORDNANCE', 47, 516);
+    ctx.fillText('警告 · 实弹区域', 47, 516);
     menuCache = c;
   }
 
@@ -2890,7 +2890,7 @@
     U.bossHud.classList.add('is-hidden');
     if (U.bossMarker) U.bossMarker.style.display = G.endless ? 'none' : '';
     const diff = difficultyData(G.difficulty);
-    U.sectorLabel.textContent = `${MAPS[index].sector} / ${MAPS[index].en} · ${diff.name}${G.endless ? ' · ENDLESS' : ''}`;
+    U.sectorLabel.textContent = `第 ${index + 1} 区 · ${MAPS[index].name} · ${diff.name}${G.endless ? ' · 无尽' : ''}`;
     U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : '生存至撤离 · 06:00';
     U.sideTip.textContent = G.twoPlayer
       ? `P1 // ${G.tank.name} · P2 // ${tankData(G.players[1]).name}`
@@ -2921,7 +2921,7 @@
     }, 2600);
     setTimeout(() => { if (G.mode === 'playing') showToast('收集青色余烬，升级你的钢铁构筑'); }, 5600);
     if (G.seals.length) setTimeout(() => {
-      if (G.mode === 'playing') showToast(`SEAL // 本关 ${G.seals.length} 座封印核心 · 主炮优先索敌 · 受击弹出增援`, 'red');
+      if (G.mode === 'playing') showToast(`封印 · 本关 ${G.seals.length} 座封印核心 · 主炮优先索敌 · 受击弹出增援`, 'red');
     }, 4200);
   }
 
@@ -3221,7 +3221,7 @@
         addEffect({ type: 'ring', x: p.x, y: p.y, radius: 52, life: .65, maxLife: .65, color: '#5ff0ce' });
         addParticles(p.x, p.y, 18, '#5ff0ce', 'spark', 1.2);
         G.revives = (G.revives || 0) + 1;
-        showToast(`P${p.index + 1} 已重启 // 装甲恢复 35%`, 'cyan');
+        showToast(`P${p.index + 1} 已重启 · 装甲恢复 35%`, 'cyan');
         AUDIO.confirm(); rumble(.35, 100);
       }
     } else {
@@ -4030,7 +4030,7 @@
     if (wi !== G.waveIndex) {
       G.waveIndex = wi;
       const wave = getWave();
-      showToast(`WAVE ${String(wi + 1).padStart(2, '0')} // ${wave.label}${G.endless ? ' // ENDLESS' : ''}`, 'cyan');
+      showToast(`第 ${wi + 1} 波 · ${wave.label}${G.endless ? ' · 无尽' : ''}`, 'cyan');
       if (wi > 0 && G.mode === 'playing') {
         for (let i = 0; i < Math.min(3, 1 + Math.floor(wi / 2)); i++) spawnEnemy(pickWaveType(wave));
       }
@@ -4053,7 +4053,7 @@
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
       G.endlessEliteAt = G.elapsed + 150;
       spawnEnemy('elite', { warning: true });
-      showToast('无尽猎杀 // 精英单位进入战区', 'red');
+      showToast('无尽猎杀 · 精英单位进入战区', 'red');
       AUDIO.boss();
     }
     if (G.endless) {
@@ -4106,7 +4106,7 @@
       if (G.sideSpawnTimer <= 0) {
         const sidePoints = spawnPoolSides();
         if (G.enemies.length < cap && sidePoints.length) {
-          if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼突击 // 地图左右边缘持续入场', 'red'); }
+          if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼突击 · 地图左右边缘持续入场', 'red'); }
           const squad = G.endless ? Math.min(3, 1 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 180 ? 2 : 1);
           for (let i = 0; i < squad && G.enemies.length < cap; i++) {
             spawnEnemy(pickWaveType(wave), { spawn: chooseSpawnPoint(sidePoints) });
@@ -4189,10 +4189,10 @@
     G.flash = .7; G.flashColor = cfg.core;
     U.bossHud.classList.remove('is-hidden');
     const meta = U.bossHud.querySelector('.boss-hud__meta span');
-    if (meta) meta.textContent = `BOSS // ${cfg.name}`;
+    if (meta) meta.textContent = `首领 · ${cfg.name}`;
     U.bossHpLabel.textContent = `${Math.ceil(e.hp)} / ${Math.ceil(e.maxHp)}`;
     U.bossHpBar.style.width = '100%';
-    showToast(`${cfg.tag || cfg.en} // ${cfg.name} 降临`, 'red');
+    showToast(`${cfg.name} 降临`, 'red');
     AUDIO.boss(); AUDIO.setIntensity(1); rumble(1, 360);
   }
 
@@ -5122,7 +5122,7 @@
     if ((seal.minionCd || 0) <= 0) {
       spawnSealMinions(seal, 2);
       seal.minionCd = .52;
-      if (!seal.minionWarned) { seal.minionWarned = true; showToast('封印反应 // 守卫增援弹出', 'red'); }
+      if (!seal.minionWarned) { seal.minionWarned = true; showToast('封印反应 · 守卫增援弹出', 'red'); }
     }
     if (seal.hp <= 0) breakSeal(seal);
   }
@@ -5138,7 +5138,7 @@
     addShake(9, .5); G.flash = Math.max(G.flash, .5); G.flashColor = '#ffd05a';
     AUDIO.explode(1.4);
     spawnSealMinions(seal, 4, true);
-    showToast(`封印核心破裂 // ${tank ? tank.name : '未知底盘'} 守卫苏醒`, 'red');
+    showToast(`封印核心破裂 · ${tank ? tank.name : '未知底盘'} 守卫苏醒`, 'red');
     spawnSealBoss(seal);
   }
 
@@ -5148,13 +5148,13 @@
     const sp = { cx: clamp(Math.floor(seal.x / TILE), 1, COLS - 2), cy: clamp(Math.floor(seal.y / TILE), 1, ROWS - 2) };
     const e = spawnEnemy('elite', { spawn: sp, warning: true });
     if (!e) {
-      showToast('战场拥挤 // 封印守卫暂时无法入场', 'red');
+      showToast('战场拥挤 · 封印守卫暂时无法入场', 'red');
       seal.dead = false; seal.hp = 1;
       return;
     }
     e.x = seal.x; e.y = seal.y; e.cx = sp.cx; e.cy = sp.cy;
     e.sealTankId = tank.id;
-    e.sealLabel = tank.en || 'SEAL GUARD';
+    e.sealLabel = tank.name || '守卫';
     e.elite = true;
     e.size = 1.42;
     e.hp = e.maxHp = e.maxHp * (1.45 + G.arenaIndex * .13);
@@ -5441,10 +5441,10 @@
       if (G.endless) {
         G.endlessBossKills += 1;
         G.endlessNextBossAt = G.elapsed + ENDLESS_BOSS_GAP;
-        showToast(`${e.bossName || 'BOSS'} 已击破 // 第 ${G.endlessBossKills} 个无尽首领 · 下一轮 ${fmtShort(ENDLESS_BOSS_GAP)} 后`, 'cyan');
+        showToast(`${e.bossName || '首领'} 已击破 · 第 ${G.endlessBossKills} 个无尽首领 · 下一轮 ${fmtShort(ENDLESS_BOSS_GAP)} 后`, 'cyan');
       } else {
         G.bossDefeated = true;
-        showToast(`${e.bossName || 'BOSS'} 已击破 // 撤离通道开启`, 'cyan');
+        showToast(`${e.bossName || '首领'} 已击破 · 撤离通道开启`, 'cyan');
         G.victoryTimer = 1.2;
       }
     } else {
@@ -5526,7 +5526,7 @@
       addParticles(c.cx, c.cy, 34, '#ff9b62', 'debris', 1.7);
       addShake(14, .9); G.flash = 1; G.flashColor = '#ff5f4a';
       AUDIO.bigExplode();
-      showToast('基地装甲归零 // 防线失守', 'red');
+      showToast('基地装甲归零 · 防线失守', 'red');
       endRun(false, 'base');
     }
   }
@@ -5577,7 +5577,7 @@
   function recallToBase() {
     if (G.mode !== 'playing' || !G.core || !G.core.alive) return false;
     if ((G.recallCd || 0) > 0) {
-      showToast(`回程充能中 // ${Math.ceil(G.recallCd)} 秒`, 'red');
+      showToast(`回程充能中 · ${Math.ceil(G.recallCd)} 秒`, 'red');
       return false;
     }
     const active = activePlayers();
@@ -5609,7 +5609,7 @@
     G.player = (G.players || []).find(p => p.alive && !p.downed) || G.player;
     addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 64, life: .55, maxLife: .55, color: '#8fffe6' });
     addShake(3.5, .25); G.flash = Math.max(G.flash, .3); G.flashColor = '#8fffe6';
-    showToast('回程协议 // 全队撤回基地', 'cyan');
+    showToast('回程协议 · 全队撤回基地', 'cyan');
     AUDIO.confirm();
     return true;
   }
@@ -5644,7 +5644,7 @@
       addEffect({ type: 'ring', x: p.x, y: p.y, radius: 80, life: .7, maxLife: .7, color: '#5ff0ce' });
       addParticles(p.x, p.y, 24, '#5ff0ce', 'spark', 1.4);
       addShake(9, .55); G.flash = .6; G.flashColor = '#5ff0ce';
-      showToast('应急核心启动 // 车体紧急修复', 'cyan');
+      showToast('应急核心启动 · 车体紧急修复', 'cyan');
       AUDIO.confirm(); rumble(.8, 240);
       return;
     }
@@ -5659,7 +5659,7 @@
         addEffect({ type: 'explosion', x: p.x, y: p.y, radius: 72, life: .7, maxLife: .7, color: '#ff9c5b' });
         addParticles(p.x, p.y, 22, '#ff8b58', 'spark', 1.3);
         addShake(8, .5);
-        showToast(`P${p.index + 1} 车体损毁 // 队友靠近可救援`, 'red');
+        showToast(`P${p.index + 1} 车体损毁 · 队友靠近可救援`, 'red');
         AUDIO.gameOver();
         if ((G.players || []).every(q => !q.alive || q.downed)) endRun(false, 'pilot');
       } else {
@@ -6048,28 +6048,24 @@
     const coop = !!G.twoPlayer;
     const p = G.levelupPlayer || G.player;
     const isP2 = !!(p && p.index === 1);
+    if (U.levelupOwner) U.levelupOwner.textContent = isP2 ? 'P2' : 'P1';
+    if (U.levelupPlayers) U.levelupPlayers.classList.toggle('is-hidden', !coop);
     if (U.levelupP1) {
       U.levelupP1.classList.toggle('is-active', !isP2);
-      U.levelupP1.innerHTML = coop
-        ? `<b>P1</b><em>${isP2 ? '等待 P2 选择' : '键盘 1 / 2 / 3 或 ← → 切换'}</em>`
-        : '<b>P1</b><em>键盘 1 / 2 / 3 · 手柄 摇杆 + A</em>';
+      U.levelupP1.innerHTML = `<b>P1</b><em>${isP2 ? '等待' : '正在选择'}</em>`;
     }
     if (U.levelupP2) {
-      U.levelupP2.classList.toggle('is-hidden', !coop);
       U.levelupP2.classList.toggle('is-active', isP2);
-      U.levelupP2.innerHTML = `<b>P2</b><em>${isP2 ? '十字键 / 左摇杆 切换 · A 确认 · B 重掷' : '等待 P1 选择'}</em>`;
+      U.levelupP2.innerHTML = `<b>P2</b><em>${isP2 ? '正在选择' : '等待'}</em>`;
     }
-    if (U.levelupCoopNote) {
-      U.levelupCoopNote.classList.toggle('is-hidden', !coop);
-      U.levelupCoopNote.textContent = `独立升级 // 仅 ${isP2 ? 'P2' : 'P1'} 可选择，另一名驾驶员等待`;
+    if (U.levelupKeyHint) {
+      U.levelupKeyHint.textContent = isP2 ? '' : (coop ? 'P1：按 1 / 2 / 3 选择' : '按 1 / 2 / 3 选择');
+      U.levelupKeyHint.classList.toggle('is-hidden', isP2);
     }
-    if (U.levelupKeyHint) U.levelupKeyHint.innerHTML = isP2
-      ? '<kbd>P2</kbd> 手柄选择'
-      : (coop ? '<kbd>P1</kbd> 1 / 2 / 3 · ← →' : '<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · ← → 选择');
-    if (U.levelupPadHint) U.levelupPadHint.textContent = isP2
-      ? 'P2 手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷'
-      : '手柄：十字键 / 左摇杆切换 · A 确认 · B 重掷';
-    if (U.rerollBtn) U.rerollBtn.disabled = isP2 || !p || p.rerolls <= 0;
+    if (U.rerollBtn) {
+      U.rerollBtn.disabled = isP2 || !p || p.rerolls <= 0;
+      U.rerollBtn.classList.toggle('is-hidden', isP2 || !p || p.rerolls <= 0);
+    }
     if (U.rerollCount) U.rerollCount.textContent = String((p && p.rerolls) || 0);
   }
 
@@ -6086,6 +6082,7 @@
     clearPadFocus();
     G.currentChoices = getUpgradeChoices(p);
     U.newLevel.textContent = String(p.level).padStart(2, '0');
+    if (U.levelupOwner) U.levelupOwner.textContent = p.label || 'P1';
     renderUpgradeCards(G.currentChoices);
     U.levelupScreen.classList.remove('hidden');
     updateLevelupPrompt();
@@ -6097,8 +6094,8 @@
     const ownerTag = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
     const cards = choices.map((c, i) => {
       const data = c.data;
-      let typeLabel = c.kind === 'fusion' ? '合成协议 // FUSION' : c.kind === 'weapon' ? '武器模块 // WEAPON' : c.kind === 'passive' ? '被动协议 // PASSIVE' : '战地补给 // SUPPLY';
-      let levelLabel = c.kind === 'utility' ? 'FIELD SUPPLY' : c.kind === 'fusion' ? 'EVOLVE' : c.level === 0 ? 'NEW MODULE' : `LV.${c.level} → ${c.level + 1}`;
+      let typeLabel = c.kind === 'fusion' ? '合成' : c.kind === 'weapon' ? '武器' : c.kind === 'passive' ? '被动' : '补给';
+      let levelLabel = c.kind === 'utility' ? '补给' : c.kind === 'fusion' ? '进化' : c.level === 0 ? '新模块' : '';
       let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[c.nextLevel - 1].text : PASSIVES[c.id].text;
       let pips = '';
       if (c.kind === 'fusion') {
@@ -6110,7 +6107,6 @@
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
       }
       const name = c.kind === 'utility' ? c.utility.name : data.name;
-      const en = c.kind === 'utility' ? c.utility.en : data.en;
       const icon = c.kind === 'utility' ? c.utility.icon : data.icon;
       const color = c.kind === 'utility' ? c.utility.color : data.color;
       const role = c.kind === 'utility' ? '即时补给' : c.kind === 'fusion' ? '武器进化' : (data.role || '') + (data.focus ? ' · ' + data.focus : '');
@@ -6120,7 +6116,6 @@
         <div class="upgrade-card__icon"><canvas data-icon="${icon}" data-color="${color}" data-size="82"></canvas></div>
         <div class="upgrade-card__body">
           <h3 class="upgrade-card__name">${name}</h3>
-          <div class="upgrade-card__en">${en}</div>
           <div class="upgrade-card__role">${role}</div>
           <p class="upgrade-card__desc">${desc}</p>
         </div>
@@ -6147,19 +6142,19 @@
     AUDIO.confirm();
     if (c.kind === 'fusion') {
       p.fusions[c.id] = true;
-      showToast(`${p.label} 合成完成 // ${c.fusion.name}`, 'gold');
+      showToast(`${p.label} 合成完成 · ${c.fusion.name}`, 'gold');
       addEffect({ type: 'ring', x: p.x, y: p.y, radius: 90, life: .8, maxLife: .8, color: c.fusion.color });
       addParticles(p.x, p.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
       const cur = p.weapons[c.id] || 0;
       p.weapons[c.id] = Math.min(8, cur + 1);
       if (cur === 0) p.weaponCds[c.id] = .5;
-      showToast(`${p.label} 武器解锁 // ${c.data.name}`, 'cyan');
+      showToast(`${p.label} 武器解锁 · ${c.data.name}`, 'cyan');
     } else if (c.kind === 'passive') {
       const cur = p.passives[c.id] || 0;
       p.passives[c.id] = Math.min(c.data.max, cur + 1);
       if (c.id === 'armor') healPlayer(18, p);
-      showToast(`${p.label} 协议升级 // ${c.data.name}`, 'cyan');
+      showToast(`${p.label} 协议升级 · ${c.data.name}`, 'cyan');
     } else if (c.kind === 'utility') {
       if (c.id === 'field_repair') healPlayer(p.maxHp * .35, p);
       else if (c.id === 'pulse') {
@@ -6169,7 +6164,7 @@
           if (dist(e.x, e.y, p.x, p.y) < 240) damageEnemy(e, 90 * statsFor(p).damage, false, 'pulse', p);
         }
       } else if (c.id === 'emergency_shield') p.shield = Math.max(p.shield, 40);
-      showToast(`${p.label} 补给到位 // ${c.utility.name}`, 'cyan');
+      showToast(`${p.label} 补给到位 · ${c.utility.name}`, 'cyan');
     }
     recalcStats(false);
     p.pendingLevels = Math.max(0, p.pendingLevels - 1);
@@ -6255,7 +6250,7 @@
         ...Object.entries(p2.passives).filter(([id, lvl]) => lvl > 0 && PASSIVES[id]).map(([id, lvl]) => `${PASSIVES[id].short} ${lvl}`)
       ];
       const build = buildParts.slice(0, 4).join(' / ') || '主炮 1';
-      U.coopBuild2.innerHTML = `<b>P2</b> // ${build}`;
+      U.coopBuild2.innerHTML = `<b>P2</b> · ${build}`;
     }
     G.xp = p.xp; G.xpNext = p.xpNext; G.level = p.level;
     U.statAtk.textContent = `${Math.round(G.stats.damage * 100)}`;
@@ -6263,7 +6258,7 @@
     U.statCrit.textContent = `${Math.round(G.stats.crit * 100)}%`;
     U.coreRing.style.setProperty('--p', progress.toFixed(1));
     U.corePercent.textContent = endless ? String(G.endlessBossKills).padStart(2, '0') : String(Math.floor(progress));
-    U.coreText.textContent = endless ? (G.boss ? 'BOSS' : `NEXT ${fmtShort(remain)}`) : fmtShort(remain);
+    U.coreText.textContent = endless ? (G.boss ? '首领' : `下一波 ${fmtShort(remain)}`) : fmtShort(remain);
     U.coreState.textContent = endless ? 'ENDLESS' : (remain <= 0 ? 'READY' : `T-${fmtShort(remain)}`);
     const basePct = G.core ? clamp(G.core.hp / G.core.maxHp * 100, 0, 100) : 0;
     if (U.baseHpText) U.baseHpText.textContent = G.core ? `${Math.ceil(G.core.hp)} / ${Math.ceil(G.core.maxHp)}` : '--';
@@ -6282,19 +6277,19 @@
     U.comboCount.textContent = `x${(1 + Math.min(1.5, G.combo * .02)).toFixed(1)}`;
     const wave = getWave();
     if (G.boss) {
-      const bossName = G.boss.bossName || 'BOSS';
-      U.phaseLabel.textContent = `BOSS // ${bossName}`;
+      const bossName = G.boss.bossName || '首领';
+      U.phaseLabel.textContent = `首领 · ${bossName}`;
       U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 撑到撤离`;
       U.sideTip.textContent = G.twoPlayer ? `${bossName}追最近的车体。保持移动，队友别站同一条弹道。` : `${bossName}只追你。保持移动，别被逼进死角。`;
     } else {
-      U.phaseLabel.textContent = `WAVE ${String(G.waveIndex + 1).padStart(2, '0')} // ${wave.label}`;
+      U.phaseLabel.textContent = `第 ${G.waveIndex + 1} 波 · ${wave.label}`;
       U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : `生存至撤离 · ${fmtShort(remain)}`;
-      if (hpPct < 35) U.sideTip.textContent = '车体濒危 // 拉开距离，先吃维修包。';
-      else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 // 手动瞄准可拆墙。';
-      else if (endless) U.sideTip.textContent = `无尽协议 // 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
-      else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 // 保持移动，别被包夹。';
+      if (hpPct < 35) U.sideTip.textContent = '车体濒危 · 拉开距离，先吃维修包。';
+      else if (G.autoHold) U.sideTip.textContent = '自动火线被掩体阻挡 · 手动瞄准可拆墙。';
+      else if (endless) U.sideTip.textContent = `无尽协议 · 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
+      else if (G.elapsed > 240) U.sideTip.textContent = '铁幕推进 · 保持移动，别被包夹。';
       else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
-      else U.sideTip.textContent = '提示 // 砖墙可打碎，钢板不可。';
+      else U.sideTip.textContent = '提示 · 砖墙可打碎，钢板不可。';
     }
     U.clockLabel.textContent = endless ? fmtTime(G.elapsed) : fmtTime(Math.max(0, TOTAL_TIME - G.elapsed));
     U.clockBar.style.width = `${endless ? clamp((G.elapsed % 120) / 120 * 100, 0, 100) : clamp(G.elapsed / TOTAL_TIME * 100, 0, 100)}%`;
@@ -6345,14 +6340,14 @@
           }
         }
         const downed = G.players.find(q => q.downed);
-        if (downed) U.sideTip.textContent = `P${downed.index + 1} 倒地 // 队友靠近并停留 2.4 秒可重启`;
+        if (downed) U.sideTip.textContent = `P${downed.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
       }
     }
     if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? '双人 06:00 · 双车或基地归零即失败' : '生存 06:00 · 车体或基地归零即失败')}`;
     if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 8 ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
-    if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 // 队友靠近并停留 2.4 秒可重启`;
-    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，Boss 循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || 'BOSS'} 会攻击最近的你和基地，撑到撤离` : '活到撤离，车体或基地归零即失败'));
+    if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
+    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：活到撤离，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '首领'} 会攻击最近的你和基地，撑到撤离` : '活到撤离，车体或基地归零即失败'));
     if (G.boss && G.boss.hp > 0) {
       U.bossHud.classList.remove('is-hidden');
       const bp = clamp(G.boss.hp / G.boss.maxHp * 100, 0, 100);
@@ -6372,7 +6367,7 @@
       if (!data) continue;
       const fusion = FUSIONS[id] && G.fusions[id] ? FUSIONS[id] : null;
       const name = fusion ? fusion.name : data.name;
-      const sub = fusion ? `FUSION // ${fusion.en}` : `LV.${lvl} / 8`;
+      const sub = fusion ? '进化' : `等级 ${lvl} / 8`;
       html += `<div class="loadout-item${fusion ? ' is-fused' : ''}">
         <canvas data-icon="${fusion ? fusion.icon : data.icon}" data-color="${fusion ? fusion.color : data.color}" data-size="22"></canvas>
         <div class="loadout-item__copy"><strong>${name}</strong><small>${sub}</small></div>
@@ -6481,7 +6476,7 @@
     if (u.type === 'default') return '初始配发';
     if (u.type === 'seal') {
       const map = MAPS[u.value - 1];
-      return `${map ? map.sector : `第 ${u.value} 关`} 封印 · 击破守卫`;
+      return `第 ${u.value} 关${map ? ' · ' + map.name : ''} · 击破守卫`;
     }
     return '未公开条件';
   }
@@ -6536,7 +6531,7 @@
     profile.unlocked.push(tank.id);
     writeProfile(profile);
     G.profile = profile;
-    showToast(`底盘解锁 // ${tank.name}`, 'cyan');
+    showToast(`底盘解锁 · ${tank.name}`, 'cyan');
     return true;
   }
 
@@ -6551,7 +6546,7 @@
     }
     updateTankCount();
     updatePilotCard(0); updatePilotCard(1);
-    showToast(`封印解除 // ${tank.name} 已解锁`, 'cyan');
+    showToast(`封印解除 · ${tank.name} 已解锁`, 'cyan');
     return tank;
   }
 
@@ -6581,11 +6576,10 @@
       const diff = difficultyData(stageDifficulty(camp, i));
       const active = !endlessActive && i === G.arenaIndex;
       return `<button class="arena-card${active ? ' is-active' : ''}${locked ? ' is-locked' : ''}${cleared ? ' is-cleared' : ''}" data-arena="${i}" type="button" ${locked ? 'disabled aria-disabled="true"' : ''}>
-        <span class="arena-card__index">${String(i + 1).padStart(2, '0')} ${cleared ? '// CLEAR' : locked ? '// LOCKED' : '// READY'}</span>
+        <span class="arena-card__index">${String(i + 1).padStart(2, '0')} ${cleared ? '· 已突破' : locked ? '· 未解锁' : '· 可出击'}</span>
         <span class="arena-card__name">${m.name}</span>
-        <span class="arena-card__en">${m.en}</span>
         <span class="arena-card__trait">${m.desc}</span>
-        <span class="arena-card__diff arena-card__diff--${diff.id}">${diff.name} / ${diff.en}</span>
+        <span class="arena-card__diff arena-card__diff--${diff.id}">${diff.name}</span>
         ${locked ? '<span class="arena-card__lock">▣</span>' : ''}
       </button>`;
     }).join('');
@@ -6645,10 +6639,10 @@
     const tank = TANKS.find(t => t.id === G.tankIds[0]) || TANKS[0];
     const stage = G.endlessSelected ? { name: '无尽协议', sector: 'ENDLESS' } : (MAPS[G.arenaIndex] || MAPS[0]);
     if (U.sfStageName) U.sfStageName.textContent = stage.name;
-    if (U.sfStageSector) U.sfStageSector.textContent = G.endlessSelected ? 'ENDLESS' : stage.sector;
+    if (U.sfStageSector) U.sfStageSector.textContent = G.endlessSelected ? '无尽' : `第 ${G.arenaIndex + 1} 区`;
     if (U.sfTankName) U.sfTankName.textContent = tank.name;
     if (U.sfUnitName) U.sfUnitName.textContent = tank.name;
-    if (U.sfUnitRole) U.sfUnitRole.textContent = `${tank.role} / ${tank.en}`;
+    if (U.sfUnitRole) U.sfUnitRole.textContent = tank.role;
     if (U.sfModeName) U.sfModeName.textContent = G.coopSelected ? '双人模式' : '单人模式';
   }
 
@@ -6657,9 +6651,9 @@
     const p1 = TANKS.find(t => t.id === G.tankIds[0]) || TANKS[0];
     const p2 = TANKS.find(t => t.id === G.tankIds[1]) || TANKS[0];
     if (U.stageTankNameP1) U.stageTankNameP1.textContent = p1.name;
-    if (U.stageTankRoleP1) U.stageTankRoleP1.textContent = `${p1.role} / ${p1.en}`;
+    if (U.stageTankRoleP1) U.stageTankRoleP1.textContent = p1.role;
     if (U.stageTankNameP2) U.stageTankNameP2.textContent = p2.name;
-    if (U.stageTankRoleP2) U.stageTankRoleP2.textContent = `${p2.role} / ${p2.en}`;
+    if (U.stageTankRoleP2) U.stageTankRoleP2.textContent = p2.role;
     if (U.stageTankP2) U.stageTankP2.classList.toggle('is-hidden', !G.coopSelected);
   }
 
@@ -6671,7 +6665,7 @@
     const traitEl = p2 ? U.pilotTrait2 : U.pilotTrait;
     const preview = p2 ? U.pilotPreview2 : U.pilotPreview;
     if (nameEl) nameEl.textContent = tank.name;
-    if (roleEl) roleEl.textContent = `${tank.role} / ${tank.en}`;
+    if (roleEl) roleEl.textContent = tank.role;
     if (traitEl) traitEl.textContent = tank.trait;
     if (preview) drawTankPreview(preview, tank);
     if (!p2) syncMenuSelection();
@@ -6685,12 +6679,11 @@
     U.tankGrid.innerHTML = TANKS.map((t, i) => {
       const owned = tankOwned(t.id, profile);
       return `<button class="tank-card${t.id === selected ? ' is-active' : ''}${owned ? ' is-owned' : ' is-locked'}" type="button" data-tank="${t.id}" aria-pressed="${t.id === equipped ? 'true' : 'false'}">
-        <div class="tank-card__top"><span class="tank-card__id">M-${String(i + 1).padStart(2, '0')}</span><span class="tank-card__role">${owned ? t.role : 'LOCKED'}</span></div>
+        <div class="tank-card__top"><span class="tank-card__id">M-${String(i + 1).padStart(2, '0')}</span><span class="tank-card__role">${owned ? t.role : '未解锁'}</span></div>
         <canvas width="86" height="58" data-tank-preview="${t.id}"></canvas>
         <span class="tank-card__name">${t.name}</span>
-        <span class="tank-card__en">${t.en}</span>
         <span class="tank-card__trait">${owned ? t.trait : tankRequirementText(t)}</span>
-        ${owned ? (t.id === equipped ? '<span class="tank-card__lock">EQUIPPED</span>' : '') : `<span class="tank-card__lock">▣ ${t.cost} 核心</span>`}
+        ${owned ? (t.id === equipped ? '<span class="tank-card__lock">已装备</span>' : '') : `<span class="tank-card__lock">▣ ${t.cost} 核心</span>`}
       </button>`;
     }).join('');
     U.tankGrid.querySelectorAll('canvas[data-tank-preview]').forEach(cv => drawTankPreview(cv, TANKS.find(t => t.id === cv.dataset.tankPreview)));
@@ -6770,9 +6763,9 @@
       U.fusionGrid.innerHTML = Object.values(FUSIONS).map(f => {
         const w = WEAPONS[f.weapon], p = PASSIVES[f.passive];
         return `<article class="fusion-card">
-          <div class="fusion-card__part"><small>WEAPON / ${w.en}</small><strong>${w.name} Lv.${f.weaponLevel}</strong></div>
+          <div class="fusion-card__part"><small>武器</small><strong>${w.name} Lv.${f.weaponLevel}</strong></div>
           <div class="fusion-card__plus">+</div>
-          <div class="fusion-card__part"><small>PASSIVE / ${p.en}</small><strong>${p.name} Lv.${f.passiveLevel}</strong></div>
+          <div class="fusion-card__part"><small>被动</small><strong>${p.name} Lv.${f.passiveLevel}</strong></div>
           <div class="fusion-card__result"><strong>${f.name}</strong><span>${f.desc}</span></div>
         </article>`;
       }).join('');
@@ -6796,7 +6789,7 @@
   function updateBestStats() {
     const r = readRecords();
     if (U.bestTime) U.bestTime.textContent = r.bestTime > 0 ? fmtShort(r.bestTime) : '--:--';
-    if (U.bestLevel) U.bestLevel.textContent = `LV.${String(Math.max(1, r.bestLevel)).padStart(2, '0')}`;
+    if (U.bestLevel) U.bestLevel.textContent = `等级 ${Math.max(1, r.bestLevel)}`;
     if (U.bestWins) U.bestWins.textContent = String(r.wins);
   }
 
@@ -6826,35 +6819,35 @@
     const items = [];
     for (const id of Object.keys(G.weapons)) if (WEAPONS[id]) {
       const name = G.fusions[id] && FUSIONS[id] ? FUSIONS[id].name : WEAPONS[id].short;
-      items.push(`<span${G.fusions[id] ? ' class="is-fused"' : ''}><i></i>${name} Lv.${G.weapons[id]}</span>`);
+      items.push(`<span${G.fusions[id] ? ' class="is-fused"' : ''}><i></i>${name} 等级${G.weapons[id]}</span>`);
     }
-    for (const id of Object.keys(G.passives)) if (PASSIVES[id]) items.push(`<span><i></i>${PASSIVES[id].short} Lv.${G.passives[id]}</span>`);
+    for (const id of Object.keys(G.passives)) if (PASSIVES[id]) items.push(`<span><i></i>${PASSIVES[id].short} 等级${G.passives[id]}</span>`);
     U.resultBuild.innerHTML = items.join('');
     U.resultTime.textContent = fmtShort(G.elapsed);
-    U.resultLevel.textContent = `LV.${String(G.level).padStart(2, '0')}`;
+    U.resultLevel.textContent = `等级 ${G.level}`;
     U.resultKills.textContent = String(G.kills).padStart(3, '0');
-    U.resultCore.textContent = G.endless ? `${G.endlessBossKills} BOSS` : `${Math.floor(progress)}%`;
+    U.resultCore.textContent = G.endless ? `${G.endlessBossKills} 个首领` : `${Math.floor(progress)}%`;
     if (U.resultCoreLabel) U.resultCoreLabel.textContent = G.endless ? '击破首领' : '生存进度';
     U.resultSeal.classList.toggle('is-win', win);
-    U.resultSeal.querySelector('b').textContent = win ? 'WIN' : 'BF';
+    U.resultSeal.querySelector('b').textContent = win ? '胜' : '败';
     U.resultTag.classList.toggle('is-win', win);
     const stageNo = String(G.arenaIndex + 1).padStart(2, '0');
     if (G.endless) {
       const baseLost = reason === 'base';
-      U.resultTag.textContent = 'ENDLESS PROTOCOL // 生存终止';
+      U.resultTag.textContent = '无尽协议 · 生存终止';
       U.resultTitle.textContent = baseLost ? '防线归零' : '钢铁归零';
-      U.resultFlavor.textContent = `无尽协议中断 // ${MAPS[G.arenaIndex].name} · 生存 ${fmtShort(G.elapsed)} · 击破 ${G.endlessBossKills} 个首领。`;
+      U.resultFlavor.textContent = `无尽协议中断 · ${MAPS[G.arenaIndex].name} · 生存 ${fmtShort(G.elapsed)} · 击破 ${G.endlessBossKills} 个首领。`;
       AUDIO.gameOver();
     } else if (win) {
       const finalWin = G.arenaIndex >= MAPS.length - 1;
-      U.resultTag.textContent = finalWin ? 'CAMPAIGN COMPLETE // 战役完成' : `SECTOR ${stageNo} CLEARED // 关卡突破`;
+      U.resultTag.textContent = finalWin ? '战役完成' : `第 ${stageNo} 关突破`;
       U.resultTitle.textContent = finalWin ? '穹顶陷落' : '黎明抵达';
       U.resultFlavor.textContent = finalWin ? '最后一道钢铁潮汐退去。整条战役线已经打通。' : `第 ${stageNo} 关已清理。下一关的入口正在开启。`;
       U.resultCore.textContent = '100%';
       AUDIO.victory();
     } else {
       const baseLost = reason === 'base';
-      U.resultTag.textContent = baseLost ? 'MISSION FAILED // 基地失守' : 'MISSION FAILED // 车体击毁';
+      U.resultTag.textContent = baseLost ? '任务失败 · 基地失守' : '任务失败 · 车体击毁';
       U.resultTitle.textContent = baseLost ? '防线归零' : '钢铁归零';
       U.resultFlavor.textContent = baseLost
         ? `第 ${stageNo} 关基地装甲归零，防线被撕开。优先清理拆墙单位和远程火力。`
@@ -6862,7 +6855,7 @@
       AUDIO.gameOver();
     }
     const resultDiff = difficultyData(G.difficulty);
-    if (G.lastCoreReward) U.resultFlavor.textContent += ` // ${resultDiff.name} · 合金核心 +${G.lastCoreReward}`;
+    if (G.lastCoreReward) U.resultFlavor.textContent += ` · ${resultDiff.name} · 合金核心 +${G.lastCoreReward}`;
     if (U.nextBtn) {
       U.nextBtn.classList.toggle('is-hidden', !(win && G.nextStageIndex >= 0));
       const next = U.nextBtn.querySelector('strong');
@@ -7004,7 +6997,7 @@
 
   function updateDifficultyUI() {
     const diff = difficultyData(G.difficulty);
-    if (U.stageDifficulty) U.stageDifficulty.textContent = G.endlessSelected ? '∞ / ENDLESS' : `${diff.en} / ${diff.name}`;
+    if (U.stageDifficulty) U.stageDifficulty.textContent = G.endlessSelected ? '无尽' : diff.name;
     if (U.difficultyHint) U.difficultyHint.textContent = `${diff.name}：${diff.desc}`;
     if (U.difficultyOptions) {
       U.difficultyOptions.querySelectorAll('.difficulty-card').forEach(btn => {
@@ -7030,12 +7023,12 @@
     });
     const diff = difficultyData(G.difficulty);
     if (U.stageHint) {
-      const cleared = camp.cleared[index] ? ' // 已突破' : '';
-      U.stageHint.textContent = `${MAPS[index].sector} · ${diff.name} · ${MAPS[index].desc}${cleared} · 通关解锁下一关`;
+      const cleared = camp.cleared[index] ? ' · 已突破' : '';
+      U.stageHint.textContent = `第 ${index + 1} 区 · ${diff.name} · ${MAPS[index].desc}${cleared} · 通关解锁下一关`;
     }
     if (U.stageIndex) U.stageIndex.textContent = String(index + 1).padStart(2, '0');
     if (U.stageName) U.stageName.textContent = MAPS[index].name;
-    if (U.stageMeta) U.stageMeta.textContent = `${MAPS[index].sector} / ${MAPS[index].en}`;
+    if (U.stageMeta) U.stageMeta.textContent = `第 ${index + 1} 区 · ${MAPS[index].name}`;
     if (U.stageTrait) U.stageTrait.textContent = `${MAPS[index].desc}${camp.cleared[index] ? ' · 已突破' : ''}`;
     updateDifficultyUI();
     const frame = document.querySelector('.visual-frame');
@@ -7068,10 +7061,10 @@
     if (U.stageHint) U.stageHint.textContent = `无尽协议 · ${MAPS[index].name} · 敌军持续升级 / Boss 循环刷新 / 生存时间计分`;
     if (U.stageIndex) U.stageIndex.textContent = '∞';
     if (U.stageName) U.stageName.textContent = '无尽协议';
-    if (U.stageMeta) U.stageMeta.textContent = `ENDLESS PROTOCOL / ${MAPS[index].en}`;
-    if (U.stageTrait) U.stageTrait.textContent = '持续波次 · 循环 Boss · 生存计分';
+    if (U.stageMeta) U.stageMeta.textContent = `无尽协议 · ${MAPS[index].name}`;
+    if (U.stageTrait) U.stageTrait.textContent = '持续波次 · 循环首领 · 生存计分';
     updateDifficultyUI();
-    if (U.stageDifficulty) U.stageDifficulty.textContent = '∞ / ENDLESS';
+    if (U.stageDifficulty) U.stageDifficulty.textContent = '无尽';
     const frame = document.querySelector('.visual-frame');
     if (frame) {
       frame.style.borderColor = hexA(MAPS[index].palette.accent, .27);
@@ -7206,23 +7199,22 @@
     const all = entries.normal.concat(entries.elite, entries.boss);
     const total = all.length;
     const found = previewAll ? total : all.filter(e => seen.has(e.key)).length;
-    if (U.codexProgress) U.codexProgress.textContent = `${found} / ${total}`;
-    const section = (title, sub, list) => {
+    if (U.codexProgress) U.codexProgress.textContent = `已记录 ${found} / ${total}`;
+    const section = (title, list) => {
       const n = previewAll ? list.length : list.filter(e => seen.has(e.key)).length;
       const cards = list.map(e => {
         const known = previewAll || seen.has(e.key);
         return `<article class="codex-card is-${e.cls}${known ? '' : ' is-locked'}">
           <canvas width="200" height="116" data-codex-key="${e.key}"></canvas>
           <strong class="codex-card__name">${known ? e.name : '???'}</strong>
-          <small class="codex-card__en">${known ? e.en : 'UNRECORDED'}</small>
           <span class="codex-card__desc">${known ? e.desc : '尚未遭遇。进入战区并让它出现在你的雷达上。'}</span>
         </article>`;
       }).join('');
-      return `<section class="codex-section"><div class="codex-section__head"><span>${title} // ${sub}</span><b>${n} / ${list.length}</b></div><div class="codex-cards">${cards}</div></section>`;
+      return `<section class="codex-section"><div class="codex-section__head"><span>${title}</span><b>${n} / ${list.length}</b></div><div class="codex-cards">${cards}</div></section>`;
     };
-    U.codexGrid.innerHTML = section('NORMAL', '普通单位', entries.normal)
-      + section('ELITE', '精英单位', entries.elite)
-      + section('BOSS', 'Boss 单位', entries.boss);
+    U.codexGrid.innerHTML = section('普通单位', entries.normal)
+      + section('精英单位', entries.elite)
+      + section('首领单位', entries.boss);
     const byKey = new Map(all.map(e => [e.key, e]));
     U.codexGrid.querySelectorAll('canvas[data-codex-key]').forEach(cv => {
       drawCodexPreview(cv, byKey.get(cv.dataset.codexKey));
@@ -7258,10 +7250,10 @@
     U.itemGrid.innerHTML = Object.entries(ITEMS).map(([id, item]) => {
       const baseItem = id === 'basekit' || id === 'turret';
       return `<article class="item-guide-card" style="--item-color:${item.color}">
-        <span class="item-guide-card__tag">${baseItem ? 'BASE' : 'FIELD'}</span>
+        <span class="item-guide-card__tag">${baseItem ? '基地' : '战地'}</span>
         <div class="item-guide-card__head">
           <span class="item-guide-card__glyph">${item.glyph || '◇'}</span>
-          <div class="item-guide-card__title"><strong>${item.name}</strong><small>${item.en}</small></div>
+          <div class="item-guide-card__title"><strong>${item.name}</strong></div>
         </div>
         <div class="item-guide-card__desc">${item.desc}</div>
         <div class="item-guide-card__detail">${item.detail || ''}</div>
@@ -7373,7 +7365,7 @@
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
-      'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',
+      'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
@@ -7459,7 +7451,7 @@
       renderStagePicker();
       updateDifficultyUI();
       const diff = difficultyData(id);
-      if (U.stageHint) U.stageHint.textContent = `${MAPS[G.arenaIndex].sector} · ${diff.name} · ${MAPS[G.arenaIndex].desc}${camp.cleared[G.arenaIndex] ? ' // 已突破' : ''} · 通关解锁下一关`;
+      if (U.stageHint) U.stageHint.textContent = `第 ${G.arenaIndex + 1} 区 · ${diff.name} · ${MAPS[G.arenaIndex].desc}${camp.cleared[G.arenaIndex] ? ' · 已突破' : ''} · 通关解锁下一关`;
       AUDIO.init(); AUDIO.tick();
     });
     U.stageClose.addEventListener('click', closeStageScreen);
@@ -7489,7 +7481,7 @@
         renderTankGrid();
         updatePilotCard(0); updatePilotCard(1);
       } else {
-        showToast('合金核心不足 // 继续出战获取', 'red');
+        showToast('合金核心不足 · 继续出战获取', 'red');
       }
       AUDIO.init(); AUDIO.tick();
     });
@@ -7539,14 +7531,14 @@
     if (U.padSwapBtn) U.padSwapBtn.addEventListener('click', () => {
       if (!Input.gamepad.connected || !Input.gamepad2.connected) {
         AUDIO.deny();
-        showToast('需要两只手柄才能交换 // 当前只识别到一只', 'red');
+        showToast('需要两只手柄才能交换 · 当前只识别到一只', 'red');
         return;
       }
       swapPadSlots();
       pollGamepad();
       syncPadState();
       AUDIO.confirm();
-      showToast('手柄已交换 // P1 ↔ P2', 'cyan');
+      showToast('手柄已交换 · P1 ↔ P2', 'cyan');
     });
     if (U.sfxVolume) U.sfxVolume.addEventListener('input', () => {
       AUDIO.init();
@@ -8171,7 +8163,7 @@
       readPad(secondary, g2);
     }
     if (!hadPrimary || hadSecondary !== g2.connected) syncPadState();
-    if (secondary && !hadSecondary && G.mode === 'playing') showToast('P2 手柄已连接 // 左摇杆移动', 'cyan');
+    if (secondary && !hadSecondary && G.mode === 'playing') showToast('P2 手柄已连接 · 左摇杆移动', 'cyan');
 
     const pressed = i => !!(g.buttons[i] && g.buttons[i].pressed);
     const was = i => !!g.prevButtons[i];
