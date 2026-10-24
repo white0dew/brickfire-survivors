@@ -913,14 +913,14 @@
       stats: ['对残血伤害 +8%'], text: '对生命低于 <b>35%</b> 的敌人伤害 <b>+8%</b>。'
     },
     venom: {
-      name: '纳米腐蚀弹头', en: 'NANO CORROSIVE', short: '纳蚀', icon: 'nano', color: '#a9e56e',
-      desc: '命中注入纳米腐蚀剂，短时间持续剥离装甲。', max: 5,
-      stats: ['腐蚀伤害提升'], text: '命中附加 <b>2 秒纳米腐蚀</b>，每秒伤害随等级提升。'
+      name: '纳米爆裂弹头', en: 'NANO BURST', short: '纳爆', icon: 'nano', color: '#a9e56e',
+      desc: '命中时引发纳米腐蚀爆裂，对周围敌人造成范围伤害。', max: 5,
+      stats: ['范围腐蚀伤害'], text: '命中触发 <b>纳米爆裂</b>，半径和范围伤害随等级提升。'
     },
     frostbite: {
-      name: '低温弹头', en: 'CRYO WARHEAD', short: '冻伤', icon: 'cooling', color: '#9bd8ff',
-      desc: '命中减速目标，为走位创造空间。', max: 5,
-      stats: ['命中减速'], text: '命中使敌人减速 <b>1.0 秒</b>，持续时间随等级提升。'
+      name: '霜爆弹头', en: 'CRYO BURST', short: '霜爆', icon: 'cooling', color: '#9bd8ff',
+      desc: '命中时引发低温爆裂，对周围敌人造成范围伤害并减速。', max: 5,
+      stats: ['范围冻伤'], text: '命中触发 <b>霜爆</b>，半径、伤害与减速随等级提升。'
     },
     persist: {
       name: '持续增幅', en: 'PERSISTENCE', short: '持续', icon: 'cooling', color: '#b896ff',
@@ -1020,8 +1020,8 @@
   Object.assign(PASSIVES.dash, { role:'机动' });
   Object.assign(PASSIVES.fortune, { role:'资源' });
   Object.assign(PASSIVES.execute, { role:'收割' });
-  Object.assign(PASSIVES.venom, { role:'持续伤害' });
-  Object.assign(PASSIVES.frostbite, { role:'控制' });
+  Object.assign(PASSIVES.venom, { role:'范围腐蚀' });
+  Object.assign(PASSIVES.frostbite, { role:'范围冻伤' });
   Object.assign(PASSIVES.persist, { role:'区域延长' });
   Object.assign(PASSIVES.guardian, { role:'基地防御' });
   Object.assign(PASSIVES.amphibious, { role:'地形通行' });

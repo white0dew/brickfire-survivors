@@ -4143,6 +4143,8 @@
         continue;
       }
       if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
+      if (e.nanoBurstCd > 0) e.nanoBurstCd = Math.max(0, e.nanoBurstCd - dt);
+      if (e.cryoBurstCd > 0) e.cryoBurstCd = Math.max(0, e.cryoBurstCd - dt);
       if (e.poisonTimer > 0) {
         e.poisonTimer = Math.max(0, e.poisonTimer - dt);
         damageEnemy(e, (e.poisonDps || 0) * dt, false, 'poison', e.poisonOwner);
@@ -5263,10 +5265,39 @@
     addShake(Math.min(11, radius * .1), .22);
   }
 
+  function triggerNanoBurst(e, owner, damage, radius) {
+    addEffect({ type: 'explosion', x: e.x, y: e.y, radius, life: .34, maxLife: .34, color: '#a9e56e' });
+    addEffect({ type: 'ring', x: e.x, y: e.y, radius: radius * 1.25, life: .38, maxLife: .38, color: '#d8ff9a' });
+    addParticles(e.x, e.y, 12, '#baff7a', 'spark', 1.2);
+    for (const other of G.enemies) {
+      if (other.dead || other.spawnTimer > 0) continue;
+      const d2 = dist2(e.x, e.y, other.x, other.y);
+      const reach = radius + (other.radius || 14) * (other.size || 1) * .5;
+      if (d2 >= reach * reach) continue;
+      const fall = 1 - .35 * Math.sqrt(d2) / reach;
+      damageEnemy(other, damage * fall, false, 'nanoburst', owner);
+    }
+  }
+
+  function triggerCryoBurst(e, owner, damage, radius, slow) {
+    addEffect({ type: 'explosion', x: e.x, y: e.y, radius, life: .34, maxLife: .34, color: '#9bd8ff' });
+    addEffect({ type: 'ring', x: e.x, y: e.y, radius: radius * 1.25, life: .38, maxLife: .38, color: '#e2f5ff' });
+    addParticles(e.x, e.y, 12, '#c7f5ff', 'spark', 1.2);
+    for (const other of G.enemies) {
+      if (other.dead || other.spawnTimer > 0) continue;
+      const d2 = dist2(e.x, e.y, other.x, other.y);
+      const reach = radius + (other.radius || 14) * (other.size || 1) * .5;
+      if (d2 >= reach * reach) continue;
+      other.slowTimer = Math.max(other.slowTimer || 0, slow);
+      const fall = 1 - .35 * Math.sqrt(d2) / reach;
+      damageEnemy(other, damage * fall, false, 'cryoburst', owner);
+    }
+  }
+
   function damageEnemy(e, amount, crit, source, owner) {
     if (!e || e.dead || e.spawnTimer > 0) return;
     // Bulwark: front plow absorbs most direct fire; flanking and explosives bypass it.
-    if (e.type === 'bulwark' && owner && source !== 'explosion' && source !== 'flame') {
+    if (e.type === 'bulwark' && owner && source !== 'explosion' && source !== 'flame' && source !== 'nanoburst' && source !== 'cryoburst') {
       const incoming = Math.atan2(owner.y - e.y, owner.x - e.x);
       const diff = ((incoming - e.bodyAngle + Math.PI) % TAU + TAU) % TAU - Math.PI;
       if (Math.abs(diff) < 1.15) {
@@ -5294,16 +5325,17 @@
       e.poisonDps = Math.max(e.poisonDps || 0, 4 * st.damage);
       e.poisonOwner = owner;
     }
-    if (st.venom && source !== 'poison' && source !== 'flame') {
-      e.poisonTimer = Math.max(e.poisonTimer || 0, 2);
-      e.poisonDps = Math.max(e.poisonDps || 0, (1.2 + st.venom * .35) * st.damage);
-      e.poisonOwner = owner;
+    if (st.venom && source !== 'poison' && source !== 'flame' && source !== 'nanoburst' && source !== 'cryoburst' && !(e.nanoBurstCd > 0)) {
+      triggerNanoBurst(e, owner, amount * (.36 + st.venom * .06), 36 + st.venom * 8);
+      e.nanoBurstCd = .55;
     }
-    if (st.frostbite && source !== 'flame' && source !== 'poison') {
-      e.slowTimer = Math.max(e.slowTimer || 0, 1 + st.frostbite * .15);
+    if (st.frostbite && source !== 'flame' && source !== 'poison' && source !== 'nanoburst' && source !== 'cryoburst' && !(e.cryoBurstCd > 0)) {
+      triggerCryoBurst(e, owner, amount * (.30 + st.frostbite * .05), 34 + st.frostbite * 9, 1 + st.frostbite * .18);
+      e.cryoBurstCd = .7;
     }
     G.totalDamage += amount;
-    if (source !== 'flame' || chance(.45)) addDamageNumber(e.x, e.y - 17 * (e.size || 1), Math.round(amount), crit ? '#ffd15c' : '#f4ead2', crit);
+    const quiet = source === 'nanoburst' || source === 'cryoburst';
+    if (!quiet && (source !== 'flame' || chance(.45))) addDamageNumber(e.x, e.y - 17 * (e.size || 1), Math.round(amount), crit ? '#ffd15c' : '#f4ead2', crit);
     if (e.hp <= 0) killEnemy(e, source, owner);
   }
 
