@@ -295,7 +295,7 @@
           scheduleTankArtRedraw();
         };
         img.onerror = () => { console.warn('[tank-art] missing', tank.id, part); };
-        img.src = `assets/game/tanks/${tank.id}/${part}.png?v=20261024-2`;
+        img.src = `assets/game/tanks/${tank.id}/${part}.png?v=20261024-3`;
       }
     }
   }
@@ -2087,6 +2087,14 @@
         ctx.strokeStyle = hexA(color, .22); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.stroke();
         ctx.fillStyle = hexA(color, .06); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, TAU); ctx.fill();
         ctx.fillStyle = hexA(color, .65); ctx.fillRect(s.x - 1, s.y - 12, 2, 24); ctx.fillRect(s.x - 12, s.y - 1, 24, 2);
+        if (s.kind === 'rod') {
+          const fall = clamp(1 - s.timer / s.delay, 0, 1);
+          const drop = 190 * (1 - fall);
+          ctx.strokeStyle = hexA('#dbe8ff', .25 + fall * .5); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(s.x, s.y - drop - 26); ctx.lineTo(s.x, s.y); ctx.stroke();
+          ctx.fillStyle = hexA('#ffffff', .55 + fall * .35);
+          ctx.fillRect(s.x - 1, s.y - drop - 42, 2, 42);
+        }
         ctx.restore();
       }
     }
@@ -3646,22 +3654,32 @@
         p.frostTimer = Math.max(.55, w.interval / st.attackSpeed * st.cdr);
       }
     }
-    // toxin pool
+    // orbital kinetic rods (legacy weapon id: toxin)
     const toxinLvl = weaponsFor(p).toxin || 0;
     if (toxinLvl) {
       const w = WEAPONS.toxin.levels[Math.min(7, toxinLvl - 1)];
       p.toxinTimer -= dt;
       if (p.toxinTimer <= 0) {
-        const target = nearestAttackable(p.x, p.y, 600);
-        if (target) {
-          const radius = w.radius * st.area * (fused('toxin', p) ? 1.25 : 1);
-          const life = w.life * st.duration * (fused('toxin', p) ? 1.25 : 1);
-          addToxinPool(target.x, target.y, w.damage * st.damage * (fused('toxin', p) ? 1.35 : 1), radius, p, life, w.tick);
-          if (fused('toxin', p)) addToxinPool(target.x + rand(34, -34), target.y + rand(34, -34), w.damage * st.damage, radius * .8, p, life * .8, w.tick);
-          addEffect({ type: 'ring', x: target.x, y: target.y, radius, life: .4, maxLife: .4, color: '#a9e56e' });
-          AUDIO.tone(150, .25, 'sine', .015, 280);
-          p.toxinTimer = Math.max(.6, w.interval / st.attackSpeed * st.cdr);
-        } else p.toxinTimer = .25;
+        const candidates = G.enemies.filter(e => !e.dead && e.spawnTimer <= 0 && dist2(e.x, e.y, p.x, p.y) < 640 * 640);
+        if (candidates.length) {
+          // Prefer the boss, then the toughest target: the rod is a single heavy hit,
+          // not another area-denial pool.
+          candidates.sort((a, b) => ((b === G.boss ? 1 : 0) - (a === G.boss ? 1 : 0)) || b.hp - a.hp);
+          const target = candidates[0];
+          const rodCount = w.count + (tankData(p).rodAdd || 0) + (fused('toxin', p) ? 1 : 0);
+          for (let i = 0; i < rodCount; i++) {
+            const crit = chance(st.crit);
+            G.strikes.push({
+              x: clamp(target.x + (i ? rand(34, -34) : 0), 30, W - 30),
+              y: clamp(target.y + (i ? rand(34, -34) : 0), 30, H - 30),
+              radius: w.radius * st.area * (fused('toxin', p) ? 1.25 : 1),
+              damage: w.damage * st.damage * (fused('toxin', p) ? 1.2 : 1) * (crit ? st.critMult : 1),
+              crit, owner: p, delay: w.delay, timer: w.delay, state: 'warn', kind: 'rod', source: 'kinetic', fusion: fused('toxin', p), color: '#9dbbff'
+            });
+          }
+          p.toxinTimer = Math.max(.7, w.interval / st.attackSpeed * st.cdr);
+          AUDIO.tone(130, .45, 'sine', .02, 240);
+        } else p.toxinTimer = .3;
       }
     }
     // gravity well
@@ -3904,7 +3922,12 @@
             damageBase(s.damage * .8, 'hazard');
           }
         } else {
-          explodeAt(s.x, s.y, s.radius, s.damage, color, { source: 'orbital', owner: s.owner, crit: s.crit });
+          explodeAt(s.x, s.y, s.radius, s.damage, color, { source: s.source || 'orbital', owner: s.owner, crit: s.crit });
+          if (s.kind === 'rod') {
+            addEffect({ type: 'ring', x: s.x, y: s.y, radius: s.radius * 1.8, life: .45, maxLife: .45, color: '#dbe8ff' });
+            addParticles(s.x, s.y, 18, '#cfe4ff', 'spark', 1.5);
+            if (s.fusion) explodeAt(s.x, s.y, s.radius * 1.65, s.damage * .45, '#dbe8ff', { source: 'kinetic', owner: s.owner, crit: false });
+          }
         }
         addShake(9, .33);
         G.flash = .6; G.flashColor = color;
@@ -6236,7 +6259,8 @@
     if (totalItems < 4) html += '<div class="loadout-hint">继续拾取余烬扩展构筑</div>';
     U.loadoutList.innerHTML = html || '<div class="empty-slot">升级解锁武器模块</div>';
     ICONS.applyAll(U.loadoutList);
-    U.slotCount.textContent = `${Object.keys(G.weapons).length} / 6`;
+    U.slotCount.textContent = `武器 ${Object.keys(G.weapons).length} / 6`;
+    if (U.passiveCount) U.passiveCount.textContent = `被动 ${Object.keys(G.passives).length} / 6`;
     G.loadoutDirty = false;
   }
 
@@ -7136,9 +7160,9 @@
   /* ---------------- input / lifecycle ---------------- */
   function cacheUI() {
     const ids = ['app', 'menuScreen', 'menuCanvas', 'padState', 'padHint', 'startBtn', 'howBtn', 'howScreen', 'howClose', 'howStart', 'soundBtnMenu',
-      'gameLayout', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
+      'gameLayout', 'slotCount', 'passiveCount', 'sectorLabel', 'phaseLabel', 'clockLabel', 'clockBar', 'bossMarker', 'topKills', 'soundBtn', 'pauseBtn', 'fullBtn', 'fullBtnMenu',
       'battleFrame', 'gameCanvas', 'toastStack', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
-      'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'slotCount', 'loadoutList',
+      'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupP1', 'levelupP2', 'levelupCoopNote', 'levelupKeyHint', 'levelupPadHint', 'pauseScreen', 'resumeBtn',

@@ -745,17 +745,18 @@
       ]
     },
     toxin: {
-      name: '腐蚀毒池', en: 'VENOM FIELD', short: '毒池', icon: 'flame', color: '#a9e56e', type: 'weapon',
-      desc: '在敌群脚下投放持续腐蚀的毒池。',
+      // Legacy id kept for saves; the weapon itself is now a kinetic orbital rod.
+      name: '天基动能棒', en: 'RODS FROM GOD', short: '天基', icon: 'orbital', color: '#9dbbff', type: 'weapon',
+      desc: '从轨道投下钨棒，延迟后贯穿并震碎目标区域。',
       levels: [
-        { damage: 7, interval: 2.6, radius: 42, life: 3.4, tick: .45, text: '投放毒池，持续 <b>3.4</b> 秒。' },
-        { damage: 9, interval: 2.48, radius: 46, life: 3.7, tick: .44, text: '毒池范围与持续时间提升。' },
-        { damage: 12, interval: 2.34, radius: 50, life: 4.0, tick: .43, text: '腐蚀浓度提升。' },
-        { damage: 15, interval: 2.2, radius: 55, life: 4.3, tick: .42, text: '毒池可覆盖更多敌人。' },
-        { damage: 19, interval: 2.05, radius: 60, life: 4.6, tick: .4, text: '毒性伤害 <b>+4</b>。' },
-        { damage: 24, interval: 1.88, radius: 65, life: 5.0, tick: .38, text: '毒池持续时间延长。' },
-        { damage: 30, interval: 1.7, radius: 70, life: 5.4, tick: .36, text: '高浓度腐蚀液。' },
-        { damage: 38, interval: 1.48, radius: 78, life: 6.0, tick: .32, text: '<b>腐化生态</b>：毒池连成一片。' }
+        { damage: 105, interval: 5.2, radius: 44, count: 1, delay: .9, text: '每 <b>5.2</b> 秒锁定目标，投下 1 根钨棒。' },
+        { damage: 130, interval: 5.05, radius: 48, count: 1, delay: .86, text: '动能伤害 <b>+25</b>，落点更精准。' },
+        { damage: 160, interval: 4.85, radius: 52, count: 1, delay: .82, text: '再入速度提升，冲击半径扩大。' },
+        { damage: 195, interval: 4.6, radius: 58, count: 1, delay: .78, text: '钨棒质量增加，贯穿效果提升。' },
+        { damage: 240, interval: 4.35, radius: 64, count: 2, delay: .72, text: '每次呼叫 <b>2</b> 根钨棒。' },
+        { damage: 295, interval: 4.1, radius: 70, count: 2, delay: .66, text: '轨道投送窗口缩短。' },
+        { damage: 365, interval: 3.8, radius: 78, count: 2, delay: .6, text: '连续动能打击覆盖敌群。' },
+        { damage: 455, interval: 3.45, radius: 88, count: 3, delay: .52, text: '<b>天基制裁</b>：三根钨棒同时贯穿战区。' }
       ]
     },
     gravity: {
@@ -912,9 +913,9 @@
       stats: ['对残血伤害 +8%'], text: '对生命低于 <b>35%</b> 的敌人伤害 <b>+8%</b>。'
     },
     venom: {
-      name: '毒剂弹头', en: 'VENOM WARHEAD', short: '毒弹', icon: 'flame', color: '#a9e56e',
-      desc: '所有攻击附加持续中毒。', max: 5,
-      stats: ['中毒伤害提升'], text: '命中附加 <b>2 秒中毒</b>，每秒伤害随等级提升。'
+      name: '纳米腐蚀弹头', en: 'NANO CORROSIVE', short: '纳蚀', icon: 'nano', color: '#a9e56e',
+      desc: '命中注入纳米腐蚀剂，短时间持续剥离装甲。', max: 5,
+      stats: ['腐蚀伤害提升'], text: '命中附加 <b>2 秒纳米腐蚀</b>，每秒伤害随等级提升。'
     },
     frostbite: {
       name: '低温弹头', en: 'CRYO WARHEAD', short: '冻伤', icon: 'cooling', color: '#9bd8ff',
@@ -923,8 +924,8 @@
     },
     persist: {
       name: '持续增幅', en: 'PERSISTENCE', short: '持续', icon: 'cooling', color: '#b896ff',
-      desc: '延长火焰、毒池等区域效果。', max: 5,
-      stats: ['区域持续 +10%'], text: '火焰与毒池持续时间 <b>+10%</b>。'
+      desc: '延长火焰与区域效果持续时间。', max: 5,
+      stats: ['区域持续 +10%'], text: '火焰与区域效果持续时间 <b>+10%</b>。'
     },
     guardian: {
       name: '基地守护', en: 'BASE GUARDIAN', short: '守家', icon: 'shield', color: '#5ff0ce',
@@ -964,7 +965,7 @@
     { id:'juggernaut', name:'巨兽 M-17', en:'JUGGERNAUT', role:'坦度', desc:'不需要躲子弹，子弹需要躲你。', trait:'最大装甲 +35%；受伤 -10%；速度 -15%', colors:{body:'#71634a',light:'#d8c294',dark:'#342b1b',core:'#ffbc55'}, hpMul:1.35, damageTakenMul:.9, speedMul:.85, affinity:['armor','shield','cannon'], start:{weapons:{cannon:1},passives:{armor:1}} },
     { id:'phantom', name:'幽灵 M-18', en:'PHANTOM', role:'冲刺', desc:'出现，开火，消失。', trait:'冲刺冷却 -45%；速度 +6%', colors:{body:'#4e7b8b',light:'#b7efff',dark:'#172f38',core:'#5ff0ce'}, dashCdMul:.55, speedMul:1.06, affinity:['engine','cannon','crit'], start:{weapons:{cannon:1},passives:{engine:1}} },
     { id:'demo', name:'爆破 M-19', en:'DEMOLITION', role:'爆炸', desc:'把每一发炮弹都变成一个小型事件。', trait:'爆炸范围 +25%；爆炸伤害 +10%', colors:{body:'#b45a32',light:'#ffc07a',dark:'#44200f',core:'#ff7a2a'}, areaMul:1.25, explodeAdd:20, affinity:['warhead','mine','cannon'], start:{weapons:{cannon:1},passives:{warhead:1}} },
-    { id:'toxin', name:'毒蝎 M-20', en:'TOXIN', role:'中毒', desc:'不追求一炮致命，只追求慢慢烂掉。', trait:'命中附加中毒，2 秒持续伤害；全伤害 -5%', colors:{body:'#6c8a38',light:'#d8ff9a',dark:'#2b3a12',core:'#a9e56e'}, poisonOnHit:true, damageMul:.95, affinity:['cannon','flame','warhead'], start:{weapons:{cannon:1}} }
+    { id:'toxin', name:'天基 M-20', en:'ROD FROM GOD', role:'轨道打击', desc:'从近地轨道投下钨棒，把敌群按回地面。', trait:'开场携带天基动能棒；动能打击 +1；爆炸范围 +10%', colors:{body:'#52638f',light:'#dbe8ff',dark:'#1b2544',core:'#9dbbff'}, rodAdd:1, areaMul:1.1, affinity:['orbital','warhead','cannon'], start:{weapons:{cannon:1,toxin:1}} }
   ];
 
   const FUSIONS = {
@@ -978,7 +979,7 @@
     laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:6, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
     missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:6, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
     frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:6, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
-    toxin: { id:'toxin', weapon:'toxin', passive:'salvage', weaponLevel:6, passiveLevel:2, name:'腐化生态', en:'CORROSIVE BIOSPHERE', color:'#a9e56e', icon:'flame', desc:'毒池 +1 层，范围与持续时间大幅提升。' },
+    toxin: { id:'toxin', weapon:'toxin', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'天基齐射', en:'ORBITAL BARRAGE', color:'#9dbbff', icon:'orbital', desc:'动能棒 +1，冲击半径 +25%，落点引发二次震波。' },
     gravity: { id:'gravity', weapon:'gravity', passive:'magnet', weaponLevel:6, passiveLevel:2, name:'事件视界', en:'EVENT HORIZON', color:'#b896ff', icon:'orbital', desc:'奇点半径 +30%，吸附力翻倍，碾碎伤害提升。' },
     mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:6, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
     sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:6, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，耐久与嘲讽范围提升，形成会吸火的交叉防线。' },
@@ -997,7 +998,7 @@
   Object.assign(WEAPONS.laser, { role:'直线穿透', focus:'单列 / 高频射线' });
   Object.assign(WEAPONS.missile, { role:'追踪爆发', focus:'自动锁定 / 爆炸' });
   Object.assign(WEAPONS.frost, { role:'范围控场', focus:'减速 / 近身防御' });
-  Object.assign(WEAPONS.toxin, { role:'区域封锁', focus:'毒池 / 持续伤害' });
+  Object.assign(WEAPONS.toxin, { role:'重型打击', focus:'天基 / 单体爆发' });
   Object.assign(WEAPONS.gravity, { role:'聚怪控场', focus:'吸附 / 集中歼灭' });
   Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
   Object.assign(WEAPONS.sentry, { role:'嘲讽阵地', focus:'吸引火力 / 基地守区' });
