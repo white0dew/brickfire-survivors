@@ -8667,6 +8667,17 @@
     g2.prevButtons = Array.from(g2.buttons || [], b => !!(b && b.pressed));
   }
 
+  function primeMenuAudio() {
+    AUDIO.init();
+    if (G.mode !== 'menu') return;
+    if (!AUDIO.menuMusicOn || AUDIO.bgmKind !== 'menu') {
+      AUDIO.startMenuMusic();
+    } else if (AUDIO.bgmEl && AUDIO.bgmEl.paused) {
+      const play = AUDIO.bgmEl.play();
+      if (play && play.catch) play.catch(() => {});
+    }
+  }
+
   function init() {
     cacheUI();
     loadArtAssets();
@@ -8745,6 +8756,10 @@
         if (G.boss) { G.boss.spawnTimer = 0; G.boss.spawnTotal = 0; }
       }
     }
+    primeMenuAudio();
+    ['pointerdown', 'keydown', 'touchstart'].forEach(type => {
+      window.addEventListener(type, primeMenuAudio, { capture: true, passive: type === 'touchstart' });
+    });
     requestAnimationFrame(loop);
     // Local/debug-only full codex: /?debug&codex=all (never writes bf.codex).
     const codexPreview = new URLSearchParams(location.search);
