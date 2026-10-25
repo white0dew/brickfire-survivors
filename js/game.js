@@ -4739,7 +4739,8 @@
         updateRegularEnemy(e, dt);
       }
       if (e.dead) continue;
-      // Ground and hover units can ram; aircraft stay above the collision plane.
+      // Collision safety net only; no enemy relies on a dedicated contact attack.
+      // Aircraft stay above the collision plane.
       if (e.domain !== 'air') {
         if (e.contactCd > 0) e.contactCd -= dt;
         const p = nearestTarget(e.x, e.y);
