@@ -6873,14 +6873,25 @@
     U.threatLabel.textContent = threat > 6.5 ? '极危' : threat > 4.5 ? '高' : threat > 2.5 ? '中' : '低';
     U.dangerTint.classList.toggle('is-active', hpPct < 28);
     const dashLeft = Math.max(0, p.dashCd);
-    U.dashStatus.textContent = dashLeft <= .03 ? '就绪' : `充能 ${dashLeft.toFixed(1)}s`;
-    U.dashMeter.style.width = `${dashLeft <= .03 ? 100 : clamp((1 - dashLeft / p.dashMax) * 100, 0, 100)}%`;
+    if (U.dashStatus) U.dashStatus.textContent = dashLeft <= .03 ? '就绪' : `充能 ${dashLeft.toFixed(1)}s`;
+    if (U.dashMeter) U.dashMeter.style.width = `${dashLeft <= .03 ? 100 : clamp((1 - dashLeft / p.dashMax) * 100, 0, 100)}%`;
+    if (U.dashStatus2) {
+      const dashLeft2 = p2 ? Math.max(0, p2.dashCd) : 0;
+      U.dashStatus2.textContent = !p2 ? '离线' : (p2.downed ? '倒地' : (dashLeft2 <= .03 ? '就绪' : `充能 ${dashLeft2.toFixed(1)}s`));
+      if (U.dashMeter2) U.dashMeter2.style.width = p2 ? `${dashLeft2 <= .03 ? 100 : clamp((1 - dashLeft2 / p2.dashMax) * 100, 0, 100)}%` : '0%';
+    }
     const recallLeft = Math.max(0, G.recallCd || 0);
-    if (U.recallStatus) U.recallStatus.textContent = recallLeft <= .03 ? '就绪' : `冷却 ${Math.ceil(recallLeft)}s`;
-    if (U.recallMeter) U.recallMeter.style.width = `${recallLeft <= .03 ? 100 : clamp((1 - recallLeft / (G.recallMax || RECALL_CD)) * 100, 0, 100)}%`;
-    if (U.recallBtn) {
-      U.recallBtn.disabled = recallLeft > .03;
-      U.recallBtn.classList.toggle('is-cooling', recallLeft > .03);
+    for (const status of [U.recallStatus, U.recallStatus2]) {
+      if (status) status.textContent = recallLeft <= .03 ? '就绪' : `冷却 ${Math.ceil(recallLeft)}s`;
+    }
+    const recallPct = recallLeft <= .03 ? 100 : clamp((1 - recallLeft / (G.recallMax || RECALL_CD)) * 100, 0, 100);
+    for (const meter of [U.recallMeter, U.recallMeter2]) {
+      if (meter) meter.style.width = `${recallPct}%`;
+    }
+    for (const btn of [U.recallBtn, U.recallBtn2]) {
+      if (!btn) continue;
+      btn.disabled = recallLeft > .03;
+      btn.classList.toggle('is-cooling', recallLeft > .03);
     }
     if (U.mobileRecall) {
       U.mobileRecall.disabled = recallLeft > .03;
@@ -8188,7 +8199,7 @@
       'battleFrame', 'gameCanvas', 'toastStack', 'p1Feed', 'p2Feed', 'bossHud', 'bossHpLabel', 'bossHpBar', 'mobileHud', 'mCoreBar', 'mBaseBar', 'mHpBar', 'mLevel', 'levelLabel', 'hpText', 'hpMeter', 'xpText', 'xpMeter',
       'statAtk', 'statSpd', 'statCrit', 'coreState', 'corePercent', 'coreText', 'coreRing', 'corePips', 'loadoutList',
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
-      'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
+      'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'dashStatus2', 'dashMeter2', 'recallBtn', 'recallBtn2', 'recallStatus', 'recallStatus2', 'recallMeter', 'recallMeter2', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'itemTutorialScreen', 'itemTutorialGrid', 'itemTutorialStart', 'itemTutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins', 'sfBestTime', 'sfBestLevel', 'sfBestWins',
@@ -8328,6 +8339,7 @@
     U.itemDone.addEventListener('click', closeItemGuide);
     U.itemScreen.addEventListener('click', e => { if (e.target === U.itemScreen || e.target.classList.contains('overlay__backdrop')) closeItemGuide(); });
     if (U.recallBtn) U.recallBtn.addEventListener('click', recallToBase);
+    if (U.recallBtn2) U.recallBtn2.addEventListener('click', recallToBase);
     if (U.mobileRecall) U.mobileRecall.addEventListener('click', recallToBase);
     U.saveBtn.addEventListener('click', openSaveScreen);
     U.saveClose.addEventListener('click', closeSaveScreen);
