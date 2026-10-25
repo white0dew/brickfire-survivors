@@ -409,9 +409,10 @@
       codex: '重装攻城单位。装甲厚、炮弹重，推进缓慢但能持续拆墙。'
     },
     bomber: {
-      name: '自爆履带', en: 'BOMBER', hp: 109.5, speed: 69, damage: 25, fire: 0, bulletSpeed: 0,
+      name: '爆破炮车', en: 'BLAST TANK', hp: 109.5, speed: 54, damage: 25, fire: 3.0, bulletSpeed: 180,
       xp: 4, radius: 12, color: '#c65766', dark: '#5c202b', light: '#ff9eaa', core: '#ff3d5a', class: 'bomber',
-      codex: '高速自爆单位。没有远程武器，贴身瞬间引爆，优先追击最近目标。'
+      domain: 'ground', ai: 'line', role: 'ranged', tier: 1, size: .96,
+      codex: '远程爆破单位。发射会在地面炸开的爆破弹，不再贴身自爆；优先打掉它的炮口。'
     },
     sniper: {
       name: '磁轨猎手', en: 'RAIL HUNTER', hp: 130.5, speed: 29, damage: 21.25, fire: 3.6, bulletSpeed: 560,
@@ -511,10 +512,10 @@
       codex: '正面装有推土铲的重装单位。正面减伤极高，绕后、电弧和曲射能有效处理。'
     },
     minelayer: {
-      name: '布雷履带', en: 'MINELAYER', hp: 135, speed: 32, damage: 15, fire: 0, bulletSpeed: 0,
+      name: '封锁炮车', en: 'SUPPRESSION TANK', hp: 135, speed: 32, damage: 15, fire: 2.8, bulletSpeed: 220,
       xp: 5, radius: 12, color: '#9a7b3e', dark: '#3c3117', light: '#ffdd8a', core: '#ffcf5a', class: 'light',
-      domain: 'ground', ai: 'minelayer', role: 'trapper', tier: 1, size: .95,
-      codex: '移动时在身后布设感应雷。不要沿着它的旧路线追击；远程打掉地雷。'
+      domain: 'ground', ai: 'line', role: 'ranged', tier: 1, size: .95,
+      codex: '远程封锁单位。发射慢速封锁弹，命中后压制走位；不再布置感应雷。'
     },
     splitter: {
       name: '分裂运输车', en: 'SPLITTER', hp: 450, speed: 26, damage: 18.75, fire: 2.5, bulletSpeed: 220,
@@ -523,28 +524,28 @@
       codex: '死亡时分裂成三只小型履带。尽量用范围伤害一次清干净，避免被碎片包围。'
     },
     scrap: {
-      name: '碎片履带', en: 'SCRAP RUNNER', hp: 27, speed: 62, damage: 7.5, fire: 0, bulletSpeed: 0,
+      name: '碎片炮车', en: 'SCRAP GUNNER', hp: 27, speed: 62, damage: 7.5, fire: 1.8, bulletSpeed: 300,
       xp: 1, radius: 7, color: '#b3774b', dark: '#3a2418', light: '#ffc08a', core: '#ff8a4a', class: 'light',
-      domain: 'ground', ai: 'rusher', role: 'rusher', tier: 1, size: .7,
-      codex: '分裂运输车死亡后掉出的高速碎片。血少、速度快，优先用范围武器清掉。'
+      domain: 'ground', ai: 'line', role: 'ranged', tier: 1, size: .7,
+      codex: '分裂运输车死亡后掉出的高速碎片，装有微型速射炮；血少、速度快。'
     },
     borer: {
-      name: '钻地车', en: 'BURROWER', hp: 390, speed: 34, damage: 25, fire: 0, bulletSpeed: 0,
+      name: '钻地炮车', en: 'BURROW GUNNER', hp: 390, speed: 34, damage: 25, fire: 2.8, bulletSpeed: 240,
       xp: 15, radius: 14, color: '#8a5b3c', dark: '#2d1a11', light: '#ffc187', core: '#ff8a4a', class: 'medium',
-      domain: 'ground', ai: 'borer', role: 'ambusher', tier: 2, size: 1.05,
-      codex: '钻地突进单位。会短暂潜地后从目标侧后方钻出，钻出前有土层震动；不要背对它。'
+      domain: 'ground', ai: 'borer', role: 'ranged', tier: 2, size: 1.05,
+      codex: '远程钻地单位。会潜地换位，从侧后方钻出后开火；不再靠撞击。'
     },
     charger: {
-      name: '破阵冲锋车', en: 'BREAKER RAM', hp: 210, speed: 54, damage: 27.5, fire: 0, bulletSpeed: 0,
+      name: '破阵炮车', en: 'BREAKER TANK', hp: 210, speed: 54, damage: 27.5, fire: 2.2, bulletSpeed: 320,
       xp: 9, radius: 13, color: '#b64f38', dark: '#3a1711', light: '#ffb07a', core: '#ff5b3a', class: 'light',
-      domain: 'ground', ai: 'charger', role: 'rusher', tier: 1, size: 1.0,
-      codex: '高速冲锋单位。没有远程武器，靠撞击和数量压穿防线；用减速、地雷和范围火力截停。'
+      domain: 'ground', ai: 'charger', role: 'ranged', tier: 1, size: 1.0,
+      codex: '高速突击炮车。会短促加速抢角度，然后双连射；不再靠撞击造成伤害。'
     },
     welder: {
-      name: '维修车', en: 'FIELD WELDER', hp: 165, speed: 30, damage: 0, fire: 0, bulletSpeed: 0,
+      name: '焊焰炮车', en: 'ARC WELDER', hp: 165, speed: 30, damage: 8, fire: 2.6, bulletSpeed: 240,
       xp: 8, radius: 12, color: '#6e8f4a', dark: '#24311a', light: '#d9ff9a', core: '#a9e56e', class: 'light',
-      domain: 'ground', ai: 'welder', role: 'support', tier: 1, size: .95,
-      codex: '战场维修单位。会周期性修复周围敌军，自己不攻击；优先点掉它，别让前排一直回血。'
+      domain: 'ground', ai: 'line', role: 'ranged', tier: 1, size: .95,
+      codex: '远程焊焰单位。发射低伤害电弧焊束，不再维修其他敌军。'
     },
 
     // ---- EXPANSION PILOT: Sky Swarm air units ----

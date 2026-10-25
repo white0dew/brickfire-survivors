@@ -191,6 +191,12 @@
   // be readable at a glance and demand a different dodge.
   const ENEMY_ATTACK_STYLE = {
     scout:     { shape: 'shell', color: '#ff7a58', shots: 1, radius: 3.0, trail: 14 },
+    bomber:    { shape: 'heavy', color: '#ff8a5a', shots: 1, speedMul: .72, radius: 4.8, trail: 28, splash: 32, splashMul: .45 },
+    minelayer: { shape: 'shell', color: '#ffcf5a', shots: 1, speedMul: .78, radius: 3.6, trail: 22 },
+    scrap:     { shape: 'shell', color: '#ffc08a', shots: 1, speedMul: 1.15, radius: 2.0, trail: 8 },
+    borer:     { shape: 'orb', color: '#ffb15a', shots: 1, speedMul: .9, radius: 3.6, trail: 18 },
+    charger:   { shape: 'shell', color: '#ff6a4a', shots: 2, spread: .1, damageMul: .7, speedMul: 1.12, radius: 2.9, trail: 16 },
+    welder:    { shape: 'orb', color: '#a9e56e', shots: 1, speedMul: .9, radius: 2.6, trail: 20 },
     grunt:     { shape: 'shell', color: '#ff6860', shots: 2, spread: .055, damageMul: .72, radius: 3.1, trail: 16 },
     heavy:     { shape: 'heavy', color: '#ffb35c', shots: 1, speedMul: .78, radius: 5.4, trail: 28, splash: 34, splashMul: .5 },
     sniper:    { shape: 'rail',  color: '#9dbbff', shots: 1, speedMul: 1.15, radius: 2.0, trail: 58 },
@@ -421,7 +427,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-41`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-42`;
     }
   }
 
@@ -2011,7 +2017,7 @@
     // Mortar / elite / scrap already contain their gun in the AI sheet. Drawing a
     // procedural turret on top produced a second barrel, so rotate the complete
     // sprite instead and let it own the aim direction.
-    const aimWithTurret = e.type === 'mortar' || e.type === 'elite' || e.type === 'scrap' || e.type === 'borer' || e.type === 'charger' || e.type === 'welder';
+    const aimWithTurret = e.type === 'mortar' || e.type === 'elite' || e.type === 'scrap' || e.type === 'borer' || e.type === 'charger' || e.type === 'welder' || e.type === 'bomber' || e.type === 'minelayer';
     return img ? { img, split: false, aimWithTurret } : null;
   }
 
@@ -4740,7 +4746,6 @@
         if (p) {
           const contactR = (e.radius * e.size + p.radius + 1);
           if (dist2(e.x, e.y, p.x, p.y) < contactR * contactR) {
-            if (e.type === 'bomber') { bomberExplode(e); continue; }
             if (e.contactCd <= 0) {
               if (p.isSentry) damageSentry(p.sentry, e.damage * .9, 'contact');
               else if (p.isBase) damageBase(e.damage * .9, 'contact');
@@ -4948,9 +4953,7 @@
     const targetDist = dist(e.x, e.y, tx, ty);
     const attackStyle = ENEMY_ATTACK_STYLE[e.type] || {};
     // turret aim
-    if (e.type !== 'bomber') {
-      e.turretAngle = angleLerp(e.turretAngle, Math.atan2(ty - e.y, tx - e.x), dt * 5);
-    }
+    e.turretAngle = angleLerp(e.turretAngle, Math.atan2(ty - e.y, tx - e.x), dt * 5);
     // elite area burst
     if (e.elite && e.abilityCd <= 0) {
       e.abilityCd = 8.5;
@@ -4977,39 +4980,13 @@
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 30, life: .42, maxLife: .42, color: '#ffcf5a' });
       addParticles(e.x, e.y, 10, '#ffcf5a', 'spark', .55);
     }
-    // charger: short speed burst instead of a gun.
+    // charger: short speed burst to re-angle before firing.
     if (e.ai === 'charger' && e.abilityCd <= 0 && targetDist < 330) {
       e.abilityCd = 4.2;
       e.chargeBoost = .8;
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 24, life: .25, maxLife: .25, color: '#ff8a4a' });
     }
-    // welder: repairs nearby enemies; it has no weapon of its own.
-    if (e.ai === 'welder' && e.abilityCd <= 0) {
-      e.abilityCd = 4.0;
-      let healed = 0;
-      for (const ally of G.enemies) {
-        if (!ally || ally === e || ally.dead || ally.hp <= 0 || ally.boss) continue;
-        if (dist(e.x, e.y, ally.x, ally.y) > 150) continue;
-        ally.hp = Math.min(ally.maxHp, ally.hp + ally.maxHp * .08);
-        healed++;
-      }
-      if (healed) {
-        addEffect({ type: 'ring', x: e.x, y: e.y, radius: 54, life: .5, maxLife: .5, color: '#a9e56e' });
-        addParticles(e.x, e.y, 8, '#a9e56e', 'spark', .55);
-      }
-    }
-    // minelayer leaves a hostile mine trail; this is its pressure, not a gun.
-    if (e.ai === 'minelayer' && e.abilityCd <= 0) {
-      e.abilityCd = 2.6;
-      if (G.mines.length < 55) {
-        G.mines.push({
-          x: e.x - Math.cos(e.bodyAngle) * 15,
-          y: e.y - Math.sin(e.bodyAngle) * 15,
-          arm: .8, life: 12, damage: e.damage * 1.6, radius: 30,
-          seed: rand(TAU), hostile: true
-        });
-      }
-    }
+    // All regular ground units now use ranged fire; no repair/mine auras.
     // firing: artillery uses a telegraphed ground strike; everyone else uses a shell.
     if (e.ai === 'artillery' && targetDist < 480 && e.fireCd <= 0) {
       const lead = targetMode === 'player' ? clamp(targetDist / 260, 0, .6) : 0;
@@ -5019,7 +4996,7 @@
       addEffect({ type: 'ring', x: px, y: py, radius: 34, life: .35, maxLife: .35, color: '#ffb15a' });
       e.fireCd = (e.fireInterval || 3.8) * rand(1.2, .85);
       e.recoil = 1;
-    } else if (targetDist < 455 && e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher' && e.ai !== 'charger' && e.ai !== 'borer' && e.ai !== 'welder') {
+    } else if (targetDist < 455 && e.fireCd <= 0 && e.ai !== 'artillery') {
       const interval = e.fireInterval || ENEMIES[e.type].fire || 2.3;
       const shots = Math.max(1, attackStyle.shots || (e.elite ? 3 : 1));
       const spread = attackStyle.spread != null ? attackStyle.spread : (e.elite ? .16 : 0);
@@ -5043,9 +5020,6 @@
       e.fireCd = interval * rand(1.15, .8);
       e.recoil = 1;
     }
-    if (e.type === 'bomber') {
-      // bombers chase directly; they do not shoot
-    }
     // movement
     if (e.moving && e.moveTarget) {
       const dx = e.moveTarget.x - e.x, dy = e.moveTarget.y - e.y;
@@ -5065,11 +5039,6 @@
       let shouldHold = false;
       if (targetDist < 205) shouldHold = true;
       if (e.ai === 'artillery' && targetDist < 300) shouldHold = true;
-      if (e.ai === 'minelayer' && targetDist < 180) shouldHold = true;
-      // Dedicated rammers and self-destruct units must keep closing to
-      // contact range. Without this they stop at 205px and never trigger
-      // their payload, which reads as a broken, passive enemy.
-      if (e.ai === 'charger' || e.ai === 'borer' || e.ai === 'rusher' || e.ai === 'minelayer' || e.type === 'bomber') shouldHold = false;
       if (!shouldHold) {
         const flow = p.isBase ? G.flowBase : (G.flowPlayers[p.index] || G.flowPlayer);
         let dir = flowDirection(flow, e.x, e.y, null);
@@ -5083,7 +5052,7 @@
             // dig in
             e.bodyAngle = Math.atan2(dir.dy, dir.dx);
             e.turretAngle = e.bodyAngle;
-            if (e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher' && e.ai !== 'charger' && e.ai !== 'borer' && e.ai !== 'welder') {
+            if (e.fireCd <= 0 && e.ai !== 'artillery') {
               const bx = (dir.nx + .5) * TILE, by = (dir.ny + .5) * TILE;
               fireEnemyBullet(e, e.x + Math.cos(e.bodyAngle) * (e.radius + 4), e.y + Math.sin(e.bodyAngle) * (e.radius + 4), e.bodyAngle, e.bulletSpeed * (attackStyle.speedMul || 1), e.damage * 1.1, {
                 color: attackStyle.color || '#ff8062', radius: attackStyle.radius || 3.2,
@@ -5105,15 +5074,6 @@
         }
       }
     }
-    // bombers proximity trigger
-    if (e.type === 'bomber') {
-      if (dist(e.x, e.y, p.x, p.y) < 30) bomberExplode(e);
-    }
-  }
-
-  function bomberExplode(e) {
-    if (e.dead) return;
-    killEnemy(e, 'bomber');
   }
 
   function fireEnemyBullet(e, x, y, angle, speed, damage, opts) {
@@ -6147,7 +6107,6 @@
       }
       if (G.core && G.core.alive && G.core.hp < G.core.maxHp * .5 && chance(.035)) spawnPickup('basekit', e.x, e.y, 0);
     }
-    if (e.type === 'bomber') explodeAt(e.x, e.y, 46, 25, '#ff5b4a', { hurtPlayer: true, hurtBase: true, hostile: true, source: 'bomber' });
     G.combo = Math.min(G.combo, 999);
   }
 
