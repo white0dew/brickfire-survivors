@@ -84,23 +84,30 @@
     { cx: 2, cy: 9, side: 'left' }, { cx: 27, cy: 9, side: 'right' }
   ];
 
-  // Each map now owns a complete five-phase roster. The first four slots are
-  // map signatures; the fifth is a familiar backbone unit so every sector has
-  // a different opening, midgame and finale instead of sharing three waves.
-  const MAP_ROSTERS = {
-    furnace: ['scout', 'mortar', 'welder', 'bulwark', 'charger'],
-    marsh: ['minelayer', 'splitter', 'borer', 'saucer', 'scout'],
-    frost: ['charger', 'strafer', 'bulwark', 'drone', 'grunt'],
-    redtide: ['bomber', 'minelayer', 'drone', 'strafer', 'sniper'],
-    foundry: ['mortar', 'gunship', 'splitter', 'charger', 'heavy'],
-    graveyard: ['drone', 'skybomber', 'strafer', 'splitter', 'scout'],
-    reactor: ['saucer', 'warper', 'beamfrigate', 'warden', 'grunt'],
-    dome: ['gunship', 'skybomber', 'carrier', 'warper', 'heavy'],
-    citadel: ['strafer', 'gunship', 'warden', 'welder', 'sniper'],
-    abyss: ['borer', 'saucer', 'beamfrigate', 'carrier', 'heavy'],
-    solar: ['beamfrigate', 'saucer', 'skybomber', 'charger', 'grunt'],
-    throne: ['warper', 'skybomber', 'bulwark', 'carrier', 'heavy']
+  // Every sector owns three exclusive normal units, introduced in tiers:
+  // tier 1 chaff -> tier 2 line unit -> tier 3 heavy. The five original phase
+  // slots are retained so the spawn clock and elite/boss timers stay untouched.
+  const STAGE_LINEUPS = {
+    furnace: ['scout', 'mortar', 'bulwark'],
+    marsh: ['scrap', 'splitter', 'mire'],
+    frost: ['charger', 'strafer', 'glacier'],
+    redtide: ['bomber', 'minelayer', 'sniper'],
+    foundry: ['welder', 'gunship', 'heavy'],
+    graveyard: ['drone', 'skybomber', 'orbiter'],
+    reactor: ['saucer', 'warper', 'beamfrigate'],
+    dome: ['spark', 'prism', 'carrier'],
+    citadel: ['skyhound', 'aegis', 'warden'],
+    abyss: ['tide', 'borer', 'maelstrom'],
+    solar: ['flare', 'corona', 'sunspot'],
+    throne: ['grunt', 'wraith', 'sovereign']
   };
+  const MAP_ROSTERS = Object.fromEntries(Object.entries(STAGE_LINEUPS).map(([id, tiers]) => [
+    id, [tiers[0], tiers[0], tiers[1], tiers[2], tiers[2]]
+  ]));
+  const TEST_ENEMIES = MAPS.flatMap((map, stageIndex) => {
+    const tiers = STAGE_LINEUPS[map.id] || [];
+    return tiers.map((type, tierIndex) => ({ type, stageIndex, tier: tierIndex + 1, stage: map.name }));
+  });
 
   // Expansion pilot: one readable environmental rhythm for the three test maps.
   const MAP_HAZARDS = {
@@ -160,7 +167,7 @@
   // The tutorial keeps its short three-phase ramp; every campaign sector uses
   // its own five-phase roster from the first second of the run.
   function stageRoster() {
-    if (G.arenaIndex === 0 && !G.endless) return ['scout', 'grunt', 'mortar'];
+    if (G.arenaIndex === 0 && !G.endless) return STAGE_LINEUPS.furnace || ['scout', 'mortar', 'bulwark'];
     return MAP_ROSTERS[G.arena.id] || ['scout', 'grunt', 'heavy', 'mortar', 'bulwark'];
   }
 
@@ -174,6 +181,10 @@
   }
 
   function phaseLabel() {
+    if (G.testMode && TEST_ENEMIES[G.testIndex]) {
+      const testType = TEST_ENEMIES[G.testIndex].type;
+      return (ENEMIES[testType] && ENEMIES[testType].name) || testType;
+    }
     const roster = stageRoster();
     const type = roster[phaseIndex()] || 'scout';
     const cfg = ENEMIES[type] || {};
@@ -208,7 +219,21 @@
     saucer:    { shape: 'orb',   color: '#7fe8ff', shots: 1, homing: true, turn: .72, homingDelay: .12, radius: 3.1, trail: 24 },
     warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 },
     warden:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 4.2, trail: 32 },
-    carrier:   { shape: 'orb',   color: '#5ff0ce', shots: 2, spread: .1, damageMul: .62, radius: 3.2, trail: 22 }
+    carrier:   { shape: 'orb',   color: '#5ff0ce', shots: 2, spread: .1, damageMul: .62, radius: 3.2, trail: 22 },
+    mire:      { shape: 'blob',  color: '#b6ff6a', shots: 3, spread: .16, speedMul: .8, radius: 4.2, trail: 24, splash: 36, splashMul: .5 },
+    glacier:   { shape: 'heavy', color: '#bdefff', shots: 3, spread: .12, speedMul: .82, radius: 4.0, trail: 26, splash: 28, splashMul: .4 },
+    orbiter:   { shape: 'rail',  color: '#9fd8ff', shots: 1, speedMul: 1.18, radius: 2.4, trail: 52 },
+    spark:     { shape: 'shell', color: '#ffe18a', shots: 2, spread: .08, speedMul: 1.2, radius: 2.4, trail: 12 },
+    prism:     { shape: 'orb',   color: '#ff9ee8', shots: 3, spread: .2, radius: 3.4, trail: 30 },
+    skyhound:  { shape: 'shell', color: '#9fefff', shots: 2, spread: .08, speedMul: 1.15, radius: 2.6, trail: 16 },
+    aegis:     { shape: 'heavy', color: '#c9f2ff', shots: 2, spread: .1, speedMul: .8, radius: 4.4, trail: 24, splash: 26, splashMul: .4 },
+    tide:      { shape: 'orb',   color: '#5ff0ce', shots: 1, homing: true, turn: .7, homingDelay: .12, radius: 3.2, trail: 24 },
+    maelstrom: { shape: 'blob',  color: '#6fffe0', shots: 3, spread: .18, speedMul: .72, radius: 4.8, trail: 30, splash: 40, splashMul: .5 },
+    flare:     { shape: 'shell', color: '#ffd15c', shots: 3, spread: .09, speedMul: 1.12, radius: 2.8, trail: 14 },
+    corona:    { shape: 'orb',   color: '#ffb52d', shots: 3, spread: .18, radius: 3.4, trail: 28 },
+    sunspot:   { shape: 'heavy', color: '#ffcf5a', shots: 3, spread: .12, speedMul: .78, radius: 4.8, trail: 30, splash: 36, splashMul: .5 },
+    wraith:    { shape: 'orb',   color: '#c8b8ff', shots: 2, spread: .12, radius: 3.2, trail: 28 },
+    sovereign: { shape: 'heavy', color: '#ff9e7a', shots: 3, spread: .15, speedMul: .8, radius: 5.0, trail: 32, splash: 30, splashMul: .45 }
   };
 
   let settingsFocusIndex = 0;
@@ -360,6 +385,11 @@
     enemyDrone: 'enemies/drone.png', enemyStrafer: 'enemies/strafer.png', enemySkybomber: 'enemies/skybomber.png', enemyGunship: 'enemies/gunship.png',
     enemyCarrier: 'enemies/carrier.png',
     enemySaucer: 'enemies/saucer.png', enemyBeamfrigate: 'enemies/beamfrigate.png', enemyWarper: 'enemies/warper.png', enemyWarden: 'enemies/warden.png',
+    enemyMire: 'enemies/mire.png', enemyGlacier: 'enemies/glacier.png', enemyOrbiter: 'enemies/orbiter.png',
+    enemySpark: 'enemies/spark.png', enemyPrism: 'enemies/prism.png', enemySkyhound: 'enemies/skyhound.png',
+    enemyAegis: 'enemies/aegis.png', enemyTide: 'enemies/tide.png', enemyMaelstrom: 'enemies/maelstrom.png',
+    enemyFlare: 'enemies/flare.png', enemyCorona: 'enemies/corona.png', enemySunspot: 'enemies/sunspot.png',
+    enemyWraith: 'enemies/wraith.png', enemySovereign: 'enemies/sovereign.png',
     enemyScoutHull: 'enemies/scout-hull.png', enemyGruntHull: 'enemies/grunt-hull.png', enemyHeavyHull: 'enemies/heavy-hull.png',
     enemySniperHull: 'enemies/sniper-hull.png', enemyEliteHull: 'enemies/elite-hull.png', enemyMortarHull: 'enemies/mortar-hull.png',
     vfxMuzzle: 'vfx/muzzle.png', vfxImpact: 'vfx/impact.png', vfxExplosion: 'vfx/explosion.png', vfxSmoke: 'vfx/smoke.png',
@@ -427,7 +457,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-42`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-44`;
     }
   }
 
@@ -1844,7 +1874,8 @@
     ctx.lineWidth = 1;
 
     const airKey = {
-      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship', carrier: 'enemyCarrier'
+      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship', carrier: 'enemyCarrier',
+      orbiter: 'enemyOrbiter', skyhound: 'enemySkyhound', aegis: 'enemyAegis'
     }[e.type];
     const airArt = airKey ? artImage(airKey) : null;
     if (airArt) {
@@ -1932,7 +1963,8 @@
     ctx.translate(e.x, e.y - lift);
     ctx.rotate(e.bodyAngle + Math.PI / 2);
     const xenoKey = {
-      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden'
+      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden',
+      prism: 'enemyPrism', tide: 'enemyTide', corona: 'enemyCorona', wraith: 'enemyWraith'
     }[e.type];
     const xenoArt = xenoKey ? artImage(xenoKey) : null;
     if (xenoArt) {
@@ -2001,7 +2033,10 @@
       bomber: 'enemyBomber', sniper: 'enemySniper', elite: 'enemyElite',
       mortar: 'enemyMortar', bulwark: 'enemyBulwark', minelayer: 'enemyMinelayer',
       splitter: 'enemySplitter', scrap: 'enemyScrap',
-      borer: 'enemyBorer', charger: 'enemyCharger', welder: 'enemyWelder'
+      borer: 'enemyBorer', charger: 'enemyCharger', welder: 'enemyWelder',
+      mire: 'enemyMire', glacier: 'enemyGlacier', spark: 'enemySpark',
+      maelstrom: 'enemyMaelstrom', flare: 'enemyFlare', sunspot: 'enemySunspot',
+      sovereign: 'enemySovereign'
     }[e.type];
     const hullKey = {
       scout: 'enemyScoutHull', grunt: 'enemyGruntHull', heavy: 'enemyHeavyHull',
@@ -3071,10 +3106,62 @@
     return Math.floor(20 + (level - 1) * 15 + Math.pow(level, 1.35) * 7.2);
   }
 
+  // Local-only enemy lab: /?test=1 ... /?test=36 shows one stage enemy at a time.
+  function startEnemyTest(num) {
+    const item = TEST_ENEMIES[clamp((num | 0) - 1, 0, TEST_ENEMIES.length - 1)];
+    if (!item) return;
+    G.campaign.unlocked = MAPS.length;
+    // Keep every test unit in the same arena so their silhouettes and attacks
+    // can be compared directly; the panel still shows the unit's home stage.
+    startRun(0, false, false);
+    closeTutorial();
+    G.itemTutorialSeen = true;
+    G.testMode = true;
+    G.testIndex = clamp((num | 0) - 1, 0, TEST_ENEMIES.length - 1);
+    G.spawnTimer = 9999;
+    G.sideSpawnTimer = 9999;
+    G.nextEliteAt = 9999;
+    G.endlessEliteAt = 9999;
+    G.bossAt = 600;
+    G.runDuration = 600;
+    G.bossSpawned = true;
+    G.boss = null;
+    G.enemies = [];
+    G.elapsed = 0;
+    G.player.invuln = 99999;
+    if (G.core) G.core.hp = G.core.maxHp = 999999;
+    const slots = [[15, 10], [11, 12], [19, 12]];
+    for (const [cx, cy] of slots) {
+      const e = spawnEnemy(item.type, { spawn: { cx, cy } });
+      if (!e) continue;
+      e.hp = e.maxHp = 1e9;
+      e.spawnTimer = .2;
+      e.spawnTotal = .2;
+      e.testDummy = true;
+    }
+    const cfg = ENEMIES[item.type] || {};
+    const tierName = item.tier === 1 ? '普通兵一' : item.tier === 2 ? '普通兵二' : '普通兵三';
+    let panel = document.getElementById('enemyTestPanel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'enemyTestPanel';
+      panel.style.cssText = 'position:fixed;right:18px;top:110px;z-index:9999;width:300px;padding:14px 16px;background:rgba(3,8,6,.92);border:1px solid rgba(255,207,90,.55);border-radius:8px;color:#e8f4ec;font:12px/1.65 monospace;box-shadow:0 8px 30px rgba(0,0,0,.5);pointer-events:none;';
+      document.body.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    panel.innerHTML = `<div style="color:#ffcf5a;font-weight:700;font-size:14px;margin-bottom:6px;">测试兵种 ${G.testIndex + 1}/${TEST_ENEMIES.length} · ${tierName}</div>` +
+      `<div style="color:#fff;font-size:13px;font-weight:700;">${cfg.name || item.type} <span style="color:#8fb9a8;font-weight:400;">// ${item.stage}</span></div>` +
+      `<div style="color:#a9c8ba;margin-top:6px;">${cfg.codex || ''}</div>` +
+      `<div style="color:#79b9ff;margin-top:10px;">换一个：把网址里的 test=${G.testIndex + 1} 改成 1-${TEST_ENEMIES.length}</div>`;
+  }
+
   function startRun(index, coop, endless) {
+    const testPanel = document.getElementById('enemyTestPanel');
+    if (testPanel) testPanel.style.display = 'none';
     const unlocked = G.campaign ? G.campaign.unlocked : 1;
     index = clamp(index | 0, 0, Math.min(MAPS.length - 1, Math.max(0, unlocked - 1)));
     G.mode = 'playing';
+    G.testMode = false;
     G.endless = !!endless;
     G.endlessSelected = G.endless;
     G.endlessBossKills = 0;
@@ -3093,8 +3180,6 @@
     G.difficultyMod = difficultyData(G.difficulty).mod;
     G.runMod = buildRunMod(G.arena.mod, G.difficulty);
     const stagePressure = STAGE_PRESSURE[clamp(index, 0, STAGE_PRESSURE.length - 1)] || STAGE_PRESSURE[0];
-    G.runMod.enemyHp *= stagePressure.hp;
-    G.runMod.bossHp *= stagePressure.hp;
     G.runMod.enemyDamage *= stagePressure.dmg;
     G.runMod.spawnMul *= stagePressure.spawn;
     if (G.arenaIndex === 0 && !G.endless) {
@@ -4649,7 +4734,7 @@
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
+      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1),
       damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
@@ -4680,7 +4765,8 @@
       domain: cfg.domain || 'ground',
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * scale * (mod.bossHp || 1), maxHp: cfg.hp * scale * (mod.bossHp || 1),
+      hp: cfg.hp * scale * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
+      maxHp: cfg.hp * scale * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
       damage: cfg.damage * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
@@ -7815,7 +7901,9 @@
       'scout', 'grunt', 'heavy', 'bomber', 'sniper',
       'mortar', 'bulwark', 'minelayer', 'splitter', 'borer', 'charger', 'welder', 'scrap',
       'drone', 'strafer', 'skybomber', 'gunship', 'carrier',
-      'saucer', 'beamfrigate', 'warper', 'warden'
+      'saucer', 'beamfrigate', 'warper', 'warden',
+      'mire', 'glacier', 'orbiter', 'spark', 'prism', 'skyhound', 'aegis',
+      'tide', 'maelstrom', 'flare', 'corona', 'sunspot', 'wraith', 'sovereign'
     ];
     const normal = normalKeys.map(key => {
       const cfg = ENEMIES[key];
@@ -7882,7 +7970,10 @@
       minelayer: 'enemyMinelayer', splitter: 'enemySplitter', borer: 'enemyBorer',
       charger: 'enemyCharger', welder: 'enemyWelder', scrap: 'enemyScrap',
       drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship', carrier: 'enemyCarrier',
-      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden'
+      saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden',
+      mire: 'enemyMire', glacier: 'enemyGlacier', orbiter: 'enemyOrbiter', spark: 'enemySpark', prism: 'enemyPrism',
+      skyhound: 'enemySkyhound', aegis: 'enemyAegis', tide: 'enemyTide', maelstrom: 'enemyMaelstrom',
+      flare: 'enemyFlare', corona: 'enemyCorona', sunspot: 'enemySunspot', wraith: 'enemyWraith', sovereign: 'enemySovereign'
     }[entry.key];
     const codexArt = !locked && artKey ? artImage(artKey) : null;
     if (codexArt) {
@@ -9471,7 +9562,7 @@
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100), level: G.level, kills: G.kills };
       };
       window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, spawnPickup, damageEnemy, update, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, queueItemTutorial, openItemTutorial, closeItemTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
-      Object.assign(window.__BF_DEBUG, { stageRoster, pickWaveType, phaseIndex, activeSpawnPoints });
+      Object.assign(window.__BF_DEBUG, { stageRoster, pickWaveType, phaseIndex, activeSpawnPoints, startEnemyTest, TEST_ENEMIES });
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
@@ -9487,6 +9578,8 @@
         if (G.boss) { G.boss.spawnTimer = 0; G.boss.spawnTotal = 0; }
       }
     }
+    const testParam = parseInt(new URLSearchParams(location.search).get('test'), 10);
+    if (testParam >= 1 && testParam <= TEST_ENEMIES.length) startEnemyTest(testParam);
     primeMenuAudio();
     ['pointerdown', 'keydown', 'touchstart'].forEach(type => {
       window.addEventListener(type, primeMenuAudio, { capture: true, passive: type === 'touchstart' });
