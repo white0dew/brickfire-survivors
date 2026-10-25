@@ -214,7 +214,7 @@
     tankIds: [TANKS[0].id, TANKS[0].id],
     tankPickerSlot: 0,
     difficulty: 'normal',
-    difficultyMod: { enemyHp: 1, enemyDamage: 1, enemySpeed: 1, spawnMul: 1, bossHp: 1, xpMul: 1, coreMul: 1 },
+    difficultyMod: { enemyHp: 1, enemyDamage: 1, enemySpeed: 1, spawnMul: 1, fireRate: 1, bossHp: 1, xpMul: 1, coreMul: 1 },
     runMod: {},
     tankViewId: TANKS[0].id,
     profile: { cores: 0, totalKills: 0, wins: 0, revives: 0, unlocked: [TANKS[0].id] },
@@ -4597,7 +4597,7 @@
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
       hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
-      damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
+      damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
@@ -4605,7 +4605,7 @@
       airPhase: rand(TAU), orbit: rand(TAU), orbitDir: chance(.5) ? 1 : -1, teleportCd: rand(4.5, 2.2),
       spawnTimer: opts.warning ? 1.15 : .62, spawnTotal: opts.warning ? 1.15 : .62,
       hitFlash: 0, freeze: 0, trackPhase: rand(TAU), moving: false, moveTarget: null,
-      targetMode: 'player', think: rand(.3), contactCd: 0, abilityCd: rand(4, 2), recoil: 0, dead: false
+      targetMode: 'player', think: rand(.3), contactCd: 0, abilityCd: rand(4, 2) / (mod.fireRate || 1), recoil: 0, dead: false
     };
     markCodex(type);
     G.enemies.push(e);
@@ -4632,8 +4632,8 @@
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       elite: false, boss: true, xp: cfg.xp, spawnTimer: 1.35, spawnTotal: 1.35,
-      hitFlash: 0, freeze: 0, trackPhase: 0, fireCd: rand(2.8, 1.6), minionTimer: 11, burstCd: 4.5, shockCd: 7,
-      abilityCd: 3.2, specialCd: 5.8, specialIndex: 0, phase: rand(TAU), shieldTimer: 0, contactCd: 0, dead: false
+      hitFlash: 0, freeze: 0, trackPhase: 0, fireCd: rand(2.8, 1.6) / (mod.fireRate || 1), minionTimer: 11, burstCd: 4.5 / (mod.fireRate || 1), shockCd: 7 / (mod.fireRate || 1),
+      abilityCd: 3.2 / (mod.fireRate || 1), specialCd: 5.8 / (mod.fireRate || 1), specialIndex: 0, phase: rand(TAU), shieldTimer: 0, contactCd: 0, dead: false
     };
     markCodex(bossKey);
     G.enemies.push(e);
@@ -4729,8 +4729,9 @@
 
   function updateAirEnemy(e, dt) {
     e.think -= dt;
-    e.fireCd -= dt;
-    e.abilityCd -= dt;
+    const rate = (G.runMod && G.runMod.fireRate) || 1;
+    e.fireCd -= dt * rate;
+    e.abilityCd -= dt * rate;
     e.airPhase += dt;
     const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
@@ -4796,8 +4797,9 @@
 
   function updateHoverEnemy(e, dt) {
     e.think -= dt;
-    e.fireCd -= dt;
-    e.abilityCd -= dt;
+    const rate = (G.runMod && G.runMod.fireRate) || 1;
+    e.fireCd -= dt * rate;
+    e.abilityCd -= dt * rate;
     e.teleportCd -= dt;
     e.airPhase += dt;
     const p = nearestTarget(e.x, e.y, e);
@@ -4864,9 +4866,10 @@
 
   function updateRegularEnemy(e, dt) {
     e.think -= dt;
-    if (G.elapsed >= 7) e.fireCd -= dt;
+    const fireRate = (G.runMod && G.runMod.fireRate) || 1;
+    if (G.elapsed >= 7) e.fireCd -= dt * fireRate;
     else e.fireCd = Math.max(e.fireCd, 1.4);
-    e.abilityCd -= dt;
+    e.abilityCd -= dt * fireRate;
     e.recoil = Math.max(0, e.recoil - dt * 6);
     const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
@@ -5485,12 +5488,13 @@
   function updateBoss(e, dt) {
     const p = nearestTarget(e.x, e.y, e);
     if (!p) return;
-    e.fireCd -= dt;
+    const fireRate = (G.runMod && G.runMod.fireRate) || 1;
+    e.fireCd -= dt * fireRate;
     e.minionTimer -= dt;
-    e.burstCd = (e.burstCd == null ? 5 : e.burstCd) - dt;
-    e.shockCd = (e.shockCd == null ? 8 : e.shockCd) - dt;
-    e.abilityCd = (e.abilityCd == null ? 5 : e.abilityCd) - dt;
-    e.specialCd = (e.specialCd == null ? 6.5 : e.specialCd) - dt;
+    e.burstCd = (e.burstCd == null ? 5 : e.burstCd) - dt * fireRate;
+    e.shockCd = (e.shockCd == null ? 8 : e.shockCd) - dt * fireRate;
+    e.abilityCd = (e.abilityCd == null ? 5 : e.abilityCd) - dt * fireRate;
+    e.specialCd = (e.specialCd == null ? 6.5 : e.specialCd) - dt * fireRate;
     e.shieldTimer = Math.max(0, (e.shieldTimer || 0) - dt);
     e.recoil = Math.max(0, e.recoil - dt * 4);
     e.phase = (e.phase || 0) + dt;
@@ -7034,6 +7038,7 @@
       enemyDamage: (baseMod.enemyDamage || 1) * (diff.enemyDamage || 1),
       enemySpeed: (baseMod.enemySpeed || 1) * (diff.enemySpeed || 1),
       spawnMul: (baseMod.spawnMul || 1) * (diff.spawnMul || 1),
+      fireRate: diff.fireRate || 1,
       bossHp: (baseMod.bossHp || 1) * (diff.bossHp || 1),
       xpMul: (baseMod.xpMul || 1) * (diff.xpMul || 1),
       coreMul: diff.coreMul || 1
