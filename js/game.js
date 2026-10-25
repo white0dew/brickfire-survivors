@@ -25,6 +25,7 @@
   const CORE_W = 64;
   const CORE_H = 64;
   const BASE_MAX_HP = 520;
+  const ENEMY_HP_SCALE = 1.5;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
   // Enemy target selection leans toward pilots, not the static base. A base
@@ -4596,7 +4597,7 @@
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
+      hp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
       damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
@@ -4627,7 +4628,7 @@
       domain: cfg.domain || 'ground',
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * scale * (mod.bossHp || 1), maxHp: cfg.hp * scale * (mod.bossHp || 1),
+      hp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1),
       damage: cfg.damage * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
