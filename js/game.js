@@ -3572,8 +3572,8 @@
   function frontBrickTarget(p) {
     if (!p) return null;
     const facing = Number.isFinite(p.bodyAngle) ? p.bodyAngle : 0;
-    const maxD = TILE * 1.9;
-    for (let d = 2; d <= maxD; d += 4) {
+    const limit = Math.hypot(W, H) + TILE;
+    for (let d = 2; d <= limit; d += 6) {
       const x = p.x + Math.cos(facing) * d;
       const y = p.y + Math.sin(facing) * d;
       const tile = tileAt(x, y);
