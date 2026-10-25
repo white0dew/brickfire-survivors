@@ -8198,12 +8198,77 @@
     return false;
   }
 
+  let activeConfirmGate = null;
+  const CONFIRM_DIRECTION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Tab']);
+
+  function padDirectionHeld(gp) {
+    const b = (gp && gp.buttons) || [];
+    const pressed = i => !!(b[i] && b[i].pressed);
+    return pressed(12) || pressed(13) || pressed(14) || pressed(15) ||
+      Math.abs((gp && gp.axes && gp.axes[0]) || 0) > .55 ||
+      Math.abs((gp && gp.axes && gp.axes[1]) || 0) > .55;
+  }
+
+  function destroyConfirmGate() {
+    if (!activeConfirmGate) return;
+    activeConfirmGate.destroy();
+    activeConfirmGate = null;
+  }
+
+  function installConfirmGate(button, label, hintHost) {
+    destroyConfirmGate();
+    if (!button) return null;
+    const hint = document.createElement('div');
+    hint.className = 'confirm-gate__hint';
+    hint.textContent = `推一下方向键 / 左摇杆，选择「${label}」`;
+    (hintHost || button.parentNode).appendChild(hint);
+    button.classList.add('confirm-gate');
+    button.classList.remove('is-armed');
+    let armed = false;
+    const arm = () => {
+      if (armed) return false;
+      armed = true;
+      button.classList.add('is-armed');
+      hint.classList.add('is-armed');
+      hint.textContent = `已选择「${label}」 · 按 Enter / A 确认`;
+      AUDIO.tick();
+      return true;
+    };
+    const onFocus = () => arm();
+    button.addEventListener('focus', onFocus);
+    const gate = {
+      get armed() { return armed; },
+      arm,
+      handleKey(event) {
+        if (CONFIRM_DIRECTION_KEYS.has(event.code)) {
+          event.preventDefault();
+          arm();
+          return true;
+        }
+        if (event.code === 'Enter' || event.code === 'Space' || event.code === 'Escape') {
+          event.preventDefault();
+          if (armed) button.click();
+          return true;
+        }
+        return false;
+      },
+      destroy() {
+        button.classList.remove('confirm-gate', 'is-armed');
+        button.removeEventListener('focus', onFocus);
+        if (hint.parentNode) hint.parentNode.removeChild(hint);
+      }
+    };
+    activeConfirmGate = gate;
+    return gate;
+  }
+
   function showEliteTutorial() {
     if (document.getElementById('eliteTutorial')) return;
     G.mode = 'eliteTutorial';
     G.accum = 0;
     G.lastFrame = performance.now();
     Input.keys.clear();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const wrap = document.createElement('div');
     wrap.id = 'eliteTutorial';
     wrap.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,5,.82);backdrop-filter:blur(5px);padding:24px;';
@@ -8216,12 +8281,14 @@
         <button id="eliteTutorialClose" type="button" style="width:100%;padding:13px 18px;border:1px solid #ffcf5a;background:#ffcf5a;color:#201608;font:700 15px/1 Silkscreen,monospace;cursor:pointer;letter-spacing:.08em;">继续战斗</button>
       </div>`;
     document.body.appendChild(wrap);
+    const gate = installConfirmGate(wrap.querySelector('#eliteTutorialClose'), '继续战斗', wrap.firstElementChild);
     let padWatch = null;
     const close = () => {
       if (!wrap.parentNode) return;
       wrap.parentNode.removeChild(wrap);
       document.removeEventListener('keydown', onKey);
       if (padWatch) clearInterval(padWatch);
+      destroyConfirmGate();
       G.mode = 'playing';
       G.accum = 0;
       G.lastFrame = performance.now();
@@ -8229,12 +8296,21 @@
       AUDIO.confirm();
     };
     const onKey = (event) => {
-      if (event.code === 'Enter' || event.code === 'Space' || event.code === 'Escape') { event.preventDefault(); close(); }
+      if (gate && gate.handleKey(event)) return;
     };
     document.addEventListener('keydown', onKey);
+    const dirHeld = new Map(), confirmHeld = new Map();
     padWatch = setInterval(() => {
       for (const gp of [Input.gamepad, Input.gamepad2]) {
-        if (gp && gp.connected && gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) { close(); break; }
+        if (!gp || !gp.connected) continue;
+        const dir = padDirectionHeld(gp);
+        const confirm = !!(gp.buttons && gp.buttons[0] && gp.buttons[0].pressed);
+        const wasDir = dirHeld.has(gp) ? dirHeld.get(gp) : true;
+        const wasConfirm = confirmHeld.has(gp) ? confirmHeld.get(gp) : true;
+        dirHeld.set(gp, dir);
+        confirmHeld.set(gp, confirm);
+        if (!gate.armed && dir && !wasDir) gate.arm();
+        if (gate.armed && confirm && !wasConfirm) { close(); break; }
       }
     }, 90);
     wrap.querySelector('#eliteTutorialClose').addEventListener('click', close);
@@ -8314,6 +8390,7 @@
     G.accum = 0;
     G.lastFrame = performance.now();
     Input.keys.clear();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const wrap = document.createElement('div');
     wrap.id = 'sealTutorial';
     wrap.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,5,.82);backdrop-filter:blur(5px);padding:24px;';
@@ -8335,12 +8412,14 @@
       </div>`;
     document.body.appendChild(wrap);
     drawSealTutorialIcon(wrap.querySelector('#sealTutorialIcon'), seal);
+    const gate = installConfirmGate(wrap.querySelector('#sealTutorialClose'), '知道了，继续', wrap.firstElementChild);
     let padWatch = null;
     const close = () => {
       if (!wrap.parentNode) return;
       wrap.parentNode.removeChild(wrap);
       document.removeEventListener('keydown', onKey);
       if (padWatch) clearInterval(padWatch);
+      destroyConfirmGate();
       G.mode = 'playing';
       G.accum = 0;
       G.lastFrame = performance.now();
@@ -8348,12 +8427,21 @@
       AUDIO.confirm();
     };
     const onKey = (event) => {
-      if (event.code === 'Enter' || event.code === 'Space' || event.code === 'Escape') { event.preventDefault(); close(); }
+      if (gate && gate.handleKey(event)) return;
     };
     document.addEventListener('keydown', onKey);
+    const dirHeld = new Map(), confirmHeld = new Map();
     padWatch = setInterval(() => {
       for (const gp of [Input.gamepad, Input.gamepad2]) {
-        if (gp && gp.connected && gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) { close(); break; }
+        if (!gp || !gp.connected) continue;
+        const dir = padDirectionHeld(gp);
+        const confirm = !!(gp.buttons && gp.buttons[0] && gp.buttons[0].pressed);
+        const wasDir = dirHeld.has(gp) ? dirHeld.get(gp) : true;
+        const wasConfirm = confirmHeld.has(gp) ? confirmHeld.get(gp) : true;
+        dirHeld.set(gp, dir);
+        confirmHeld.set(gp, confirm);
+        if (!gate.armed && dir && !wasDir) gate.arm();
+        if (gate.armed && confirm && !wasConfirm) { close(); break; }
       }
     }, 90);
     wrap.querySelector('#sealTutorialClose').addEventListener('click', close);
@@ -8390,7 +8478,8 @@
     U.itemTutorialScreen.classList.remove('hidden');
     U.itemTutorialScreen.setAttribute('aria-hidden', 'false');
     clearPadFocus();
-    if (Input.gamepad.connected) setPadFocus(U.itemTutorialStart);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    installConfirmGate(U.itemTutorialStart, '继续战斗', U.itemTutorialScreen.querySelector('.tutorial__panel'));
     AUDIO.init(); AUDIO.tick();
   }
 
@@ -8404,6 +8493,7 @@
     Input.keys.clear();
     Input.dashQueued = false; Input.dashQueued2 = false;
     clearPadFocus();
+    destroyConfirmGate();
     AUDIO.confirm();
   }
 
@@ -8424,7 +8514,8 @@
     U.tutorialScreen.setAttribute('aria-hidden', 'false');
     ICONS.applyAll(U.tutorialScreen);
     clearPadFocus();
-    if (Input.gamepad.connected) setPadFocus(U.tutorialStart);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    installConfirmGate(U.tutorialStart, '开始作战', U.tutorialScreen.querySelector('.tutorial__panel'));
     AUDIO.tick();
   }
 
@@ -8438,6 +8529,7 @@
     Input.keys.clear();
     Input.dashQueued = false; Input.dashQueued2 = false;
     clearPadFocus();
+    destroyConfirmGate();
     AUDIO.confirm();
     if (G.tutorialMusicPending) {
       G.tutorialMusicPending = false;
@@ -8696,17 +8788,11 @@
       if (e.code === 'KeyM') { toggleMute(); return; }
       if (e.code === 'KeyF') { toggleFullscreen(); return; }
       if (G.mode === 'itemTutorial') {
-        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
-          e.preventDefault();
-          closeItemTutorial();
-        }
+        if (activeConfirmGate && activeConfirmGate.handleKey(e)) return;
         return;
       }
       if (G.mode === 'tutorial') {
-        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
-          e.preventDefault();
-          closeTutorial();
-        }
+        if (activeConfirmGate && activeConfirmGate.handleKey(e)) return;
         return;
       }
       if (e.code === 'Escape') {
@@ -8954,8 +9040,8 @@
     }
     const base = {
       menu: [['方向键', '选择'], ['A', '确认'], ['START', '出击']],
-      tutorial: [['A', '开始作战'], ['B', '跳过教学']],
-      itemTutorial: [['A', '继续战斗'], ['B', '关闭']],
+      tutorial: [['方向键', '选择'], ['A', '确认']],
+      itemTutorial: [['方向键', '选择'], ['A', '确认']],
       stage: [['方向键', '选择星区'], ['A', '进入'], ['B', '返回']],
       tank: [['方向键', '选择坦克'], ['A', '装备'], ['B', '返回']],
       fusion: [['方向键', '选择'], ['A', '确认'], ['B', '返回']],
@@ -9132,9 +9218,9 @@
   function defaultPadFocus(ctx) {
     if (!ctx) return null;
     if (ctx.key === 'menu') return document.querySelector('.sf-nav__item--start') || (U.menuNav && U.menuNav.querySelector('.sf-nav__item--start')) || U.startBtn;
-    if (ctx.key === 'tutorial') return U.tutorialStart;
-    if (ctx.key === 'itemTutorial') return U.itemTutorialStart;
-    if (ctx.key === 'levelup') return null;
+    // Timed tutorial popups must not start with a focused confirm button.
+    // The first directional press selects it; only then can A/Enter confirm.
+    if (ctx.key === 'tutorial' || ctx.key === 'itemTutorial' || ctx.key === 'levelup') return null;
     if (ctx.key === 'pause') return U.resumeBtn;
     if (ctx.key === 'settings') return settingsRowControl(settingsRows()[settingsFocusIndex]) || U.settingsFullscreen || padFocusables(ctx.root)[0] || null;
     if (ctx.key === 'result') return U.nextBtn && !U.nextBtn.classList.contains('is-hidden') ? U.nextBtn : U.againBtn;
@@ -9186,7 +9272,12 @@
     }
     const list = padFocusables(ctx.root);
     if (!list.length) return;
-    if (!g.focusEl || !list.includes(g.focusEl)) { setPadFocus(list[0]); return; }
+    if (!g.focusEl || !list.includes(g.focusEl)) {
+      const preferred = ctx.key === 'tutorial' ? U.tutorialStart
+        : ctx.key === 'itemTutorial' ? U.itemTutorialStart : null;
+      setPadFocus(preferred || list[0]);
+      return;
+    }
     const cur = g.focusEl.getBoundingClientRect();
     const cx = cur.left + cur.width / 2, cy = cur.top + cur.height / 2;
     let best = null, bestScore = Infinity;
@@ -9225,8 +9316,12 @@
     const ctx = syncPadContext(false);
     if (!ctx || ctx.key === 'menu') return false;
     if (ctx.key === 'levelup') return false;
-    if (ctx.key === 'tutorial') closeTutorial();
-    else if (ctx.key === 'itemTutorial') closeItemTutorial();
+    if (ctx.key === 'tutorial' || ctx.key === 'itemTutorial') {
+      if (!activeConfirmGate || !activeConfirmGate.armed) return false;
+      if (ctx.key === 'tutorial') closeTutorial();
+      else closeItemTutorial();
+      return true;
+    }
     else if (ctx.key === 'stage') closeStageScreen();
     else if (ctx.key === 'tank') closeTankScreen();
     else if (ctx.key === 'fusion') closeFusionScreen();

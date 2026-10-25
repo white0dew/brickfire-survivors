@@ -3397,3 +3397,29 @@ body.pad-connected .sf-hint { display: flex; }
 @media (max-width: 620px) and (orientation: portrait) {
   .hud-pilot { width: 166px; }
 }
+
+/* Tutorial confirmation gate: never start with the confirm action selected. */
+.confirm-gate {
+  transition: opacity .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+.confirm-gate:not(.is-armed) {
+  opacity: .58;
+  filter: saturate(.5);
+}
+.confirm-gate.is-armed {
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .16), 0 0 18px rgba(95, 240, 206, .22);
+}
+.confirm-gate__hint {
+  margin: 8px 0 0;
+  color: rgba(200, 226, 214, .72);
+  font-family: var(--font-cn);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: .05em;
+  text-align: center;
+}
+.confirm-gate__hint.is-armed {
+  color: var(--cyan);
+}
