@@ -421,7 +421,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-38`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-41`;
     }
   }
 
@@ -5066,8 +5066,10 @@
       if (targetDist < 205) shouldHold = true;
       if (e.ai === 'artillery' && targetDist < 300) shouldHold = true;
       if (e.ai === 'minelayer' && targetDist < 180) shouldHold = true;
-      // Dedicated rammers must keep closing to contact range.
-      if (e.ai === 'charger' || e.ai === 'borer') shouldHold = false;
+      // Dedicated rammers and self-destruct units must keep closing to
+      // contact range. Without this they stop at 205px and never trigger
+      // their payload, which reads as a broken, passive enemy.
+      if (e.ai === 'charger' || e.ai === 'borer' || e.ai === 'rusher' || e.ai === 'minelayer' || e.type === 'bomber') shouldHold = false;
       if (!shouldHold) {
         const flow = p.isBase ? G.flowBase : (G.flowPlayers[p.index] || G.flowPlayer);
         let dir = flowDirection(flow, e.x, e.y, null);
