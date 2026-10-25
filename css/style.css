@@ -2149,20 +2149,21 @@ body.pad-connected .sf-hint { display: flex; }
 .endless-row { display: block; margin-top: 9px; }
 .endless-row .arena-card--endless {
   width: 100%;
-  min-height: 62px;
+  min-height: 82px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 18px;
-  padding: 10px 16px;
+  column-gap: 22px;
+  row-gap: 2px;
+  padding: 14px 22px;
   text-align: left;
 }
-.endless-row .arena-card--endless .arena-card__index { grid-column: 1; grid-row: 1 / 3; margin: 0; writing-mode: horizontal-tb; }
-.endless-row .arena-card--endless .arena-card__name { grid-column: 2; grid-row: 1; font-size: 20px; }
-.endless-row .arena-card--endless .arena-card__trait { grid-column: 2; grid-row: 2; margin: 0; }
+.endless-row .arena-card--endless .arena-card__index { position: static; right: auto; top: auto; grid-column: 1; grid-row: 1 / 3; margin: 0; font-size: 10px; writing-mode: horizontal-tb; }
+.endless-row .arena-card--endless .arena-card__name { grid-column: 2; grid-row: 1; font-size: 25px; }
+.endless-row .arena-card--endless .arena-card__trait { grid-column: 2; grid-row: 2; margin: 0; font-size: 10px; }
 .endless-row .arena-card--endless .arena-card__en { display: none; }
-.endless-row .arena-card--endless .arena-card__diff { grid-column: 3; grid-row: 1 / 3; margin: 0; }
+.endless-row .arena-card--endless .arena-card__diff { grid-column: 3; grid-row: 1 / 3; margin: 0; font-size: 8px; }
 .endless-row .arena-card--endless .arena-card__lock { position: static; grid-column: 3; grid-row: 1 / 3; }
 
 /* Full-width battle field; the old right sidebar is gone. */

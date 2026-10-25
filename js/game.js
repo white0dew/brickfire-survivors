@@ -3222,7 +3222,7 @@
     if (U.bossMarker) U.bossMarker.style.display = G.endless ? 'none' : '';
     const diff = difficultyData(G.difficulty);
     U.sectorLabel.textContent = `第 ${index + 1} 区 · ${MAPS[index].name} · ${diff.name}${G.endless ? ' · 无尽' : ''}`;
-    U.objectiveLabel.textContent = G.endless ? '无尽协议 · 生存至极限' : `泰坦降临倒计时 · ${fmtShort(G.bossAt || BOSS_AT)}`;
+    U.objectiveLabel.textContent = G.endless ? '无尽模式 · 生存至极限' : `泰坦降临倒计时 · ${fmtShort(G.bossAt || BOSS_AT)}`;
     U.sideTip.textContent = G.twoPlayer
       ? `P1 · ${G.tank.name} · P2 · ${tankData(G.players[1]).name}`
       : `底盘 // ${G.tank.name} · ${G.tank.role}`;
@@ -3250,7 +3250,7 @@
       AUDIO.setIntensity(0);
     }
     showToast(G.endless
-      ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
+      ? `无尽模式启动 // ${G.arena.name} · 生存至极限`
       : (G.twoPlayer
         ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署`
         : `${G.tank.name} 已部署 // ${G.tank.trait}`), 'cyan');
@@ -6898,13 +6898,13 @@
     if (G.boss) {
       const bossName = G.boss.bossName || '泰坦';
       U.phaseLabel.textContent = `泰坦 · ${bossName}`;
-      U.objectiveLabel.textContent = endless ? `无尽协议 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 摧毁泰坦`;
+      U.objectiveLabel.textContent = endless ? `无尽模式 · 击破 ${bossName} · 已生存 ${fmtShort(G.elapsed)}` : `击破${bossName} · 摧毁泰坦`;
       U.sideTip.textContent = G.twoPlayer ? `${bossName}优先锁定车体。保持移动，队友别站同一条弹道。` : `${bossName}优先锁定你的车体。保持移动，别被逼进死角。`;
     } else {
       U.phaseLabel.textContent = `第 ${phaseIndex() + 1} 阶段 · ${phaseLabel()}`;
-      U.objectiveLabel.textContent = endless ? `无尽协议 · 已生存 ${fmtShort(G.elapsed)}` : (remain > 0 ? `泰坦降临倒计时 · ${fmtShort(remain)}` : '泰坦已降临 · 摧毁它');
+      U.objectiveLabel.textContent = endless ? `无尽模式 · 已生存 ${fmtShort(G.elapsed)}` : (remain > 0 ? `泰坦降临倒计时 · ${fmtShort(remain)}` : '泰坦已降临 · 摧毁它');
       if (hpPct < 35) U.sideTip.textContent = '车体濒危 · 拉开距离，先吃维修包。';
-      else if (endless) U.sideTip.textContent = `无尽协议 · 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
+      else if (endless) U.sideTip.textContent = `无尽模式 · 已击破 ${G.endlessBossKills} 个首领 · 下一轮 ${fmtShort(remain)}`;
       else if (G.elapsed > 480) U.sideTip.textContent = '最后阶段 · 保留冲刺，准备迎击泰坦。';
       else if (weaponsFor(p).flame && p.moving) U.sideTip.textContent = '燃迹喷流正在灼烧追兵。';
       else U.sideTip.textContent = '提示 · 砖墙可打碎，钢板不可。';
@@ -6972,11 +6972,11 @@
         if (downed) U.sideTip.textContent = `P${downed.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
       }
     }
-    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? `双人 · 泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 双车或基地归零即失败` : `泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 车体或基地归零即失败`)}`;
+    if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽模式 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? `双人 · 泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 双车或基地归零即失败` : `泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 车体或基地归零即失败`)}`;
     if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= maxUpgradeRank() ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
     if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
-    U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：击破泰坦，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '泰坦'} 会攻击最近的你和基地，击破它才能结束战役` : '在倒计时结束前整备，击破降临的泰坦'));
+    U.objectiveLabel.title = G.endless ? '无尽模式：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：击破泰坦，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '泰坦'} 会攻击最近的你和基地，击破它才能结束战役` : '在倒计时结束前整备，击破降临的泰坦'));
     if (G.boss && G.boss.hp > 0) {
       U.bossHud.classList.remove('is-hidden');
       const bp = clamp(G.boss.hp / G.boss.maxHp * 100, 0, 100);
@@ -7215,9 +7215,9 @@
     }).join('');
     if (U.endlessOptions) {
       U.endlessOptions.innerHTML = `<button class="arena-card arena-card--endless${endlessActive ? ' is-active' : ''}${endlessUnlocked ? '' : ' is-locked'}" data-endless="1" type="button" ${endlessUnlocked ? '' : 'disabled aria-disabled="true"'}>
-        <span class="arena-card__index">无穷 // PROTOCOL</span>
-        <span class="arena-card__name">无尽协议</span>
-        <span class="arena-card__en">ENDLESS PROTOCOL</span>
+        <span class="arena-card__index">无穷 // MODE</span>
+        <span class="arena-card__name">无尽模式</span>
+        <span class="arena-card__en">ENDLESS MODE</span>
         <span class="arena-card__trait">${endlessUnlocked ? '无尽波次 · 循环 Boss · 生存计分' : '通关第 2 关解锁'}</span>
         <span class="arena-card__diff arena-card__diff--endless">∞ / ENDLESS</span>
         ${endlessUnlocked ? '' : '<span class="arena-card__lock">▣</span>'}
@@ -7232,8 +7232,8 @@
     const p = U.stageProgress;
     if (p) p.textContent = `${String(camp.unlocked).padStart(2, '0')} / ${String(MAPS.length).padStart(2, '0')}`;
     if (U.stageFootHint) U.stageFootHint.textContent = endlessUnlocked
-      ? (camp.unlocked >= MAPS.length ? '全部星区与无尽协议已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 无尽协议已开放。`)
-      : (camp.unlocked >= MAPS.length ? '全部星区已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 通关第 2 关解锁无尽协议。`);
+      ? (camp.unlocked >= MAPS.length ? '全部星区与无尽模式已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 无尽模式已开放。`)
+      : (camp.unlocked >= MAPS.length ? '全部星区已解锁。' : `已解锁 ${camp.unlocked} / ${MAPS.length} 个星区 · 通关第 2 关解锁无尽模式。`);
     updateStageRoster();
   }
 
@@ -7267,7 +7267,7 @@
 
   function syncMenuSelection() {
     const tank = TANKS.find(t => t.id === G.tankIds[0]) || TANKS[0];
-    const stage = G.endlessSelected ? { name: '无尽协议', sector: 'ENDLESS' } : (MAPS[G.arenaIndex] || MAPS[0]);
+    const stage = G.endlessSelected ? { name: '无尽模式', sector: 'ENDLESS' } : (MAPS[G.arenaIndex] || MAPS[0]);
     if (U.sfStageName) U.sfStageName.textContent = stage.name;
     if (U.sfStageSector) U.sfStageSector.textContent = G.endlessSelected ? '无尽' : `第 ${G.arenaIndex + 1} 区`;
     if (U.sfTankName) U.sfTankName.textContent = tank.name;
@@ -7471,9 +7471,9 @@
     const stageNo = String(G.arenaIndex + 1).padStart(2, '0');
     if (G.endless) {
       const baseLost = reason === 'base';
-      U.resultTag.textContent = '无尽协议 · 生存终止';
+      U.resultTag.textContent = '无尽模式 · 生存终止';
       U.resultTitle.textContent = baseLost ? '防线归零' : '钢铁归零';
-      U.resultFlavor.textContent = `无尽协议中断 · ${MAPS[G.arenaIndex].name} · 生存 ${fmtShort(G.elapsed)} · 击破 ${G.endlessBossKills} 个首领。`;
+      U.resultFlavor.textContent = `无尽模式中断 · ${MAPS[G.arenaIndex].name} · 生存 ${fmtShort(G.elapsed)} · 击破 ${G.endlessBossKills} 个首领。`;
       AUDIO.gameOver();
     } else if (win) {
       const finalWin = G.arenaIndex >= MAPS.length - 1;
@@ -7632,7 +7632,7 @@
     updatePilotCard(1);
     updateStageRoster();
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.endlessSelected ? (G.coopSelected ? '双人无尽' : '无尽出击') : (G.coopSelected ? '双人出击' : '点火出击');
-    if (U.startBtnSub) U.startBtnSub.textContent = G.endlessSelected ? (G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL') : (G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR');
+    if (U.startBtnSub) U.startBtnSub.textContent = G.endlessSelected ? (G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS MODE') : (G.coopSelected ? 'LINK TWO PILOTS / CO-OP' : 'ENTER THE SECTOR');
     syncMenuSelection();
   }
 
@@ -7699,10 +7699,10 @@
       card.classList.toggle('is-active', active);
       card.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    if (U.stageHint) U.stageHint.textContent = `无尽协议 · ${MAPS[index].name} · 敌军持续升级 / Boss 循环刷新 / 生存时间计分`;
+    if (U.stageHint) U.stageHint.textContent = `无尽模式 · ${MAPS[index].name} · 敌军持续升级 / Boss 循环刷新 / 生存时间计分`;
     if (U.stageIndex) U.stageIndex.textContent = '∞';
-    if (U.stageName) U.stageName.textContent = '无尽协议';
-    if (U.stageMeta) U.stageMeta.textContent = `无尽协议 · ${MAPS[index].name}`;
+    if (U.stageName) U.stageName.textContent = '无尽模式';
+    if (U.stageMeta) U.stageMeta.textContent = `无尽模式 · ${MAPS[index].name}`;
     if (U.stageTrait) U.stageTrait.textContent = '持续波次 · 循环首领 · 生存计分';
     updateDifficultyUI();
     if (U.stageDifficulty) U.stageDifficulty.textContent = '无尽';
@@ -7713,7 +7713,7 @@
     }
     if (U.visualUnitSub) U.visualUnitSub.textContent = `MODULAR SIEGE PLATFORM / ENDLESS`;
     if (U.startBtnLabel) U.startBtnLabel.textContent = G.coopSelected ? '双人无尽' : '无尽出击';
-    if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS PROTOCOL';
+    if (U.startBtnSub) U.startBtnSub.textContent = G.coopSelected ? 'CO-OP ENDLESS / LINK TWO PILOTS' : 'ENDLESS MODE';
     syncMenuSelection();
     menuCache = null;
     menuParticles = [];
