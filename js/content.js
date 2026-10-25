@@ -1039,7 +1039,7 @@
     },
     {
       id: 'nightmare', name: '噩梦', en: 'NIGHTMARE', desc: '极限围杀 · 核心奖励 +60%',
-      mod: { enemyHp: 1.8, enemyDamage: 1.6, enemySpeed: 1.18, spawnMul: 1.35, bossHp: 1.5, xpMul: 1.18, coreMul: 1.6 }
+      mod: { enemyHp: 2, enemyDamage: 2, enemySpeed: 1.18, spawnMul: 1.35, bossHp: 1.5, xpMul: 1.18, coreMul: 1.6 }
     }
   ];
 
