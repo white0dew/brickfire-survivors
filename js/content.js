@@ -421,7 +421,7 @@
     elite: {
       name: '精英·破城者', en: 'BREAKER ELITE', hp: 1875, speed: 20, damage: 28.125, fire: 2.8, bulletSpeed: 225,
       xp: 42, radius: 14.5, color: '#c99332', dark: '#40260b', light: '#fff0b8', core: '#ffca4a', class: 'elite', elite: true,
-      codex: '精英破城者。高装甲、高伤害，周期性释放环形弹幕，是封印守卫的基准型号。'
+      codex: '精英破城者。高装甲、高伤害，周期性释放环形弹幕，是精英轮换的基准型号。'
     },
     boss: {
       name: '泰坦·攻城型', en: 'SIEGE TITAN', hp: 27000, speed: 19, damage: 47.5, fire: 1.45, bulletSpeed: 235,
@@ -494,7 +494,7 @@
       name: '边境·霸主', en: 'BORDER WARLORD', hp: 54000, speed: 18, damage: 60, fire: 1.5, bulletSpeed: 250,
       xp: 480, radius: 34, color: '#7b2f2f', dark: '#241010', light: '#ffb18a', core: '#ff4f58', class: 'boss', boss: true,
       bossKind: 'warlord', bossScale: 1.6, tag: 'WARLORD // THRONE', domain: 'ground',
-      codex: '边境王座的主人。召唤封印守卫、冲锋与重炮轮换；最后一战没有安全角落。'
+      codex: '边境王座的主人。召唤精英守卫、冲锋与重炮轮换；最后一战没有安全角落。'
     },
 
     // ---- EXPANSION PILOT: Rust Legion ground units ----

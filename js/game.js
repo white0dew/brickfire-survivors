@@ -2137,9 +2137,7 @@
     }
     if (e.elite) {
       const sealBoss = !!e.sealTankId;
-      const eliteName = sealBoss
-        ? `封印守卫 · ${e.sealLabel || ''}`
-        : e.eliteLabel ? `精英 · ${e.eliteLabel}` : '精英';
+      const eliteName = e.eliteLabel ? `精英·${e.eliteLabel}` : '精英·破城者';
       const w = clamp(22 + eliteName.length * 7, 76, 166);
       // Pulsing command ring: an elite must read as an event, not a recolored grunt.
       const pulse = .5 + .5 * Math.sin(t * 5 + e.id);
@@ -4563,16 +4561,16 @@
       const eliteAlive = G.enemies.some(e => e.elite && !e.sealTankId && !e.dead);
       if (!eliteAlive) {
         const elite = spawnTimedElite({ warning: true });
-        const label = elite && elite.eliteLabel ? elite.eliteLabel : '破城者';
-        showToast(`警告：精英单位「${label}」进入战区 · 击破必掉战术宝箱`, 'red');
+        const label = elite && elite.eliteLabel ? `精英·${elite.eliteLabel}` : '精英·破城者';
+        showToast(`警告：${label}进入战区 · 击破必掉战术宝箱`, 'red');
         AUDIO.boss();
       }
     }
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
       G.endlessEliteAt = G.elapsed + ELITE_GAP;
       const elite = spawnTimedElite({ warning: true });
-      const label = elite && elite.eliteLabel ? elite.eliteLabel : '破城者';
-      showToast(`无尽猎杀 · 精英单位「${label}」进入战区`, 'red');
+      const label = elite && elite.eliteLabel ? `精英·${elite.eliteLabel}` : '精英·破城者';
+      showToast(`无尽猎杀 · ${label}进入战区`, 'red');
       AUDIO.boss();
     }
 
@@ -5732,7 +5730,7 @@
     if ((seal.minionCd || 0) <= 0) {
       spawnSealMinions(seal, 2);
       seal.minionCd = .52;
-      if (!seal.minionWarned) { seal.minionWarned = true; showToast('封印反应 · 守卫增援弹出', 'red'); }
+      if (!seal.minionWarned) { seal.minionWarned = true; showToast('封印反应 · 增援弹出', 'red'); }
     }
     if (seal.hp <= 0) breakSeal(seal);
   }
@@ -5748,7 +5746,7 @@
     addShake(9, .5); G.flash = Math.max(G.flash, .5); G.flashColor = '#ffd05a';
     AUDIO.explode(1.4);
     spawnSealMinions(seal, 4, true);
-    showToast(`封印核心破裂 · ${tank ? tank.name : '未知底盘'} 守卫苏醒`, 'red');
+    showToast(`封印核心破裂 · 精英·${tank ? tank.name : '未知底盘'} 苏醒`, 'red');
     spawnSealBoss(seal);
   }
 
@@ -5758,13 +5756,14 @@
     const sp = { cx: clamp(Math.floor(seal.x / TILE), 1, COLS - 2), cy: clamp(Math.floor(seal.y / TILE), 1, ROWS - 2) };
     const e = spawnEnemy('elite', { spawn: sp, warning: true });
     if (!e) {
-      showToast('战场拥挤 · 封印守卫暂时无法入场', 'red');
+      showToast('战场拥挤 · 精英守卫暂时无法入场', 'red');
       seal.dead = false; seal.hp = 1;
       return;
     }
     e.x = seal.x; e.y = seal.y; e.cx = sp.cx; e.cy = sp.cy;
     e.sealTankId = tank.id;
     e.sealLabel = tank.name || '守卫';
+    e.eliteLabel = tank.name || '守卫';
     e.elite = true;
     e.size = 1.42;
     e.hp = e.maxHp = e.maxHp * (1.45 + G.arenaIndex * .13);
@@ -7864,8 +7863,8 @@
     for (const tank of TANKS) {
       if (tank.id === TANKS[0].id) continue;
       elite.push({
-        key: `seal:${tank.id}`, type: 'elite', name: `${tank.name} · 封印守卫`, en: `SEAL GUARD // ${tank.en}`,
-        desc: `击破 ${tank.sealStage + 1} 号星区封印核心后苏醒的精英守卫。${tank.trait || ''}`,
+        key: `seal:${tank.id}`, type: 'elite', name: `精英·${tank.name}`, en: `ELITE // ${tank.en}`,
+        desc: `在精英轮换或击破 ${tank.sealStage + 1} 号星区封印核心后登场的 ${tank.name} 精英。${tank.trait || ''}`,
         colors: { body: tank.colors.body, light: tank.colors.light, dark: tank.colors.dark, core: tank.colors.core },
         cls: 'elite', tank
       });
@@ -8277,7 +8276,7 @@
         </div>
         <h2 style="margin:0 0 12px;font-size:26px;color:#d8fff3;">封印核心会反击</h2>
         <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">攻击封印会立刻触发 <b style="color:#5ff0ce;">守军增援</b>，持续攻击还会不断召唤小兵。</p>
-        <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">击破封印后，<b style="color:#ffcf5a;">封印守卫</b>会苏醒；击败守卫可以解锁它的底盘。</p>
+        <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">击破封印后，<b style="color:#ffcf5a;">精英守卫</b>会苏醒；击败它可以解锁对应底盘。</p>
         <p style="margin:0 0 22px;color:#a9b8aa;line-height:1.6;font-size:13px;">封印位于地图左上或右上角落，需要主动靠近。前期不必急着打。</p>
         <button id="sealTutorialClose" type="button" style="width:100%;padding:13px 18px;border:1px solid #5ff0ce;background:#5ff0ce;color:#05201a;font:700 15px/1 Silkscreen,monospace;cursor:pointer;letter-spacing:.08em;">知道了，继续</button>
       </div>`;
