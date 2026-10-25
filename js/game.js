@@ -1200,8 +1200,8 @@
     if (droneCount > 0) {
       const shieldPulse = c.shieldFlash > 0 ? .38 : 0;
       ctx.save();
-      ctx.strokeStyle = hexA(p.core, .13 + shieldPulse);
-      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = hexA(p.core, .2 + shieldPulse);
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 6]);
       ctx.lineDashOffset = -t * 14;
       ctx.beginPath();
@@ -1221,6 +1221,8 @@
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.stroke();
       ctx.rotate((d.angle || 0) + Math.PI / 2);
+      ctx.shadowColor = 'rgba(143,255,230,.58)';
+      ctx.shadowBlur = 6;
       // rotor arms and pods
       ctx.strokeStyle = '#3d8c7d'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke();
@@ -1237,6 +1239,7 @@
       const rel = (d.aimAngle == null ? d.angle : d.aimAngle) - d.angle;
       ctx.rotate(rel);
       ctx.fillStyle = '#8fffe6'; ctx.fillRect(-1, -11, 2, 5);
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
     // center light
@@ -2580,7 +2583,7 @@
         const near = nearestPlayer(p.x, p.y) || G.player;
         if (near && dist(near.x, near.y, p.x, p.y) < 80) {
           ctx.save();
-          ctx.font = '7px "PingFang SC", sans-serif'; ctx.textAlign = 'center';
+          ctx.font = '9px "PingFang SC", sans-serif'; ctx.textAlign = 'center';
           ctx.fillStyle = item.color; ctx.fillText(item.name, p.x, p.y - 16);
           ctx.restore();
         }

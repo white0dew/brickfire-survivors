@@ -599,7 +599,7 @@
     shovel: { name: '应急维修', en: 'FIELD REPAIR', color: '#a9e56e', glyph: '✚', desc: '修复车体 25%，并获得 2 秒无敌', detail: '立即回复最大装甲的 25%，短暂无敌便于脱离包围。' },
     tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', glyph: '▣', desc: '修复车体 45%，并提升 5 最大装甲', detail: '永久增加 5 点最大装甲，并按新上限修复 45%。' },
     basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', glyph: '⌂', desc: '修复基地装甲 24%', detail: '只对基地生效；基地装甲归零会立即失守。' },
-    turret: { name: '哨戒炮塔', en: 'SENTRY', color: '#8fffe6', glyph: '⌖', desc: '在基地周围部署防御塔', detail: '最多部署 4 座；基地本身不攻击。塔满后拾取改为修复基地 10% 装甲。' },
+    turret: { name: '哨戒无人机', en: 'SENTRY DRONE', color: '#8fffe6', glyph: '⌖', desc: '部署三向环绕拦截无人机', detail: '最多 4 架；在基地左、上、右三面环绕并拦截敌方弹幕，底部是盲区。满编后拾取改为修复基地 10% 装甲。' },
     fortify: { name: '基地强化包', en: 'BASE FORTIFY', color: '#b896ff', glyph: '◈', desc: '基地装甲上限 +15%，并修复 15%', detail: '永久提高本局基地最大装甲；后续维修按新上限计算。可重复拾取叠加。' },
     hover: { name: '两栖浮渡', en: 'PONTOON', color: '#5ff0ce', glyph: '≈', desc: '15 秒内可穿越水面', detail: '临时展开浮筒，直接碾过水域；期间仍可正常开火和冲刺。' }
   };

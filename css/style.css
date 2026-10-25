@@ -2413,33 +2413,35 @@ body.pad-connected .sf-hint { display: flex; }
 /* Pickup messages hang directly under the owning pilot's corner. */
 .hud-pilot__feed {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 8px);
   left: 0;
-  width: min(330px, 100%);
+  width: min(460px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   pointer-events: none;
 }
 .hud-pilot__feed--p2 { left: auto; right: 0; align-items: flex-end; }
 .pickup-toast {
   max-width: 100%;
-  padding: 5px 9px;
-  border-left: 2px solid var(--cyan);
-  background: rgba(5,10,8,.88);
+  padding: 8px 12px;
+  border-left: 3px solid var(--cyan);
+  background: rgba(5,10,8,.94);
   color: var(--paper);
   font-family: var(--font-cn);
-  font-size: 10px;
-  line-height: 1.55;
-  letter-spacing: .02em;
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  font-size: clamp(16px, 1vw, 19px);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: .025em;
+  text-shadow: 0 1px 8px rgba(0,0,0,.55);
+  box-shadow: 0 7px 22px rgba(0,0,0,.32);
   animation: pickupFeedIn .18s ease-out both;
 }
 .hud-pilot__feed--p2 .pickup-toast { border-left: 0; border-right: 2px solid var(--cyan); text-align: right; }
 @keyframes pickupFeedIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (max-width: 620px) and (orientation: portrait) {
-  .hud-pilot__feed { width: 170px; }
-  .pickup-toast { font-size: 9px; padding: 4px 6px; }
+  .hud-pilot__feed { width: min(280px, calc(100vw - 24px)); }
+  .pickup-toast { font-size: 14px; padding: 7px 10px; }
 }
 
 /* The command rail sits at the lower quarter, not the lower third. */
@@ -2496,8 +2498,8 @@ body.pad-connected .sf-hint { display: flex; }
   padding: clamp(6px, .35vw, 9px) clamp(9px, .55vw, 13px);
 }
 .hud-base__label, .hud-base > em { font-size: clamp(8px, .48vw, 11px); }
-.hud-pilot__feed { width: min(clamp(330px, 20vw, 460px), 100%); }
-.pickup-toast { font-size: clamp(10px, .55vw, 12px); }
+.hud-pilot__feed { width: min(clamp(420px, 25vw, 600px), 100%); }
+.pickup-toast { font-size: clamp(16px, 1vw, 19px); }
 .hud-loadout__head span { font-size: clamp(8px, .45vw, 11px); }
 .hud-loadout__head b { font-size: clamp(9px, .5vw, 12px); }
 .hud-loadout .loadout-item canvas { width: clamp(18px, 1vw, 24px); height: clamp(18px, 1vw, 24px); flex-basis: clamp(18px, 1vw, 24px); }
