@@ -7184,12 +7184,15 @@
     U.bossHud.classList.add('is-hidden');
     U.levelupScreen.classList.add('hidden');
     U.pauseScreen.classList.add('hidden');
+    // 失败时先让死亡爆炸和战场停顿 3 秒，再显示继续/选关菜单；
+    // 胜利结算保持原来的短停顿。
+    const revealDelay = win ? 520 : 3000;
     setTimeout(() => {
       if (G.mode === 'result') {
         U.resultScreen.classList.remove('hidden');
         G.lastFrame = performance.now();
       }
-    }, 520);
+    }, revealDelay);
   }
 
   function returnToMenu() {
