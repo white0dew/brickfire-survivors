@@ -593,22 +593,36 @@
     const ids = (SEAL_TANKS_BY_STAGE[index] || []);
     if (!ids.length) return;
 
-    // Seals are optional destinations, not something the base can snipe from
-    // spawn. Keep them in the upper-left / upper-right rooms so the player has
-    // to deliberately drive over and commit to breaking them.
+    // Seals are optional destinations. Put them in the upper rooms, behind
+    // existing steel/brick cover relative to the player's spawn, so the base
+    // cannot simply stare down a straight lane and snipe them at t=0.
     const cornerZones = [
-      { x0: 2, y0: 2, x1: 9, y1: 8, ax: 4, ay: 4 },
-      { x0: COLS - 9, y0: 2, x1: COLS - 2, y1: 8, ax: COLS - 4, ay: 4 }
+      { x0: 1, x1: 12, y0: 1, y1: 8, ax: 4, ay: 3 },
+      { x0: COLS - 13, x1: COLS - 2, y0: 1, y1: 8, ax: COLS - 5, ay: 3 }
     ];
     const used = [];
     const spawn = G.player || G.players[0] || { x: W / 2, y: H / 2 };
 
     const safeHere = (x, y) => {
-      if (collidesWorld(x, y, 24, true)) return false;
+      if (collidesWorld(x, y, 18, true)) return false;
       if (dist(x, y, spawn.x, spawn.y) < 120) return false;
       if (dist(x, y, G.core.cx, G.core.cy) < 120) return false;
       if (used.some(p => dist(x, y, p.x, p.y) < 86)) return false;
       return true;
+    };
+
+    const lineBlockers = (x0, y0, x1, y1) => {
+      let steel = 0, brick = 0, water = 0;
+      for (let i = 0; i <= 90; i++) {
+        const x = x0 + (x1 - x0) * i / 90;
+        const y = y0 + (y1 - y0) * i / 90;
+        const tile = G.tiles[Math.floor(y / TILE)] && G.tiles[Math.floor(y / TILE)][Math.floor(x / TILE)];
+        if (!tile) continue;
+        if (tile.type === 'steel') steel++;
+        else if (tile.type === 'brick') brick++;
+        else if (tile.type === 'water') water++;
+      }
+      return { steel, brick, water };
     };
 
     for (let si = 0; si < ids.length; si++) {
@@ -616,41 +630,76 @@
       const tank = TANKS.find(t => t.id === tankId);
       if (!tank) continue;
       const zone = cornerZones[si % cornerZones.length];
-      const cornerSpots = [];
+      let best = null;
       for (let ty = zone.y0; ty <= zone.y1; ty++) {
         for (let tx = zone.x0; tx <= zone.x1; tx++) {
           const tile = G.tiles[ty] && G.tiles[ty][tx];
           if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble')) continue;
-          cornerSpots.push({ x: (tx + .5) * TILE, y: (ty + .5) * TILE });
+          const x = (tx + .5) * TILE, y = (ty + .5) * TILE;
+          if (!safeHere(x, y)) continue;
+          const fromSpawn = lineBlockers(spawn.x, spawn.y, x, y);
+          const fromCore = lineBlockers(G.core.cx, G.core.cy, x, y);
+          // Steel is the hard cover we want. Brick is acceptable; water is
+          // only a last-resort visual blocker.
+          let score = 0;
+          if (fromSpawn.steel) score += 10000;
+          else if (fromSpawn.brick) score += 1200;
+          else if (fromSpawn.water) score += 300;
+          if (fromCore.steel) score += 3000;
+          else if (fromCore.brick) score += 500;
+          score -= dist(x, y, zone.ax * TILE, zone.ay * TILE) * .02;
+          if (!best || score > best.score) best = { x, y, score };
         }
       }
-      cornerSpots.sort((a, b) => dist2(a.x, a.y, zone.ax * TILE, zone.ay * TILE) - dist2(b.x, b.y, zone.ax * TILE, zone.ay * TILE));
-
-      let chosen = cornerSpots.find(p => safeHere(p.x, p.y)) || null;
-      if (!chosen) {
-        // A few maps wall in the exact corner. Fall back to the nearest safe
-        // ground tile in that half of the map, still far from the spawn/core.
+      if (!best) {
+        // A fully walled-in corner can have no legal tile. Use the old
+        // upper-half fallback rather than dropping the seal's unlock.
         const fallback = [];
-        const yMax = Math.max(8, Math.floor(ROWS / 2));
-        for (let ty = 1; ty < yMax; ty++) {
+        for (let ty = 1; ty < Math.max(8, Math.floor(ROWS / 2)); ty++) {
           for (let tx = 1; tx < COLS - 1; tx++) {
             const inHalf = si % 2 === 0 ? tx < COLS / 2 : tx >= COLS / 2;
             if (!inHalf) continue;
             const tile = G.tiles[ty] && G.tiles[ty][tx];
             if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble')) continue;
-            fallback.push({ x: (tx + .5) * TILE, y: (ty + .5) * TILE });
+            const x = (tx + .5) * TILE, y = (ty + .5) * TILE;
+            if (safeHere(x, y)) fallback.push({ x, y });
           }
         }
         fallback.sort((a, b) => dist2(a.x, a.y, zone.ax * TILE, zone.ay * TILE) - dist2(b.x, b.y, zone.ax * TILE, zone.ay * TILE));
-        chosen = fallback.find(p => safeHere(p.x, p.y)) || null;
+        best = fallback[0] || null;
       }
-      if (!chosen) continue;
-      used.push(chosen);
+      if (!best) continue;
+
+      // Put a visible steel cover directly on the spawn-facing side of the
+      // seal. A distant line-of-sight check alone is not readable on screen;
+      // the player must be able to see that the seal is tucked behind steel.
+      {
+        const dx = spawn.x - best.x, dy = spawn.y - best.y;
+        const vertical = Math.abs(dy) >= Math.abs(dx);
+        const dir = Math.sign(vertical ? dy : dx) || 1;
+        const scx = Math.floor(best.x / TILE), scy = Math.floor(best.y / TILE);
+        let placed = 0;
+        for (const depth of [2, 3]) {
+          for (let off = -2; off <= 2; off++) {
+            const tx = vertical ? scx + off : scx + dir * depth;
+            const ty = vertical ? scy + dir * depth : scy + off;
+            if (tx < 1 || ty < 1 || tx >= COLS - 1 || ty >= ROWS - 1) continue;
+            const tile = G.tiles[ty] && G.tiles[ty][tx];
+            if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble' && tile.type !== 'brick')) continue;
+            tile.type = 'steel'; tile.hp = Infinity; tile.maxHp = Infinity;
+            tile.seed = (tx * 31 + ty * 91) % 1000;
+            placed++;
+          }
+          if (placed >= 3) break;
+        }
+      }
+
+      used.push(best);
       const maxHp = 150 + index * 18;
       G.seals.push({
         tankId: tank.id,
         tankIndex: TANKS.indexOf(tank),
-        x: chosen.x, y: chosen.y, radius: 17,
+        x: best.x, y: best.y, radius: 17,
         hp: maxHp, maxHp, hitFlash: 0, minionCd: 0, dead: false, seed: rand(TAU), ring: rand(TAU)
       });
     }
@@ -5484,7 +5533,7 @@
     if (!G.sealTutorialSeen) {
       G.sealTutorialSeen = true;
       try { localStorage.setItem('bf.sealTutorial', '1'); } catch (_) {}
-      showSealTutorial();
+      showSealTutorial(seal);
     }
     for (let i = 0; i < 4; i++) addParticle(seal.x + rand(8, -8), seal.y + rand(8, -8), rand(45, -45), rand(45, -45), '#ffe3a0', 'spark', .35, 2);
     if ((seal.minionCd || 0) <= 0) {
@@ -7893,7 +7942,74 @@
     AUDIO.tick();
   }
 
-  function showSealTutorial() {
+  function drawSealTutorialIcon(canvas, seal) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = 144 * dpr;
+    canvas.height = 126 * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, 144, 126);
+    const tank = TANKS[(seal && seal.tankIndex) || 0] || TANKS[0];
+    const c = tank.colors;
+    const t = performance.now() / 1000;
+    ctx.save();
+    ctx.translate(72, 66);
+    ctx.scale(2.25, 2.25);
+    // Dark background disc.
+    ctx.fillStyle = 'rgba(2,8,6,.78)';
+    ctx.beginPath(); ctx.arc(0, 0, 42, 0, TAU); ctx.fill();
+    // Steel cover hint at the bottom.
+    ctx.fillStyle = '#27383d';
+    for (let i = -2; i <= 2; i++) ctx.fillRect(i * 11 - 5, 30, 9, 7);
+    ctx.fillStyle = 'rgba(140,190,190,.22)';
+    for (let i = -2; i <= 2; i++) ctx.fillRect(i * 11 - 5, 30, 9, 2);
+    // Core glow.
+    ctx.globalCompositeOperation = 'lighter';
+    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 36);
+    glow.addColorStop(0, hexA(c.core, .3));
+    glow.addColorStop(1, hexA(c.core, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, 36, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // Rune ring.
+    ctx.strokeStyle = hexA(c.core, .5);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 5]);
+    ctx.lineDashOffset = -t * 16;
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    // Orbit shards.
+    for (let i = 0; i < 3; i++) {
+      const a = t * .72 + i * TAU / 3;
+      ctx.save();
+      ctx.translate(Math.cos(a) * 25, Math.sin(a) * 16);
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = hexA(c.light, .85);
+      ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(3, 3); ctx.lineTo(-3, 3); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // Monolith.
+    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-17, 14); ctx.lineTo(17, 14); ctx.closePath();
+    ctx.fillStyle = 'rgba(3,8,6,.96)'; ctx.fill();
+    ctx.strokeStyle = hexA(c.core, .9); ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(-13, 12); ctx.lineTo(0, 12); ctx.closePath();
+    ctx.fillStyle = hexA(c.dark, .98); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(13, 12); ctx.lineTo(0, 12); ctx.closePath();
+    ctx.fillStyle = hexA(c.core, .18); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-8, 8); ctx.lineTo(8, 8); ctx.closePath();
+    ctx.fillStyle = 'rgba(3,8,6,.76)'; ctx.fill(); ctx.strokeStyle = hexA(c.light, .7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 1); ctx.lineTo(0, 9); ctx.lineTo(-5, 1); ctx.closePath();
+    ctx.fillStyle = hexA(c.core, .95); ctx.fill();
+    ctx.fillStyle = 'rgba(3,8,6,.92)'; ctx.font = '12px Silkscreen, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, 1);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(4,10,8,.72)'; ctx.fillRect(-19, -34, 38, 3);
+    ctx.fillStyle = c.core; ctx.fillRect(-19, -34, 38, 3);
+    ctx.restore();
+  }
+
+  function showSealTutorial(seal) {
     if (document.getElementById('sealTutorial')) return;
     G.mode = 'sealTutorial';
     G.accum = 0;
@@ -7903,8 +8019,15 @@
     wrap.id = 'sealTutorial';
     wrap.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,5,.82);backdrop-filter:blur(5px);padding:24px;';
     wrap.innerHTML = `
-      <div style="width:min(480px,92vw);border:1px solid rgba(95,240,206,.6);background:linear-gradient(160deg,rgba(8,28,24,.98),rgba(5,10,8,.99));box-shadow:0 0 50px rgba(95,240,206,.15);padding:28px;">
+      <div style="width:min(500px,92vw);border:1px solid rgba(95,240,206,.6);background:linear-gradient(160deg,rgba(8,28,24,.98),rgba(5,10,8,.99));box-shadow:0 0 50px rgba(95,240,206,.15);padding:28px;">
         <div style="font:700 11px/1.2 Silkscreen,monospace;letter-spacing:.18em;color:#5ff0ce;margin-bottom:12px;">SEAL PROTOCOL // 首次攻击</div>
+        <div style="display:flex;gap:16px;align-items:center;margin:0 0 18px;padding:12px 14px;border:1px solid rgba(95,240,206,.22);background:rgba(2,9,7,.55);">
+          <canvas id="sealTutorialIcon" width="144" height="126" aria-label="封印核心图标" style="flex:0 0 144px;width:144px;height:126px;image-rendering:pixelated;"></canvas>
+          <div style="min-width:0;">
+            <strong style="display:block;color:#d8fff3;font-size:17px;margin-bottom:5px;">这就是封印核心</strong>
+            <span style="display:block;color:#a9c6b8;font-size:12px;line-height:1.65;">地图上半区的黑色三角塔<br>外层有旋转的青色符环<br>通常躲在一段钢墙后面</span>
+          </div>
+        </div>
         <h2 style="margin:0 0 12px;font-size:26px;color:#d8fff3;">封印核心会反击</h2>
         <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">攻击封印会立刻触发 <b style="color:#5ff0ce;">守军增援</b>，持续攻击还会不断召唤小兵。</p>
         <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">击破封印后，<b style="color:#ffcf5a;">封印守卫</b>会苏醒；击败守卫可以解锁它的底盘。</p>
@@ -7912,6 +8035,7 @@
         <button id="sealTutorialClose" type="button" style="width:100%;padding:13px 18px;border:1px solid #5ff0ce;background:#5ff0ce;color:#05201a;font:700 15px/1 Silkscreen,monospace;cursor:pointer;letter-spacing:.08em;">知道了，继续</button>
       </div>`;
     document.body.appendChild(wrap);
+    drawSealTutorialIcon(wrap.querySelector('#sealTutorialIcon'), seal);
     let padWatch = null;
     const close = () => {
       if (!wrap.parentNode) return;
