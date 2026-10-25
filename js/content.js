@@ -1035,11 +1035,11 @@
     },
     {
       id: 'hard', name: '困难', en: 'HARD', desc: '敌军强化 · 核心奖励 +25%',
-      mod: { enemyHp: 1.35, enemyDamage: 1.3, enemySpeed: 1.08, spawnMul: .87, fireRate: 1.15, bossHp: 1.25, xpMul: 1.08, coreMul: 1.25 }
+      mod: { enemyHp: 1.35, enemyDamage: 1.3, enemySpeed: 1.08, spawnMul: .87, fireRate: 1.5, bossHp: 1.25, xpMul: 1.08, coreMul: 1.25 }
     },
     {
       id: 'nightmare', name: '噩梦', en: 'NIGHTMARE', desc: '极限围杀 · 核心奖励 +60%',
-      mod: { enemyHp: 2, enemyDamage: 2, enemySpeed: 1.18, spawnMul: .74, fireRate: 2.8, bossHp: 2, xpMul: 1.18, coreMul: 1.6 }
+      mod: { enemyHp: 2, enemyDamage: 2, enemySpeed: 1.18, spawnMul: .74, fireRate: 2, bossHp: 2, xpMul: 1.18, coreMul: 1.6 }
     }
   ];
 
