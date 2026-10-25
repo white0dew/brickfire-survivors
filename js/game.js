@@ -97,7 +97,7 @@
     foundry: ['mortar', 'gunship', 'splitter', 'charger', 'heavy'],
     graveyard: ['drone', 'skybomber', 'strafer', 'splitter', 'scout'],
     reactor: ['saucer', 'warper', 'beamfrigate', 'warden', 'grunt'],
-    dome: ['carrier', 'skybomber', 'warper', 'gunship', 'heavy'],
+    dome: ['gunship', 'skybomber', 'carrier', 'warper', 'heavy'],
     citadel: ['strafer', 'gunship', 'warden', 'welder', 'sniper'],
     abyss: ['borer', 'saucer', 'beamfrigate', 'carrier', 'heavy'],
     solar: ['beamfrigate', 'saucer', 'skybomber', 'charger', 'grunt'],
@@ -423,7 +423,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-37`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-38`;
     }
   }
 
