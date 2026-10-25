@@ -4303,6 +4303,13 @@
     addEffect({ type: 'ring', x, y, radius: hz.radius * .6, life: .5, maxLife: .5, color: hz.color });
   }
 
+  function retireEnemy(e) {
+    if (!e || e.dead) return;
+    e.dead = true;
+    addEffect({ type: 'ring', x: e.x, y: e.y, radius: 18 + e.radius, life: .32, maxLife: .32, color: e.coreColor || '#9fb3a7' });
+    for (let i = 0; i < 6; i++) addParticle(e.x, e.y, rand(45, -45), rand(45, -45), e.coreColor || '#9fb3a7', 'smoke', .35, 2);
+  }
+
   function retireOldWaveTypes(activeType) {
     for (const e of G.enemies) {
       if (e.dead || e.boss || e.elite || e.sealTankId || e.retreating) continue;
@@ -4480,7 +4487,7 @@
       }
       if (e.retreating) {
         e.retreatTimer -= dt;
-        if (e.retreatTimer <= 0) killEnemy(e, 'retreat');
+        if (e.retreatTimer <= 0) retireEnemy(e);
         continue;
       }
       if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
