@@ -25,8 +25,6 @@
   const CORE_W = 64;
   const CORE_H = 64;
   const BASE_MAX_HP = 520;
-  const ENEMY_HP_SCALE = 1.5;
-  const ENEMY_DAMAGE_SCALE = 1.25;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
   // Enemy target selection leans toward pilots, not the static base. A base
@@ -1991,7 +1989,7 @@
 
   function groundEnemyArt(e) {
     // Seal guards carry a specific chassis identity; keep their procedural hull.
-    if (e.sealTankId) return null;
+    if (e.sealTankId || e.eliteTankId) return null;
     const fullKey = {
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy',
       bomber: 'enemyBomber', sniper: 'enemySniper', elite: 'enemyElite',
@@ -2139,7 +2137,10 @@
     }
     if (e.elite) {
       const sealBoss = !!e.sealTankId;
-      const w = sealBoss ? 116 : 76;
+      const eliteName = sealBoss
+        ? `封印守卫 · ${e.sealLabel || ''}`
+        : e.eliteLabel ? `精英 · ${e.eliteLabel}` : '精英';
+      const w = clamp(22 + eliteName.length * 7, 76, 166);
       // Pulsing command ring: an elite must read as an event, not a recolored grunt.
       const pulse = .5 + .5 * Math.sin(t * 5 + e.id);
       ctx.save();
@@ -2152,7 +2153,7 @@
       ctx.fillStyle = 'rgba(4,8,7,.88)'; ctx.fillRect(e.x - w / 2, e.y - 50, w, 11);
       ctx.strokeStyle = sealBoss ? 'rgba(95,240,206,.65)' : 'rgba(255,181,45,.55)'; ctx.lineWidth = 1; ctx.strokeRect(e.x - w / 2 + .5, e.y - 49.5, w - 1, 10);
       ctx.fillStyle = sealBoss ? '#8fffe6' : '#ffd176'; ctx.font = '7px Silkscreen, monospace'; ctx.textAlign = 'center';
-      ctx.fillText(sealBoss ? `封印守卫 · ${e.sealLabel || ''}` : '精英', e.x, e.y - 42);
+      ctx.fillText(eliteName, e.x, e.y - 42);
       ctx.fillStyle = 'rgba(5,9,7,.9)'; ctx.fillRect(e.x - w / 2, e.y - 36, w, 5);
       ctx.fillStyle = '#ffb52d'; ctx.fillRect(e.x - w / 2 + 1, e.y - 35, (w - 2) * clamp(e.hp / e.maxHp, 0, 1), 3);
     }
@@ -3149,6 +3150,7 @@
     G.spawnPoints = [];
     G.eliteFlags = {};
     G.nextEliteAt = ELITE_FIRST_AT;
+    G.eliteSpawnCount = 0;
     try { G.eliteTutorialSeen = localStorage.getItem('bf.eliteTutorial') === '1'; }
     catch (_) { G.eliteTutorialSeen = false; }
     try { G.sealTutorialSeen = localStorage.getItem('bf.sealTutorial') === '1'; }
@@ -4560,15 +4562,17 @@
       // player finish it instead of stacking three gold silhouettes.
       const eliteAlive = G.enemies.some(e => e.elite && !e.sealTankId && !e.dead);
       if (!eliteAlive) {
-        spawnEnemy('elite', { warning: true });
-        showToast('警告：精英单位「破城者」进入战区 · 击破必掉战术宝箱', 'red');
+        const elite = spawnTimedElite({ warning: true });
+        const label = elite && elite.eliteLabel ? elite.eliteLabel : '破城者';
+        showToast(`警告：精英单位「${label}」进入战区 · 击破必掉战术宝箱`, 'red');
         AUDIO.boss();
       }
     }
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
       G.endlessEliteAt = G.elapsed + ELITE_GAP;
-      spawnEnemy('elite', { warning: true });
-      showToast('无尽猎杀 · 精英单位进入战区', 'red');
+      const elite = spawnTimedElite({ warning: true });
+      const label = elite && elite.eliteLabel ? elite.eliteLabel : '破城者';
+      showToast(`无尽猎杀 · 精英单位「${label}」进入战区`, 'red');
       AUDIO.boss();
     }
 
@@ -4641,8 +4645,8 @@
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
-      damage: cfg.damage * (type === 'warden' ? 1 : ENEMY_DAMAGE_SCALE) * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
+      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
+      damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
@@ -4672,8 +4676,8 @@
       domain: cfg.domain || 'ground',
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1),
-      damage: cfg.damage * ENEMY_DAMAGE_SCALE * .88 * (mod.enemyDamage || 1),
+      hp: cfg.hp * scale * (mod.bossHp || 1), maxHp: cfg.hp * scale * (mod.bossHp || 1),
+      damage: cfg.damage * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       elite: false, boss: true, xp: cfg.xp, spawnTimer: 1.35, spawnTotal: 1.35,
@@ -5775,6 +5779,31 @@
     markCodex(`seal:${tank.id}`);
     addEffect({ type: 'ring', x: seal.x, y: seal.y, radius: 52, life: .7, maxLife: .7, color: tank.colors.core });
     addShake(7, .45); G.flash = Math.max(G.flash, .35); G.flashColor = tank.colors.core;
+  }
+
+  function spawnEliteVariant(tank, opts) {
+    const e = spawnEnemy('elite', opts);
+    if (!e) return null;
+    e.eliteTankId = tank.id;
+    e.eliteLabel = tank.name || '精英';
+    e.size = 1.38;
+    e.color = tank.colors.body;
+    e.light = tank.colors.light;
+    e.dark = tank.colors.dark;
+    e.coreColor = tank.colors.core;
+    markCodex(`seal:${tank.id}`);
+    return e;
+  }
+
+  // A timed elite cycles through Breaker and every sealed chassis. The first
+  // event is still the familiar Breaker; later events rotate through all 19
+  // tank identities so the elite roster is not a single enemy.
+  function spawnTimedElite(opts) {
+    const variants = TANKS.slice(1);
+    const slot = (G.eliteSpawnCount || 0) % (variants.length + 1);
+    G.eliteSpawnCount = (G.eliteSpawnCount || 0) + 1;
+    if (slot === 0 || !variants.length) return spawnEnemy('elite', opts);
+    return spawnEliteVariant(variants[slot - 1], opts);
   }
 
   function hostileShellSplash(b, x, y, direct) {
