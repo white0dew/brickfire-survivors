@@ -104,10 +104,6 @@
   const MAP_ROSTERS = Object.fromEntries(Object.entries(STAGE_LINEUPS).map(([id, tiers]) => [
     id, [tiers[0], tiers[0], tiers[1], tiers[2], tiers[2]]
   ]));
-  const TEST_ENEMIES = MAPS.flatMap((map, stageIndex) => {
-    const tiers = STAGE_LINEUPS[map.id] || [];
-    return tiers.map((type, tierIndex) => ({ type, stageIndex, tier: tierIndex + 1, stage: map.name }));
-  });
 
   // Expansion pilot: one readable environmental rhythm for the three test maps.
   const MAP_HAZARDS = {
@@ -181,10 +177,6 @@
   }
 
   function phaseLabel() {
-    if (G.testMode && TEST_ENEMIES[G.testIndex]) {
-      const testType = TEST_ENEMIES[G.testIndex].type;
-      return (ENEMIES[testType] && ENEMIES[testType].name) || testType;
-    }
     const roster = stageRoster();
     const type = roster[phaseIndex()] || 'scout';
     const cfg = ENEMIES[type] || {};
@@ -457,7 +449,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-44`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-45`;
     }
   }
 
@@ -3106,62 +3098,10 @@
     return Math.floor(20 + (level - 1) * 15 + Math.pow(level, 1.35) * 7.2);
   }
 
-  // Local-only enemy lab: /?test=1 ... /?test=36 shows one stage enemy at a time.
-  function startEnemyTest(num) {
-    const item = TEST_ENEMIES[clamp((num | 0) - 1, 0, TEST_ENEMIES.length - 1)];
-    if (!item) return;
-    G.campaign.unlocked = MAPS.length;
-    // Keep every test unit in the same arena so their silhouettes and attacks
-    // can be compared directly; the panel still shows the unit's home stage.
-    startRun(0, false, false);
-    closeTutorial();
-    G.itemTutorialSeen = true;
-    G.testMode = true;
-    G.testIndex = clamp((num | 0) - 1, 0, TEST_ENEMIES.length - 1);
-    G.spawnTimer = 9999;
-    G.sideSpawnTimer = 9999;
-    G.nextEliteAt = 9999;
-    G.endlessEliteAt = 9999;
-    G.bossAt = 600;
-    G.runDuration = 600;
-    G.bossSpawned = true;
-    G.boss = null;
-    G.enemies = [];
-    G.elapsed = 0;
-    G.player.invuln = 99999;
-    if (G.core) G.core.hp = G.core.maxHp = 999999;
-    const slots = [[15, 10], [11, 12], [19, 12]];
-    for (const [cx, cy] of slots) {
-      const e = spawnEnemy(item.type, { spawn: { cx, cy } });
-      if (!e) continue;
-      e.hp = e.maxHp = 1e9;
-      e.spawnTimer = .2;
-      e.spawnTotal = .2;
-      e.testDummy = true;
-    }
-    const cfg = ENEMIES[item.type] || {};
-    const tierName = item.tier === 1 ? '普通兵一' : item.tier === 2 ? '普通兵二' : '普通兵三';
-    let panel = document.getElementById('enemyTestPanel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'enemyTestPanel';
-      panel.style.cssText = 'position:fixed;right:18px;top:110px;z-index:9999;width:300px;padding:14px 16px;background:rgba(3,8,6,.92);border:1px solid rgba(255,207,90,.55);border-radius:8px;color:#e8f4ec;font:12px/1.65 monospace;box-shadow:0 8px 30px rgba(0,0,0,.5);pointer-events:none;';
-      document.body.appendChild(panel);
-    }
-    panel.style.display = 'block';
-    panel.innerHTML = `<div style="color:#ffcf5a;font-weight:700;font-size:14px;margin-bottom:6px;">测试兵种 ${G.testIndex + 1}/${TEST_ENEMIES.length} · ${tierName}</div>` +
-      `<div style="color:#fff;font-size:13px;font-weight:700;">${cfg.name || item.type} <span style="color:#8fb9a8;font-weight:400;">// ${item.stage}</span></div>` +
-      `<div style="color:#a9c8ba;margin-top:6px;">${cfg.codex || ''}</div>` +
-      `<div style="color:#79b9ff;margin-top:10px;">换一个：把网址里的 test=${G.testIndex + 1} 改成 1-${TEST_ENEMIES.length}</div>`;
-  }
-
   function startRun(index, coop, endless) {
-    const testPanel = document.getElementById('enemyTestPanel');
-    if (testPanel) testPanel.style.display = 'none';
     const unlocked = G.campaign ? G.campaign.unlocked : 1;
     index = clamp(index | 0, 0, Math.min(MAPS.length - 1, Math.max(0, unlocked - 1)));
     G.mode = 'playing';
-    G.testMode = false;
     G.endless = !!endless;
     G.endlessSelected = G.endless;
     G.endlessBossKills = 0;
@@ -9657,7 +9597,7 @@
         return { mode: G.mode, elapsed: G.elapsed, hp: G.player && G.player.hp, hp1: G.players[0] && G.players[0].hp, hp2: G.players[1] && G.players[1].hp, down1: G.players[0] && G.players[0].downed, down2: G.players[1] && G.players[1].downed, progress: Math.round(G.elapsed / Math.max(1, G.bossAt || BOSS_AT) * 100), level: G.level, kills: G.kills };
       };
       window.__BF_DEBUG = { G, Input, art: ART, startRun, recalcStats, addXp, spawnEnemy, spawnPickup, damageEnemy, update, damageSeal, killEnemy, spawnBoss, damageBase, updateBase, nearestTarget, nearestDirectionalAttackable, openTutorial, closeTutorial, queueItemTutorial, openItemTutorial, closeItemTutorial, hitTile, markCodex, renderCodex, makeSaveText, openCodexScreen, openSaveScreen, openLevelUp, chooseUpgrade, endRun, tick, draw: () => drawGame(performance.now() / 1000), U, defaultFocus: defaultPadFocus, pad: { poll: pollGamepad, p2: Input.gamepad2, slots: Input.padSlots, context: uiContext, focusables: padFocusables, move: movePadFocus, activate: activatePadFocus, back: backPadContext, scan: () => Array.from(gamepadList()).filter(Boolean).map(gp => ({ id: gp.id, mapping: gp.mapping, connected: gp.connected, axes: Array.from(gp.axes || []), buttons: Array.from(gp.buttons || []).map(b => ({ pressed: b.pressed, value: b.value })) })) } };
-      Object.assign(window.__BF_DEBUG, { stageRoster, pickWaveType, phaseIndex, activeSpawnPoints, startEnemyTest, TEST_ENEMIES });
+      Object.assign(window.__BF_DEBUG, { stageRoster, pickWaveType, phaseIndex, activeSpawnPoints });
       // Local-only boss lab: /?debug&boss=1 ... boss=12 starts that map at the boss gate.
       const bossParam = parseInt(new URLSearchParams(location.search).get('boss'), 10);
       if (bossParam >= 1 && bossParam <= MAPS.length) {
@@ -9673,8 +9613,6 @@
         if (G.boss) { G.boss.spawnTimer = 0; G.boss.spawnTotal = 0; }
       }
     }
-    const testParam = parseInt(new URLSearchParams(location.search).get('test'), 10);
-    if (testParam >= 1 && testParam <= TEST_ENEMIES.length) startEnemyTest(testParam);
     primeMenuAudio();
     ['pointerdown', 'keydown', 'touchstart'].forEach(type => {
       window.addEventListener(type, primeMenuAudio, { capture: true, passive: type === 'touchstart' });
