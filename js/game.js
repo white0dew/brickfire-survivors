@@ -7297,10 +7297,14 @@
     if (U.fusionGrid) {
       U.fusionGrid.innerHTML = Object.values(FUSIONS).map(f => {
         const w = WEAPONS[f.weapon], p = PASSIVES[f.passive];
+        // The UI uses four visible tiers (pips); legacy level numbers are only
+        // used internally for stat scaling and should not leak into fusion cards.
+        const wTier = Math.max(1, WEAPON_TIER_LEVEL.indexOf(f.weaponLevel));
+        const pTier = Math.max(1, PASSIVE_TIER_LEVEL.indexOf(f.passiveLevel));
         return `<article class="fusion-card">
-          <div class="fusion-card__part"><small>武器</small><strong>${w.name} Lv.${f.weaponLevel}</strong></div>
+          <div class="fusion-card__part"><small>武器</small><strong>${w.name} 第 ${wTier} 阶</strong></div>
           <div class="fusion-card__plus">+</div>
-          <div class="fusion-card__part"><small>被动</small><strong>${p.name} Lv.${f.passiveLevel}</strong></div>
+          <div class="fusion-card__part"><small>被动</small><strong>${p.name} 第 ${pTier} 阶</strong></div>
           <div class="fusion-card__result"><strong>${f.name}</strong><span>${f.desc}</span></div>
         </article>`;
       }).join('');
