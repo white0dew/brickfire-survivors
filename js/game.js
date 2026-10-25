@@ -152,8 +152,8 @@
   ];
 
   // Each run introduces exactly one new regular enemy every two minutes.
-  // The previous type stays at a low weight for one window, then rotates out:
-  // at most two regular types are active at once.
+  // The previous type is retired when the next one arrives: at most one
+  // regular wave species is active at a time (elites/seal guards excepted).
   function stageRoster() {
     if (G.arenaIndex === 0 && !G.endless) return ['scout', 'grunt', 'heavy'];
     const base = ['scout', 'grunt', 'heavy'];
@@ -182,8 +182,7 @@
   function pickWaveType() {
     const roster = stageRoster();
     const idx = phaseIndex();
-    if (idx <= 0) return roster[0];
-    return chance(.75) ? roster[idx] : roster[idx - 1];
+    return roster[idx] || roster[roster.length - 1];
   }
 
   // Attack identity per enemy family. Shape + cadence matter more than color:
@@ -275,6 +274,7 @@
     runDuration: 600,
     nextEliteAt: 150,
     eliteTutorialSeen: false,
+    sealTutorialSeen: false,
     itemTutorialSeen: false,
     itemTutorialQueued: false,
     freezeTimer: 0,
@@ -591,33 +591,57 @@
     G.seals = [];
     const ids = (SEAL_TANKS_BY_STAGE[index] || []);
     if (!ids.length) return;
-    const baseSpots = [
-      [3.5, 3.5], [COLS - 4.5, 3.5], [3.5, ROWS - 4.5], [COLS - 4.5, ROWS - 4.5],
-      [COLS / 2, 3.2], [COLS / 2, ROWS - 3.7], [3.5, ROWS / 2], [COLS - 4.5, ROWS / 2],
-      [7.5, 6.5], [COLS - 8.5, 6.5], [7.5, ROWS - 6.5], [COLS - 8.5, ROWS - 6.5]
+
+    // Seals are optional destinations, not something the base can snipe from
+    // spawn. Keep them in the upper-left / upper-right rooms so the player has
+    // to deliberately drive over and commit to breaking them.
+    const cornerZones = [
+      { x0: 2, y0: 2, x1: 9, y1: 8, ax: 4, ay: 4 },
+      { x0: COLS - 9, y0: 2, x1: COLS - 2, y1: 8, ax: COLS - 4, ay: 4 }
     ];
-    const candidates = baseSpots.slice();
-    for (let ty = 2; ty < ROWS - 2; ty++) {
-      for (let tx = 2; tx < COLS - 2; tx++) {
-        const tile = G.tiles[ty] && G.tiles[ty][tx];
-        if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble')) continue;
-        candidates.push([tx + .5, ty + .5]);
-      }
-    }
     const used = [];
     const spawn = G.player || G.players[0] || { x: W / 2, y: H / 2 };
-    for (const tankId of ids) {
+
+    const safeHere = (x, y) => {
+      if (collidesWorld(x, y, 24, true)) return false;
+      if (dist(x, y, spawn.x, spawn.y) < 120) return false;
+      if (dist(x, y, G.core.cx, G.core.cy) < 120) return false;
+      if (used.some(p => dist(x, y, p.x, p.y) < 86)) return false;
+      return true;
+    };
+
+    for (let si = 0; si < ids.length; si++) {
+      const tankId = ids[si];
       const tank = TANKS.find(t => t.id === tankId);
       if (!tank) continue;
-      let chosen = null;
-      for (const [cx, cy] of candidates) {
-        const x = cx * TILE, y = cy * TILE;
-        if (collidesWorld(x, y, 24, true)) continue;
-        if (dist(x, y, spawn.x, spawn.y) < 120) continue;
-        if (dist(x, y, G.core.cx, G.core.cy) < 120) continue;
-        if (used.some(p => dist(x, y, p.x, p.y) < 86)) continue;
-        chosen = { x, y };
-        break;
+      const zone = cornerZones[si % cornerZones.length];
+      const cornerSpots = [];
+      for (let ty = zone.y0; ty <= zone.y1; ty++) {
+        for (let tx = zone.x0; tx <= zone.x1; tx++) {
+          const tile = G.tiles[ty] && G.tiles[ty][tx];
+          if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble')) continue;
+          cornerSpots.push({ x: (tx + .5) * TILE, y: (ty + .5) * TILE });
+        }
+      }
+      cornerSpots.sort((a, b) => dist2(a.x, a.y, zone.ax * TILE, zone.ay * TILE) - dist2(b.x, b.y, zone.ax * TILE, zone.ay * TILE));
+
+      let chosen = cornerSpots.find(p => safeHere(p.x, p.y)) || null;
+      if (!chosen) {
+        // A few maps wall in the exact corner. Fall back to the nearest safe
+        // ground tile in that half of the map, still far from the spawn/core.
+        const fallback = [];
+        const yMax = Math.max(8, Math.floor(ROWS / 2));
+        for (let ty = 1; ty < yMax; ty++) {
+          for (let tx = 1; tx < COLS - 1; tx++) {
+            const inHalf = si % 2 === 0 ? tx < COLS / 2 : tx >= COLS / 2;
+            if (!inHalf) continue;
+            const tile = G.tiles[ty] && G.tiles[ty][tx];
+            if (!tile || (tile.type !== 'ground' && tile.type !== 'rubble')) continue;
+            fallback.push({ x: (tx + .5) * TILE, y: (ty + .5) * TILE });
+          }
+        }
+        fallback.sort((a, b) => dist2(a.x, a.y, zone.ax * TILE, zone.ay * TILE) - dist2(b.x, b.y, zone.ax * TILE, zone.ay * TILE));
+        chosen = fallback.find(p => safeHere(p.x, p.y)) || null;
       }
       if (!chosen) continue;
       used.push(chosen);
@@ -2994,6 +3018,8 @@
     G.nextEliteAt = ELITE_FIRST_AT;
     try { G.eliteTutorialSeen = localStorage.getItem('bf.eliteTutorial') === '1'; }
     catch (_) { G.eliteTutorialSeen = false; }
+    try { G.sealTutorialSeen = localStorage.getItem('bf.sealTutorial') === '1'; }
+    catch (_) { G.sealTutorialSeen = false; }
     try { G.itemTutorialSeen = localStorage.getItem('bf.itemTutorial') === '1'; }
     catch (_) { G.itemTutorialSeen = false; }
     G.itemTutorialQueued = false;
@@ -4277,11 +4303,25 @@
     addEffect({ type: 'ring', x, y, radius: hz.radius * .6, life: .5, maxLife: .5, color: hz.color });
   }
 
+  function retireOldWaveTypes(activeType) {
+    for (const e of G.enemies) {
+      if (e.dead || e.boss || e.elite || e.sealTankId || e.retreating) continue;
+      if (e.type === activeType) continue;
+      e.retreating = true;
+      e.retreatTimer = 1.15;
+      e.spawnTimer = 0;
+    }
+  }
+
   function updateWaves(dt) {
     const pi = phaseIndex();
     if (pi !== G.waveIndex) {
       G.waveIndex = pi;
       const roster = stageRoster();
+      // Retire the previous wave type instead of letting five silhouettes
+      // accumulate behind the new one. The arena should read as "one new
+      // species every two minutes", not "all species at once".
+      retireOldWaveTypes(roster[pi]);
       showToast(`第 ${pi + 1} 阶段 · ${phaseLabel()}${G.endless ? ' · 无尽' : ''}`, 'cyan');
       if (G.elapsed > 1 && G.mode === 'playing') {
         for (let i = 0; i < 2; i++) spawnEnemy(pickWaveType());
@@ -4293,9 +4333,14 @@
     // Elites are timed events, not a random drop. First one teaches the chest.
     if (!G.endless && !G.boss && G.elapsed >= G.nextEliteAt && G.elapsed < G.bossAt) {
       G.nextEliteAt += ELITE_GAP;
-      spawnEnemy('elite', { warning: true });
-      showToast('警告：精英单位「破城者」进入战区 · 击破必掉战术宝箱', 'red');
-      AUDIO.boss();
+      // One timed elite at a time. If the previous one is still alive, let the
+      // player finish it instead of stacking three gold silhouettes.
+      const eliteAlive = G.enemies.some(e => e.elite && !e.sealTankId && !e.dead);
+      if (!eliteAlive) {
+        spawnEnemy('elite', { warning: true });
+        showToast('警告：精英单位「破城者」进入战区 · 击破必掉战术宝箱', 'red');
+        AUDIO.boss();
+      }
     }
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
       G.endlessEliteAt = G.elapsed + ELITE_GAP;
@@ -4431,6 +4476,11 @@
       if (e.dead) continue;
       if (e.spawnTimer > 0) {
         e.spawnTimer -= dt;
+        continue;
+      }
+      if (e.retreating) {
+        e.retreatTimer -= dt;
+        if (e.retreatTimer <= 0) killEnemy(e, 'retreat');
         continue;
       }
       if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
@@ -5355,7 +5405,9 @@
       const cy = clamp(Math.floor(seal.y / TILE) + oy, 1, ROWS - 2);
       const x = (cx + .5) * TILE, y = (cy + .5) * TILE;
       if (collidesWorld(x, y, 12, false)) continue;
-      const e = spawnEnemy(pick(['scout', 'grunt']), { spawn: { cx, cy }, warning: true });
+      // Seal reinforcements are one readable silhouette, not a mixed squad:
+      // the player is already learning "attack seal -> response".
+      const e = spawnEnemy('grunt', { spawn: { cx, cy }, warning: true });
       if (!e) continue;
       e.x = x; e.y = y; e.cx = cx; e.cy = cy;
       spawned++;
@@ -5378,6 +5430,11 @@
     if (!seal || seal.dead) return;
     seal.hp -= amount;
     seal.hitFlash = .12;
+    if (!G.sealTutorialSeen) {
+      G.sealTutorialSeen = true;
+      try { localStorage.setItem('bf.sealTutorial', '1'); } catch (_) {}
+      showSealTutorial();
+    }
     for (let i = 0; i < 4; i++) addParticle(seal.x + rand(8, -8), seal.y + rand(8, -8), rand(45, -45), rand(45, -45), '#ffe3a0', 'spark', .35, 2);
     if ((seal.minionCd || 0) <= 0) {
       spawnSealMinions(seal, 2);
@@ -7721,6 +7778,50 @@
       }
     }, 90);
     wrap.querySelector('#eliteTutorialClose').addEventListener('click', close);
+    AUDIO.tick();
+  }
+
+  function showSealTutorial() {
+    if (document.getElementById('sealTutorial')) return;
+    G.mode = 'sealTutorial';
+    G.accum = 0;
+    G.lastFrame = performance.now();
+    Input.keys.clear();
+    const wrap = document.createElement('div');
+    wrap.id = 'sealTutorial';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,5,.82);backdrop-filter:blur(5px);padding:24px;';
+    wrap.innerHTML = `
+      <div style="width:min(480px,92vw);border:1px solid rgba(95,240,206,.6);background:linear-gradient(160deg,rgba(8,28,24,.98),rgba(5,10,8,.99));box-shadow:0 0 50px rgba(95,240,206,.15);padding:28px;">
+        <div style="font:700 11px/1.2 Silkscreen,monospace;letter-spacing:.18em;color:#5ff0ce;margin-bottom:12px;">SEAL PROTOCOL // 首次攻击</div>
+        <h2 style="margin:0 0 12px;font-size:26px;color:#d8fff3;">封印核心会反击</h2>
+        <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">攻击封印会立刻触发 <b style="color:#5ff0ce;">守军增援</b>，持续攻击还会不断召唤小兵。</p>
+        <p style="margin:0 0 10px;color:#d8e8df;line-height:1.7;font-size:15px;">击破封印后，<b style="color:#ffcf5a;">封印守卫</b>会苏醒；击败守卫可以解锁它的底盘。</p>
+        <p style="margin:0 0 22px;color:#a9b8aa;line-height:1.6;font-size:13px;">封印位于地图左上或右上角落，需要主动靠近。前期不必急着打。</p>
+        <button id="sealTutorialClose" type="button" style="width:100%;padding:13px 18px;border:1px solid #5ff0ce;background:#5ff0ce;color:#05201a;font:700 15px/1 Silkscreen,monospace;cursor:pointer;letter-spacing:.08em;">知道了，继续</button>
+      </div>`;
+    document.body.appendChild(wrap);
+    let padWatch = null;
+    const close = () => {
+      if (!wrap.parentNode) return;
+      wrap.parentNode.removeChild(wrap);
+      document.removeEventListener('keydown', onKey);
+      if (padWatch) clearInterval(padWatch);
+      G.mode = 'playing';
+      G.accum = 0;
+      G.lastFrame = performance.now();
+      Input.keys.clear();
+      AUDIO.confirm();
+    };
+    const onKey = (event) => {
+      if (event.code === 'Enter' || event.code === 'Space' || event.code === 'Escape') { event.preventDefault(); close(); }
+    };
+    document.addEventListener('keydown', onKey);
+    padWatch = setInterval(() => {
+      for (const gp of [Input.gamepad, Input.gamepad2]) {
+        if (gp && gp.connected && gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) { close(); break; }
+      }
+    }, 90);
+    wrap.querySelector('#sealTutorialClose').addEventListener('click', close);
     AUDIO.tick();
   }
 
