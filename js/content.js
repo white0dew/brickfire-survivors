@@ -592,7 +592,7 @@
   ];
 
   const ITEMS = {
-    star: { name: '火炮星星', en: 'STAR', color: '#ffb52d', glyph: '✦', desc: '主炮立即提升 1 级', detail: '主炮满级后，随机提升另一把武器；全部满级则修复 25 点装甲。' },
+    star: { name: '主炮升级', en: 'CANNON UP', color: '#ffb52d', glyph: '✦', desc: '主炮提升 1 阶', detail: '优先升级主炮；主炮满阶后随机提升另一把武器，全部满阶则修复 25 点装甲。' },
     grenade: { name: '震荡手雷', en: 'GRENADE', color: '#ff5b4a', glyph: '●', desc: '清除全屏敌弹并重创敌军', detail: '对屏幕内所有敌人造成高额伤害，同时清空敌方弹幕。' },
     helmet: { name: '反应头盔', en: 'HELMET', color: '#5ff0ce', glyph: '◒', desc: '获得 8 秒无敌护盾', detail: '持续期间免疫一切伤害；适合强行拾取或穿越弹幕。' },
     timer: { name: '时滞核心', en: 'TIMER', color: '#79b9ff', glyph: '◷', desc: '冻结所有敌人 7 秒', detail: '敌人停止移动与开火；首领同样受影响。' },
@@ -600,8 +600,7 @@
     tank: { name: '备用车体', en: 'TANK', color: '#a9e56e', glyph: '▣', desc: '修复车体 45%，并提升 5 最大装甲', detail: '永久增加 5 点最大装甲，并按新上限修复 45%。' },
     basekit: { name: '基地维修包', en: 'BASE KIT', color: '#5ff0ce', glyph: '⌂', desc: '修复基地装甲 24%', detail: '只对基地生效；基地装甲归零会立即失守。' },
     turret: { name: '哨戒无人机', en: 'SENTRY DRONE', color: '#8fffe6', glyph: '⌖', desc: '部署三向环绕拦截无人机', detail: '最多 4 架；在基地左、上、右三面环绕并拦截敌方弹幕，底部是盲区。满编后拾取改为修复基地 10% 装甲。' },
-    fortify: { name: '基地强化包', en: 'BASE FORTIFY', color: '#b896ff', glyph: '◈', desc: '基地装甲上限 +15%，并修复 15%', detail: '永久提高本局基地最大装甲；后续维修按新上限计算。可重复拾取叠加。' },
-    hover: { name: '两栖浮渡', en: 'PONTOON', color: '#5ff0ce', glyph: '≈', desc: '15 秒内可穿越水面', detail: '临时展开浮筒，直接碾过水域；期间仍可正常开火和冲刺。' }
+    fortify: { name: '基地强化包', en: 'BASE FORTIFY', color: '#b896ff', glyph: '◈', desc: '基地装甲上限 +15%，并修复 15%', detail: '永久提高本局基地最大装甲；后续维修按新上限计算。可重复拾取叠加。' }
   };
 
   const WEAPONS = {

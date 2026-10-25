@@ -2573,8 +2573,6 @@
         } else if (p.type === 'fortify') {
           ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(7, -3); ctx.lineTo(5, 5); ctx.lineTo(0, 8); ctx.lineTo(-5, 5); ctx.lineTo(-7, -3); ctx.closePath(); ctx.fill();
           ctx.fillStyle = '#06100d'; ctx.fillRect(-2, -3, 4, 7); ctx.fillRect(-4, -1, 8, 2);
-        } else if (p.type === 'hover') {
-          ctx.fillRect(-7, -1, 14, 2); ctx.fillRect(-5, -5, 2, 4); ctx.fillRect(-5, 3, 2, 4); ctx.fillRect(3, -5, 2, 4); ctx.fillRect(3, 3, 2, 4);
         } else if (p.type === 'turret') {
           // orbiting interceptor drone: central pod, two rotor arms and a
           // faint shield ring around the pickup slot.
@@ -5891,7 +5889,6 @@
       if (chance(dropChance)) {
         const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank', 'turret'];
         const weights = [15, 15, 15, 13, 15, 20, 10];
-        if (G.elapsed >= 60) { itemKeys.push('hover'); weights.push(12); }
         // Base support enters the pool only when it can matter. Fortify is a
         // permanent max-armor upgrade; basekit is a repair that keeps a damaged
         // base alive instead of becoming a dead pickup at full health.
@@ -6246,11 +6243,17 @@
     }
     if (pk.type === 'star') {
       const raw = p.weapons || (p.weapons = {});
-      const upgradable = Object.keys(raw).filter(k => (raw[k] || 0) < 4);
-      if (upgradable.length) {
-        const id = pick(upgradable);
-        raw[id] = Math.min(4, (raw[id] || 0) + 1);
-      } else healPlayer(25, p);
+      // Main cannon first; only once it is maxed does the pickup spill over
+      // into another weapon, then into a small repair.
+      if ((raw.cannon || 0) < 4) {
+        raw.cannon = Math.min(4, (raw.cannon || 0) + 1);
+      } else {
+        const upgradable = Object.keys(raw).filter(k => k !== 'cannon' && (raw[k] || 0) < 4);
+        if (upgradable.length) {
+          const id = pick(upgradable);
+          raw[id] = Math.min(4, (raw[id] || 0) + 1);
+        } else healPlayer(25, p);
+      }
       recalcStats(false);
       G.loadoutDirty = true;
     } else if (pk.type === 'grenade') {
@@ -6273,11 +6276,6 @@
       p.bonusHp = (p.bonusHp || 0) + 5;
       recalcStats(false);
       healPlayer(p.maxHp * .45, p);
-    } else if (pk.type === 'hover') {
-      p.waterWalkTimer = Math.max(p.waterWalkTimer || 0, 15);
-      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 38, life: .55, maxLife: .55, color: '#5ff0ce' });
-      addParticles(p.x, p.y, 12, '#8fffe6', 'spark', .9);
-      AUDIO.tone(420, .3, 'sine', .025, 220);
     }
     G.loadoutDirty = true;
     AUDIO.item();
