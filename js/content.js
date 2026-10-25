@@ -887,11 +887,6 @@
       desc: '纳米胶体持续修补车体。', max: 5,
       stats: ['每秒修复 +1.1'], text: '每秒修复 <b>1.1</b> 点装甲。'
     },
-    plating: {
-      name: '反应装甲', en: 'REACTIVE PLATING', short: '减伤', icon: 'armor', color: '#c9d8d3',
-      desc: '命中瞬间偏转部分伤害。', max: 5,
-      stats: ['受到伤害 -4%'], text: '受到的全部伤害 <b>-4%</b>。'
-    },
     pierce: {
       name: '折射校准', en: 'REFRACTION CALIBRATION', short: '折射', icon: 'warhead', color: '#ffcf5a',
       desc: '弹丸命中后折射到目标周围最近的另一名敌人。', max: 5,
@@ -906,26 +901,6 @@
       name: '回收协议', en: 'SALVAGE PROTOCOL', short: '掉落', icon: 'salvage', color: '#f5d76e',
       desc: '从残骸中拆出更多特殊道具。', max: 5,
       stats: ['特殊掉落 +2%'], text: '特殊道具掉率 <b>+2%</b>。'
-    },
-    execute: {
-      name: '处决协议', en: 'EXECUTION PROTOCOL', short: '处决', icon: 'crit', color: '#ff4f58',
-      desc: '对濒危目标造成额外伤害。', max: 5,
-      stats: ['对残血伤害 +8%'], text: '对生命低于 <b>35%</b> 的敌人伤害 <b>+8%</b>。'
-    },
-    venom: {
-      name: '纳米爆裂弹头', en: 'NANO BURST', short: '纳爆', icon: 'nano', color: '#a9e56e',
-      desc: '命中时引发纳米腐蚀爆裂，对周围敌人造成范围伤害。', max: 5,
-      stats: ['范围腐蚀伤害'], text: '命中触发 <b>纳米爆裂</b>，半径和范围伤害随等级提升。'
-    },
-    frostbite: {
-      name: '霜爆弹头', en: 'CRYO BURST', short: '霜爆', icon: 'cooling', color: '#9bd8ff',
-      desc: '命中时引发低温爆裂，对周围敌人造成范围伤害并减速。', max: 5,
-      stats: ['范围冻伤'], text: '命中触发 <b>霜爆</b>，半径、伤害与减速随等级提升。'
-    },
-    persist: {
-      name: '持续增幅', en: 'PERSISTENCE', short: '持续', icon: 'cooling', color: '#b896ff',
-      desc: '延长火焰与区域效果持续时间。', max: 5,
-      stats: ['区域持续 +10%'], text: '火焰与区域效果持续时间 <b>+10%</b>。'
     },
     guardian: {
       name: '基地守护', en: 'BASE GUARDIAN', short: '守家', icon: 'shield', color: '#5ff0ce',
@@ -1015,14 +990,9 @@
   Object.assign(PASSIVES.overdrive, { role:'全伤' });
   Object.assign(PASSIVES.shield, { role:'容错' });
   Object.assign(PASSIVES.regen, { role:'续航' });
-  Object.assign(PASSIVES.plating, { role:'减伤' });
   Object.assign(PASSIVES.pierce, { role:'折射' });
   Object.assign(PASSIVES.dash, { role:'机动' });
   Object.assign(PASSIVES.fortune, { role:'资源' });
-  Object.assign(PASSIVES.execute, { role:'收割' });
-  Object.assign(PASSIVES.venom, { role:'范围腐蚀' });
-  Object.assign(PASSIVES.frostbite, { role:'范围冻伤' });
-  Object.assign(PASSIVES.persist, { role:'区域延长' });
   Object.assign(PASSIVES.guardian, { role:'基地防御' });
   Object.assign(PASSIVES.amphibious, { role:'地形通行' });
   Object.assign(PASSIVES.phase, { role:'穿墙火力' });

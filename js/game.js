@@ -3280,14 +3280,9 @@
       const overdriveLvl = pass.overdrive || 0;
       const shieldLvl = pass.shield || 0;
       const regenLvl = pass.regen || 0;
-      const platingLvl = pass.plating || 0;
       const refractLvl = pass.pierce || 0;
       const dashLvl = pass.dash || 0;
       const fortuneLvl = pass.fortune || 0;
-      const executeLvl = pass.execute || 0;
-      const venomLvl = pass.venom || 0;
-      const frostbiteLvl = pass.frostbite || 0;
-      const persistLvl = pass.persist || 0;
       const amphibiousLvl = pass.amphibious || 0;
       const phaseLvl = pass.phase || 0;
       const base = {
@@ -3301,15 +3296,12 @@
         xpGain: 1 + salvageLvl * .12 + magnetLvl * .04,
         dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
         regen: regenLvl * 1.1,
-        damageTaken: Math.max(.55, 1 - platingLvl * .04),
+        damageTaken: 1,
         refractAdd: refractLvl + (phaseLvl > 1 ? 1 : 0),
         waterWalk: amphibiousLvl > 0 ? 1 : 0,
         waterSpeed: 1 + amphibiousLvl * .12,
         steelPierce: phaseLvl > 0 ? 1 : 0,
-        execute: executeLvl * .08,
-        venom: venomLvl,
-        frostbite: frostbiteLvl,
-        duration: 1 + persistLvl * .1
+        duration: 1
       };
       const tank = tankData(p);
       const st = {
@@ -3328,9 +3320,6 @@
         waterWalk: base.waterWalk,
         waterSpeed: base.waterSpeed,
         steelPierce: base.steelPierce,
-        execute: base.execute,
-        venom: base.venom,
-        frostbite: base.frostbite,
         duration: base.duration
       };
       p.stats = st;
@@ -3359,7 +3348,7 @@
       damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8,
       pickup: PLAYER_BASE.pickupRadius, xpGain: 1, dropChance: .025, regen: 0,
       damageTaken: 1, refractAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0,
-      execute: 0, venom: 0, frostbite: 0, duration: 1
+      duration: 1
     };
   }
 
@@ -4676,8 +4665,6 @@
         continue;
       }
       if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
-      if (e.nanoBurstCd > 0) e.nanoBurstCd = Math.max(0, e.nanoBurstCd - dt);
-      if (e.cryoBurstCd > 0) e.cryoBurstCd = Math.max(0, e.cryoBurstCd - dt);
       if (e.poisonTimer > 0) {
         e.poisonTimer = Math.max(0, e.poisonTimer - dt);
         damageEnemy(e, (e.poisonDps || 0) * dt, false, 'poison', e.poisonOwner);
@@ -5908,39 +5895,10 @@
     addShake(Math.min(11, radius * .1), .22);
   }
 
-  function triggerNanoBurst(e, owner, damage, radius) {
-    addEffect({ type: 'explosion', x: e.x, y: e.y, radius, life: .34, maxLife: .34, color: '#a9e56e' });
-    addEffect({ type: 'ring', x: e.x, y: e.y, radius: radius * 1.25, life: .38, maxLife: .38, color: '#d8ff9a' });
-    addParticles(e.x, e.y, 12, '#baff7a', 'spark', 1.2);
-    for (const other of G.enemies) {
-      if (other.dead || other.spawnTimer > 0) continue;
-      const d2 = dist2(e.x, e.y, other.x, other.y);
-      const reach = radius + (other.radius || 14) * (other.size || 1) * .5;
-      if (d2 >= reach * reach) continue;
-      const fall = 1 - .35 * Math.sqrt(d2) / reach;
-      damageEnemy(other, damage * fall, false, 'nanoburst', owner);
-    }
-  }
-
-  function triggerCryoBurst(e, owner, damage, radius, slow) {
-    addEffect({ type: 'explosion', x: e.x, y: e.y, radius, life: .34, maxLife: .34, color: '#9bd8ff' });
-    addEffect({ type: 'ring', x: e.x, y: e.y, radius: radius * 1.25, life: .38, maxLife: .38, color: '#e2f5ff' });
-    addParticles(e.x, e.y, 12, '#c7f5ff', 'spark', 1.2);
-    for (const other of G.enemies) {
-      if (other.dead || other.spawnTimer > 0) continue;
-      const d2 = dist2(e.x, e.y, other.x, other.y);
-      const reach = radius + (other.radius || 14) * (other.size || 1) * .5;
-      if (d2 >= reach * reach) continue;
-      other.slowTimer = Math.max(other.slowTimer || 0, slow);
-      const fall = 1 - .35 * Math.sqrt(d2) / reach;
-      damageEnemy(other, damage * fall, false, 'cryoburst', owner);
-    }
-  }
-
   function damageEnemy(e, amount, crit, source, owner) {
     if (!e || e.dead || e.spawnTimer > 0) return;
     // Bulwark: front plow absorbs most direct fire; flanking and explosives bypass it.
-    if (e.type === 'bulwark' && owner && source !== 'explosion' && source !== 'flame' && source !== 'nanoburst' && source !== 'cryoburst') {
+    if (e.type === 'bulwark' && owner && source !== 'explosion' && source !== 'flame') {
       const incoming = Math.atan2(owner.y - e.y, owner.x - e.x);
       const diff = ((incoming - e.bodyAngle + Math.PI) % TAU + TAU) % TAU - Math.PI;
       if (Math.abs(diff) < 1.15) {
@@ -5957,7 +5915,6 @@
     if (e.boss && e.shieldTimer > 0) amount *= e.bossKind === 'sentinel' ? .42 : .6;
     const tank = tankData(owner);
     const st = statsFor(owner);
-    if (st.execute && e.maxHp && e.hp / e.maxHp < .35) amount *= 1 + st.execute;
     e.hp -= amount;
     e.hitFlash = .12;
     if (tank.slowOnHit && source !== 'flame' && source !== 'poison') {
@@ -5968,17 +5925,8 @@
       e.poisonDps = Math.max(e.poisonDps || 0, 4 * st.damage);
       e.poisonOwner = owner;
     }
-    if (st.venom && source !== 'poison' && source !== 'flame' && source !== 'nanoburst' && source !== 'cryoburst' && !(e.nanoBurstCd > 0)) {
-      triggerNanoBurst(e, owner, amount * (.36 + st.venom * .06), 36 + st.venom * 8);
-      e.nanoBurstCd = .55;
-    }
-    if (st.frostbite && source !== 'flame' && source !== 'poison' && source !== 'nanoburst' && source !== 'cryoburst' && !(e.cryoBurstCd > 0)) {
-      triggerCryoBurst(e, owner, amount * (.30 + st.frostbite * .05), 34 + st.frostbite * 9, 1 + st.frostbite * .18);
-      e.cryoBurstCd = .7;
-    }
     G.totalDamage += amount;
-    const quiet = source === 'nanoburst' || source === 'cryoburst';
-    if (!quiet && (source !== 'flame' || chance(.45))) addDamageNumber(e.x, e.y - 17 * (e.size || 1), Math.round(amount), crit ? '#ffd15c' : '#f4ead2', crit);
+    if (source !== 'flame' || chance(.45)) addDamageNumber(e.x, e.y - 17 * (e.size || 1), Math.round(amount), crit ? '#ffd15c' : '#f4ead2', crit);
     if (e.hp <= 0) killEnemy(e, source, owner);
   }
 
