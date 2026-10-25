@@ -480,7 +480,7 @@
       radius: PLAYER_BASE.radius, speed: PLAYER_BASE.speed,
       fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, dashInvuln: .34, waterWalkTimer: 0,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
-      hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0, secondWindUsed: false,
+      hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0,
       level: 1, xp: 0, xpNext: xpNeeded(1), pendingLevels: 0, rerolls: 2,
       weapons: Object.assign({ cannon: 1 }, (tank.start && tank.start.weapons) || {}),
       passives: Object.assign({}, (tank.start && tank.start.passives) || {}),
@@ -3064,11 +3064,14 @@
       G.runMod.xpMul *= 1.4;
     }
     if (G.twoPlayer) {
-      // Two tanks already double the damage output. Add bodies, not sponges:
-      // no extra HP, a small damage trim, and a boss HP compensation only.
-      G.runMod.spawnMul *= .82;
-      G.runMod.enemyDamage *= .90;
+      // Co-op adds pressure instead of free survivability: more bodies and
+      // 20% more incoming damage. Enemy HP stays unchanged.
+      G.runMod.spawnMul *= 1 / 1.2;
+      G.runMod.enemyDamage *= 1.2;
       G.runMod.bossHp *= 1.35;
+      // Each level-up is a concentrated choice: two-person squads level
+      // twice as fast, while modules cap at rank 2.
+      G.runMod.xpMul *= 2;
     }
     G.bossAt = G.endless ? Infinity : (index === 0 ? TUTORIAL_BOSS_AT : BOSS_AT);
     G.runDuration = G.bossAt;
@@ -3155,7 +3158,6 @@
     G.shake = 0; G.shakeTime = 0; G.flash = 0;
     G.totalDamage = 0;
     G.deadReason = '';
-    G.secondWindUsed = false;
     G.tutorialStep = 0;
     G.tutorialTimer = 6;
     G.tutorialMusicPending = false;
@@ -3361,9 +3363,19 @@
     };
   }
 
-  // Four visible tiers, each worth roughly two old levels.
+  // Four visible tiers in single-player, each worth roughly two old levels.
+  // Co-op collapses the same power into two visible ranks: the second rank
+  // is already the old max-tier stat line, so each module only asks for one
+  // upgrade pick per player.
   const WEAPON_TIER_LEVEL = [0, 1, 3, 6, 8];
   const PASSIVE_TIER_LEVEL = [0, 1, 2, 4, 5];
+  const WEAPON_TIER_LEVEL_COOP = [0, 1, 8, 8, 8];
+  const PASSIVE_TIER_LEVEL_COOP = [0, 1, 5, 5, 5];
+  function maxUpgradeRank() { return G.twoPlayer ? 2 : 4; }
+  function weaponTierTable() { return G.twoPlayer ? WEAPON_TIER_LEVEL_COOP : WEAPON_TIER_LEVEL; }
+  function passiveTierTable() { return G.twoPlayer ? PASSIVE_TIER_LEVEL_COOP : PASSIVE_TIER_LEVEL; }
+  function weaponTierValue(rank) { const t = weaponTierTable(); return t[clamp(rank | 0, 0, t.length - 1)]; }
+  function passiveTierValue(rank) { const t = passiveTierTable(); return t[clamp(rank | 0, 0, t.length - 1)]; }
   function tierLevels(raw, table) {
     const out = {};
     for (const [id, tier] of Object.entries(raw || {})) {
@@ -3372,8 +3384,8 @@
     }
     return out;
   }
-  function weaponsFor(p) { return tierLevels((p && p.weapons) || (G.player && G.player.weapons) || G.weapons || { cannon: 1 }, WEAPON_TIER_LEVEL); }
-  function passivesFor(p) { return tierLevels((p && p.passives) || (G.player && G.player.passives) || G.passives || {}, PASSIVE_TIER_LEVEL); }
+  function weaponsFor(p) { return tierLevels((p && p.weapons) || (G.player && G.player.weapons) || G.weapons || { cannon: 1 }, weaponTierTable()); }
+  function passivesFor(p) { return tierLevels((p && p.passives) || (G.player && G.player.passives) || G.passives || {}, passiveTierTable()); }
   function fusionsFor(p) { return (p && p.fusions) || (G.player && G.player.fusions) || G.fusions || {}; }
 
   function statsFor(p) {
@@ -3517,35 +3529,80 @@
     return ((a - b + Math.PI) % TAU + TAU) % TAU - Math.PI;
   }
 
+  function segmentBlockInfo(p, target) {
+    const sx = p.x, sy = p.y;
+    const dx = target.x - sx, dy = target.y - sy;
+    const len2 = dx * dx + dy * dy;
+    const len = Math.sqrt(len2);
+    if (len < 2) return { hard: false, blocked: false };
+    const steelPierce = !!(statsFor(p) && statsFor(p).steelPierce);
+    const steps = Math.max(2, Math.ceil(len / 10));
+    let blocked = false;
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const tile = tileAt(sx + dx * t, sy + dy * t);
+      if (tile.type === 'steel') {
+        // Steel is a hard stop without phase core: the shot cannot reach.
+        if (!steelPierce) return { hard: true, blocked: true };
+      } else if (tile.type === 'brick') {
+        // Friendly walls cannot be broken, so they are hard cover too.
+        if (tile.friendlyWall) return { hard: true, blocked: true };
+        blocked = true;
+      }
+    }
+    const markBody = (body, radius) => {
+      if (!body || body.dead || body === target) return;
+      const ex = body.x - sx, ey = body.y - sy;
+      const t = (ex * dx + ey * dy) / len2;
+      if (t <= .02 || t >= .98) return;
+      const ox = sx + dx * t - body.x, oy = sy + dy * t - body.y;
+      if (ox * ox + oy * oy < (radius + 3) ** 2) blocked = true;
+    };
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      markBody(e, e.radius * e.size);
+    }
+    for (const s of G.seals || []) {
+      if (s.dead) continue;
+      markBody(s, s.radius);
+    }
+    return { hard: false, blocked };
+  }
+
   function nearestDirectionalAttackable(p, range) {
     if (!p) return null;
     const r2 = range * range;
     const facing = Number.isFinite(p.bodyAngle) ? p.bodyAngle : 0;
-    const scan = (front) => {
-      let best = null, bestD = Infinity, bestA = Infinity;
-      const consider = (target) => {
-        if (!target || target.dead) return;
-        const d = dist2(p.x, p.y, target.x, target.y);
-        if (d > r2) return;
-        const rel = Math.abs(autoAngleDelta(Math.atan2(target.y - p.y, target.x - p.x), facing));
-        if ((rel <= Math.PI / 2 + 1e-6) !== front) return;
-        if (d < bestD - 1e-6 || (Math.abs(d - bestD) <= 1e-6 && rel < bestA)) {
-          best = target; bestD = d; bestA = rel;
-        }
-      };
-      for (const e of G.enemies) {
-        if (e.dead || e.spawnTimer > 0) continue;
-        consider(e);
-      }
-      for (const s of G.seals || []) {
-        if (s.dead) continue;
-        consider(s);
-      }
-      return best;
+    const candidates = [];
+    const consider = (target) => {
+      if (!target || target.dead) return;
+      const d = dist2(p.x, p.y, target.x, target.y);
+      if (d > r2) return;
+      const rel = Math.abs(autoAngleDelta(Math.atan2(target.y - p.y, target.x - p.x), facing));
+      const front = rel <= Math.PI / 2 + 1e-6;
+      const block = segmentBlockInfo(p, target);
+      if (block.hard) return;
+      // Clear front -> clear rear -> covered front -> covered rear.
+      const priority = (block.blocked ? 2 : 0) + (front ? 0 : 1);
+      candidates.push({ target, d, rel, priority });
     };
-    // Front 180 degrees is the primary firing arc; only when it is empty do
-    // we turn the tank's fire control to the rear half.
-    return scan(true) || scan(false);
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      consider(e);
+    }
+    for (const s of G.seals || []) {
+      if (s.dead) continue;
+      consider(s);
+    }
+    let best = null;
+    for (const c of candidates) {
+      if (!best || c.priority < best.priority ||
+          (c.priority === best.priority && (c.d < best.d - 1e-6 ||
+          (Math.abs(c.d - best.d) <= 1e-6 && c.rel < best.rel)))) {
+        best = c;
+      }
+    }
+    return best ? best.target : null;
   }
 
   function fused(id, p) {
@@ -4484,7 +4541,7 @@
     // During the Titan duel, stop feeding the arena so the boss pattern is readable.
     if (G.boss && !G.endless) return;
     const phase = phaseData();
-    const coopCap = G.twoPlayer ? 1.35 : 1;
+    const coopCap = G.twoPlayer ? 1.2 : 1;
     const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : 40, Math.round(phase.cap * coopCap));
     G.spawnTimer -= dt;
     if (G.spawnTimer <= 0 && G.enemies.length < cap) {
@@ -6174,19 +6231,6 @@
     G.flash = Math.max(G.flash, .35); G.flashColor = '#ff4343';
     addParticles(p.x, p.y, 10, '#ff8b58', 'spark', 1);
     AUDIO.hit(); rumble(.6, 120);
-    if (p.hp <= 0 && !G.twoPlayer && !p.secondWindUsed) {
-      p.secondWindUsed = true;
-      p.hp = Math.round(p.maxHp * .4);
-      p.invincible = 2.8;
-      p.dashTimer = .18;
-      G.enemyBullets = G.enemyBullets.filter(b => dist(b.x, b.y, p.x, p.y) > 170);
-      addEffect({ type: 'ring', x: p.x, y: p.y, radius: 80, life: .7, maxLife: .7, color: '#5ff0ce' });
-      addParticles(p.x, p.y, 24, '#5ff0ce', 'spark', 1.4);
-      addShake(9, .55); G.flash = .6; G.flashColor = '#5ff0ce';
-      showToast('应急核心启动 · 车体紧急修复', 'cyan');
-      AUDIO.confirm(); rumble(.8, 240);
-      return;
-    }
     if (p.hp <= 0) {
       p.hp = 0;
       p.hitFlash = 0;
@@ -6324,13 +6368,14 @@
       const raw = p.weapons || (p.weapons = {});
       // Main cannon first; only once it is maxed does the pickup spill over
       // into another weapon, then into a small repair.
-      if ((raw.cannon || 0) < 4) {
-        raw.cannon = Math.min(4, (raw.cannon || 0) + 1);
+      const maxRank = maxUpgradeRank();
+      if ((raw.cannon || 0) < maxRank) {
+        raw.cannon = Math.min(maxRank, (raw.cannon || 0) + 1);
       } else {
-        const upgradable = Object.keys(raw).filter(k => k !== 'cannon' && (raw[k] || 0) < 4);
+        const upgradable = Object.keys(raw).filter(k => k !== 'cannon' && (raw[k] || 0) < maxRank);
         if (upgradable.length) {
           const id = pick(upgradable);
-          raw[id] = Math.min(4, (raw[id] || 0) + 1);
+          raw[id] = Math.min(maxRank, (raw[id] || 0) + 1);
         } else healPlayer(25, p);
       }
       recalcStats(false);
@@ -6519,10 +6564,10 @@
     for (const id of Object.keys(WEAPONS)) {
       const data = WEAPONS[id];
       const lvl = rawWeapons[id] || 0;
-      if (lvl >= 4) continue;
+      if (lvl >= maxUpgradeRank()) continue;
       if (lvl === 0 && weaponCount >= 6) continue;
       weaponCandidates.push({
-        kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: 4,
+        kind: 'weapon', id, data, level: lvl, nextLevel: lvl + 1, max: maxUpgradeRank(),
         accent: data.color,
         weight: (lvl === 0 ? 1.15 : 1.7) * (affinity.includes(id) ? 1.6 : 1)
       });
@@ -6532,7 +6577,7 @@
     for (const id of Object.keys(PASSIVES)) {
       const data = PASSIVES[id];
       const lvl = rawPassives[id] || 0;
-      const maxTier = Math.min(4, data.max || 4);
+      const maxTier = Math.min(maxUpgradeRank(), data.max || 4);
       if (lvl >= maxTier) continue;
       if (lvl === 0 && data.minLevel && p.level < data.minLevel) continue;
       if (lvl === 0 && passiveCount >= 6) continue;
@@ -6663,12 +6708,12 @@
       const data = c.data;
       let typeLabel = c.kind === 'fusion' ? '合成' : c.kind === 'weapon' ? '武器' : c.kind === 'passive' ? '被动' : '补给';
       let levelLabel = c.kind === 'utility' ? '补给' : c.kind === 'fusion' ? '进化' : c.level === 0 ? '新模块' : '';
-      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[WEAPON_TIER_LEVEL[c.nextLevel] - 1].text : PASSIVES[c.id].text;
+      let desc = c.kind === 'utility' ? c.utility.desc : c.kind === 'fusion' ? c.fusion.desc : c.kind === 'weapon' ? WEAPONS[c.id].levels[weaponTierValue(c.nextLevel) - 1].text : PASSIVES[c.id].text;
       let pips = '';
       if (c.kind === 'fusion') {
-        pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
+        pips = Array.from({ length: maxUpgradeRank() }, () => '<i class="is-on"></i>').join('');
       } else if (c.kind !== 'utility') {
-        const count = c.kind === 'weapon' ? 4 : c.max;
+        const count = c.kind === 'weapon' ? maxUpgradeRank() : c.max;
         for (let n = 0; n < count; n++) pips += `<i class="${n < c.nextLevel ? 'is-on' : ''}"></i>`;
       } else {
         pips = '<i class="is-on"></i><i class="is-on"></i><i class="is-on"></i>';
@@ -6714,7 +6759,7 @@
       addParticles(p.x, p.y, 28, c.fusion.color, 'spark', 1.6);
     } else if (c.kind === 'weapon') {
       const cur = p.weapons[c.id] || 0;
-      p.weapons[c.id] = Math.min(4, cur + 1);
+      p.weapons[c.id] = Math.min(maxUpgradeRank(), cur + 1);
       if (cur === 0) p.weaponCds[c.id] = .5;
       showToast(`${p.label} 武器解锁 · ${c.data.name}`, 'cyan');
     } else if (c.kind === 'passive') {
@@ -6920,7 +6965,7 @@
       }
     }
     if (U.coreNote) U.coreNote.innerHTML = `<span class="blink-dot"></span> ${G.endless ? '无尽协议 · 生存至极限 · 车体或基地归零即终止' : (G.twoPlayer ? `双人 · 泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 双车或基地归零即失败` : `泰坦 ${fmtShort(G.bossAt || BOSS_AT)} 降临 · 车体或基地归零即失败`)}`;
-    if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= 4 ? '湮灭主炮' : WEAPONS.cannon.name;
+    if (G.weapons.cannon && U.primaryName) U.primaryName.textContent = G.fusions.cannon ? FUSIONS.cannon.name : G.weapons.cannon >= maxUpgradeRank() ? '湮灭主炮' : WEAPONS.cannon.name;
     const downedNow = G.twoPlayer ? G.players.find(q => q.downed) : null;
     if (downedNow) U.sideTip.textContent = `P${downedNow.index + 1} 倒地 · 队友靠近并停留 2.4 秒可重启`;
     U.objectiveLabel.title = G.endless ? '无尽协议：持续生存，首领循环刷新，车体或基地归零即终止' : (G.twoPlayer ? '双人合作：击破泰坦，两人都倒下或基地被毁才失败' : (G.boss ? `${G.boss.bossName || '泰坦'} 会攻击最近的你和基地，击破它才能结束战役` : '在倒计时结束前整备，击破降临的泰坦'));
@@ -6943,11 +6988,11 @@
       if (!data) continue;
       const fusion = FUSIONS[id] && G.fusions[id] ? FUSIONS[id] : null;
       const name = fusion ? fusion.name : data.name;
-      const sub = fusion ? '进化' : `等级 ${lvl} / 4`;
+      const sub = fusion ? '进化' : `等级 ${lvl} / ${maxUpgradeRank()}`;
       html += `<div class="loadout-item${fusion ? ' is-fused' : ''}">
         <canvas data-icon="${fusion ? fusion.icon : data.icon}" data-color="${fusion ? fusion.color : data.color}" data-size="22"></canvas>
         <div class="loadout-item__copy"><strong>${name}</strong><small>${sub}</small></div>
-        <div class="loadout-pips">${Array.from({ length: 4 }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
+        <div class="loadout-pips">${Array.from({ length: maxUpgradeRank() }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
       </div>`;
     }
     for (const id of Object.keys(G.passives)) {
@@ -6955,8 +7000,8 @@
       if (!data) continue;
       html += `<div class="loadout-item is-passive">
         <canvas data-icon="${data.icon}" data-color="${data.color}" data-size="22"></canvas>
-        <div class="loadout-item__copy"><strong>${data.name}</strong><small>PASSIVE · LV.${lvl} / ${Math.min(4, data.max)}</small></div>
-        <div class="loadout-pips">${Array.from({ length: Math.min(4, data.max) }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
+        <div class="loadout-item__copy"><strong>${data.name}</strong><small>PASSIVE · LV.${lvl} / ${Math.min(maxUpgradeRank(), data.max)}</small></div>
+        <div class="loadout-pips">${Array.from({ length: Math.min(maxUpgradeRank(), data.max) }, (_, i) => `<i class="${i < lvl ? 'is-on' : ''}"></i>`).join('')}</div>
       </div>`;
     }
     const totalItems = Object.keys(G.weapons).length + Object.keys(G.passives).length;
@@ -7571,7 +7616,7 @@
       card.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     if (U.modeHint) U.modeHint.textContent = G.coopSelected
-      ? (isTouchUI() ? '手机双人建议外接手柄 · 两台机型分别选择 · 共享构筑' : 'P1 键鼠 · P2 Xbox 手柄 / 方向键 · 各自选机型 · 共享构筑')
+      ? (isTouchUI() ? '手机双人建议外接手柄 · 两台机型分别选择 · 各自升级' : 'P1 键鼠 · P2 Xbox 手柄 / 方向键 · 各自升级 · 模块上限2级')
       : (isTouchUI() ? '触屏摇杆移动 · 自动索敌 · 单兵生存' : 'P1 键鼠 · 自动索敌 · 单兵生存');
     if (U.tankPickerBtn2) U.tankPickerBtn2.classList.toggle('is-hidden', !G.coopSelected);
     updatePilotCard(0);
@@ -7938,11 +7983,28 @@
     setTimeout(() => location.reload(), 450);
   }
 
-  function showHow() {
+  function showHow(fromPause = false) {
+    G.helpFromPause = !!fromPause;
+    if (U.howStart) {
+      const label = U.howStart.querySelector('strong');
+      if (label) label.textContent = fromPause ? '返回战场' : '明白了，出击';
+    }
     U.howScreen.classList.remove('hidden');
     AUDIO.init(); AUDIO.tick();
   }
-  function hideHow() { U.howScreen.classList.add('hidden'); }
+  function hideHow() {
+    U.howScreen.classList.add('hidden');
+    G.helpFromPause = false;
+  }
+  function handleHowKey(e) {
+    if (!U.howScreen || U.howScreen.classList.contains('hidden')) return false;
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      U.howStart.click();
+      return true;
+    }
+    return false;
+  }
 
   function showEliteTutorial() {
     if (document.getElementById('eliteTutorial')) return;
@@ -8201,7 +8263,7 @@
       'coopPanel', 'coopName2', 'coopHp1', 'coopMeter1', 'coopState1', 'coopHp2', 'coopMeter2', 'coopState2', 'coopLv2', 'coopXp2', 'coopXpMeter2', 'coopBuild2', 'deckHint', 'modePicker', 'modeHint', 'startBtnLabel', 'startBtnSub', 'coreNote',
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'dashStatus2', 'dashMeter2', 'recallBtn', 'recallBtn2', 'recallStatus', 'recallStatus2', 'recallMeter', 'recallMeter2', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'itemTutorialScreen', 'itemTutorialGrid', 'itemTutorialStart', 'itemTutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
-      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
+      'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'pauseHelpBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
       'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins', 'sfBestTime', 'sfBestLevel', 'sfBestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
@@ -8348,9 +8410,14 @@
     U.saveExportBtn.addEventListener('click', downloadSave);
     U.saveCopyBtn.addEventListener('click', copySave);
     U.saveImportBtn.addEventListener('click', importSave);
-    U.howBtn.addEventListener('click', showHow);
+    U.howBtn.addEventListener('click', () => showHow(false));
     U.howClose.addEventListener('click', hideHow);
-    U.howStart.addEventListener('click', () => { hideHow(); AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected); });
+    U.howStart.addEventListener('click', () => {
+      const fromPause = !!G.helpFromPause;
+      hideHow();
+      if (fromPause) { AUDIO.tick(); return; }
+      AUDIO.init(); AUDIO.confirm(); startRun(G.arenaIndex, G.coopSelected, G.endlessSelected);
+    });
     U.howScreen.addEventListener('click', e => { if (e.target === U.howScreen || e.target.classList.contains('overlay__backdrop')) hideHow(); });
     U.tutorialStart.addEventListener('click', () => { AUDIO.init(); closeTutorial(); });
     U.tutorialClose.addEventListener('click', () => { AUDIO.init(); closeTutorial(); });
@@ -8370,6 +8437,7 @@
     U.resumeBtn.addEventListener('click', resumeGame);
     if (U.pauseSettingsBtn) U.pauseSettingsBtn.addEventListener('click', openSettings);
     if (U.pauseFusionBtn) U.pauseFusionBtn.addEventListener('click', openFusionScreen);
+    if (U.pauseHelpBtn) U.pauseHelpBtn.addEventListener('click', () => showHow(true));
     if (U.settingsClose) U.settingsClose.addEventListener('click', closeSettings);
     if (U.settingsDone) U.settingsDone.addEventListener('click', closeSettings);
     if (U.settingsScreen) {
@@ -8467,6 +8535,7 @@
         return;
       }
       if (U.settingsScreen && !U.settingsScreen.classList.contains('hidden') && handleSettingsKey(e)) return;
+      if (U.howScreen && !U.howScreen.classList.contains('hidden') && handleHowKey(e)) return;
       if (G.mode === 'menu' || G.mode === 'paused' || G.mode === 'result') {
         if (handleOverlayNavKey(e, uiContext())) return;
       }
