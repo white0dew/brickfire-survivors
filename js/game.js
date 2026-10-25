@@ -982,13 +982,17 @@
     return 50 + sp.cy * 2 + (sp.side === 'right' ? 1 : 0);
   }
 
-  // New entrances unlock every two minutes: center top -> left/right lanes ->
+  // New entrances unlock every minute: center top -> left/right lanes ->
   // wider top hatches -> bottom corners. This prevents the opening minute from
   // becoming a four-direction surround.
   function activeSpawnPoints() {
     const all = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
-    const tier = Math.min(4, Math.floor(G.elapsed / PHASE_LEN));
-    return all.filter(sp => spawnPointTier(sp) <= tier);
+    const minute = Math.floor(G.elapsed / 60);
+    // One entrance in the opening minute, then at least two new directions per
+    // minute so the full map is live by the Titan cue instead of stranding
+    // half of the hatches unused.
+    const count = minute <= 1 ? 1 : Math.min(all.length, 2 * minute - 1);
+    return all.slice().sort((a, b) => spawnPointOrder(a) - spawnPointOrder(b)).slice(0, count);
   }
 
   function spawnPoolSides() {
