@@ -530,7 +530,8 @@
       x: coreX, y: coreY, w: CORE_W, h: CORE_H,
       cx: coreX + CORE_W / 2, cy: coreY + CORE_H / 2,
       hp: coreMaxHp, maxHp: coreMaxHp, alive: true, radius: BASE_RADIUS,
-      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, turrets: arena.startTurrets || 0, repairRate: 6, repairDelay: 7
+      hitFlash: 0, noDamage: 0, turretAngle: -Math.PI / 2, turretCd: .7, turrets: arena.startTurrets || 0, repairRate: 6, repairDelay: 7,
+      dronePhase: 0, droneState: [], shieldFlash: 0
     };
     // The base's own defensive shell is friendly to player fire, but enemy fire can breach it.
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
@@ -964,14 +965,21 @@
     G.spawnPoints = points.length ? points : FALLBACK_SPAWN_POINTS.slice();
   }
 
-  function spawnPointOrder(sp) {
+  function spawnPointTier(sp) {
     if (sp.side === 'top' && sp.cx === 14) return 0;
-    // Interleave left and right lanes so the third/fourth entrances are not
-    // both on the same side of the map.
-    if (sp.side === 'left') return 10 + Math.abs(sp.cy - 8) * 2;
-    if (sp.side === 'right') return 11 + Math.abs(sp.cy - 8) * 2;
-    if (sp.side === 'top') return 30 + Math.abs(sp.cx - 14);
-    return 50 + sp.cy;
+    if ((sp.side === 'left' || sp.side === 'right') && sp.cy === 8) return 1;
+    if ((sp.side === 'left' || sp.side === 'right') && (sp.cy === 5 || sp.cy === 11)) return 2;
+    if (sp.side === 'top') return 3;
+    return 4;
+  }
+
+  function spawnPointOrder(sp) {
+    const tier = spawnPointTier(sp);
+    if (tier === 0) return 0;
+    if (tier === 1) return sp.side === 'left' ? 10 : 11;
+    if (tier === 2) return 20 + Math.abs(sp.cy - 8) * 2 + (sp.side === 'right' ? 1 : 0);
+    if (tier === 3) return 30 + Math.abs(sp.cx - 14);
+    return 50 + sp.cy * 2 + (sp.side === 'right' ? 1 : 0);
   }
 
   // New entrances unlock every two minutes: center top -> left/right lanes ->
@@ -979,9 +987,8 @@
   // becoming a four-direction surround.
   function activeSpawnPoints() {
     const all = G.spawnPoints && G.spawnPoints.length ? G.spawnPoints : FALLBACK_SPAWN_POINTS;
-    const sorted = all.slice().sort((a, b) => spawnPointOrder(a) - spawnPointOrder(b));
-    const count = 1 + Math.min(5, Math.floor(G.elapsed / PHASE_LEN));
-    return sorted.slice(0, Math.min(count, sorted.length));
+    const tier = Math.min(4, Math.floor(G.elapsed / PHASE_LEN));
+    return all.filter(sp => spawnPointTier(sp) <= tier);
   }
 
   function spawnPoolSides() {
@@ -1187,18 +1194,49 @@
       ctx.fillStyle = hexA(p.core, i % 2 ? .35 : .8);
       ctx.fillRect(31 + Math.cos(a) * 24, 31 + Math.sin(a) * 24, 2, 2);
     }
-    // defense towers are added only by sentry pickups
-    const turretCount = c.turrets || 0;
-    const turretMounts = [[0, -22], [22, 0], [0, 22], [-22, 0]];
-    for (let i = 0; i < turretCount; i++) {
-      const [ox, oy] = turretMounts[i % turretMounts.length];
+    // Orbiting interceptor drones cover the left/top/right arc; the bottom
+    // 90-degree sector is deliberately left open as the base's blind spot.
+    const droneCount = (c.droneState || []).length;
+    if (droneCount > 0) {
+      const shieldPulse = c.shieldFlash > 0 ? .38 : 0;
       ctx.save();
-      ctx.translate(32 + ox, 32 + oy);
-      ctx.rotate(c.turretAngle || -Math.PI / 2);
-      ctx.fillStyle = '#06100d'; ctx.fillRect(-6, -6, 12, 12);
-      ctx.fillStyle = '#3d8c7d'; ctx.fillRect(-4, -4, 8, 8);
-      ctx.fillStyle = '#06100d'; ctx.fillRect(-2, -12, 4, 12);
-      ctx.fillStyle = '#8fffe6'; ctx.fillRect(-1, -10, 2, 2);
+      ctx.strokeStyle = hexA(p.core, .13 + shieldPulse);
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 6]);
+      ctx.lineDashOffset = -t * 14;
+      ctx.beginPath();
+      ctx.arc(32, 32, BASE_RADIUS + 22, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    for (const d of c.droneState || []) {
+      ctx.save();
+      ctx.translate(32 + d.ox, 32 + d.oy);
+      // orbit tether
+      ctx.strokeStyle = hexA(p.core, .13);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-d.ox, -d.oy); ctx.lineTo(0, 0); ctx.stroke();
+      // energy bubble (the actual bullet-catching radius is larger than the hull)
+      ctx.strokeStyle = hexA(p.core, d.blockFlash > 0 ? .85 : .2);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.stroke();
+      ctx.rotate((d.angle || 0) + Math.PI / 2);
+      // rotor arms and pods
+      ctx.strokeStyle = '#3d8c7d'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke();
+      ctx.fillStyle = '#06100d'; ctx.fillRect(-11, -3, 5, 6); ctx.fillRect(6, -3, 5, 6);
+      ctx.strokeStyle = hexA(p.core, .55); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(-8.5, 0, 3, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(8.5, 0, 3, 0, TAU); ctx.stroke();
+      // central pod
+      ctx.fillStyle = '#0a1b17';
+      ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 0); ctx.lineTo(0, 6); ctx.lineTo(-5, 0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = d.blockFlash > 0 ? '#eafffb' : '#8fffe6';
+      ctx.fillRect(-1, -1, 2, 2);
+      // short emitter barrel points at the current target
+      const rel = (d.aimAngle == null ? d.angle : d.aimAngle) - d.angle;
+      ctx.rotate(rel);
+      ctx.fillStyle = '#8fffe6'; ctx.fillRect(-1, -11, 2, 5);
       ctx.restore();
     }
     // center light
@@ -2531,8 +2569,12 @@
         } else if (p.type === 'hover') {
           ctx.fillRect(-7, -1, 14, 2); ctx.fillRect(-5, -5, 2, 4); ctx.fillRect(-5, 3, 2, 4); ctx.fillRect(3, -5, 2, 4); ctx.fillRect(3, 3, 2, 4);
         } else if (p.type === 'turret') {
-          ctx.fillRect(-5, -3, 10, 7); ctx.fillRect(-2, -7, 4, 5); ctx.fillRect(-1, 4, 2, 3);
-          ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -1, 6, 2);
+          // orbiting interceptor drone: central pod, two rotor arms and a
+          // faint shield ring around the pickup slot.
+          ctx.fillRect(-7, -1, 14, 2); ctx.fillRect(-7, -4, 3, 2); ctx.fillRect(4, -4, 3, 2);
+          ctx.fillStyle = '#06100d'; ctx.fillRect(-3, -3, 6, 6);
+          ctx.fillStyle = item.color; ctx.fillRect(-1, -1, 2, 2);
+          ctx.strokeStyle = hexA(item.color, .42); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
         }
         ctx.restore();
         const near = nearestPlayer(p.x, p.y) || G.player;
@@ -3095,9 +3137,6 @@
     G.pendingLevels = 0;
     G.rerolls = 2;
     G.levelupPlayer = null;
-    // Give the player one nearby sentry pickup so the base has a clear
-    // defensive choice from the first minute instead of firing for free.
-    if (G.player) spawnPickup('turret', clamp(G.player.x + 110, 24, W - 24), clamp(G.player.y + 20, 24, H - 24), 0);
     for (const p of G.players) {
       p.bonusHp = 0;
       p.noDamageTime = 0;
@@ -3156,8 +3195,8 @@
     showToast(G.endless
       ? `无尽协议启动 // ${G.arena.name} · 生存至极限`
       : (G.twoPlayer
-        ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署 // 拾取哨戒炮塔`
-        : `${G.tank.name} 已部署 // ${G.tank.trait} // 拾取哨戒炮塔`), 'cyan');
+        ? `P1 ${G.tank.name} // P2 ${tankData(G.players[1]).name} 已部署`
+        : `${G.tank.name} 已部署 // ${G.tank.trait}`), 'cyan');
     setTimeout(() => {
       if (G.mode !== 'playing') return;
       if (G.twoPlayer) showToast(isTouchUI() ? '手机双人建议外接手柄 · 靠近倒地队友可救援' : 'P1 键鼠 / P2 手柄 · 靠近倒地队友可救援');
@@ -5605,6 +5644,20 @@
         hostileShellSplash(b, b.x, b.y, null);
         b.dead = true; continue;
       }
+      let baseDroneHit = null;
+      if (G.core && G.core.alive) {
+        for (const d of G.core.droneState || []) {
+          if (dist2(b.x, b.y, d.x, d.y) < (d.radius + b.radius + 1) ** 2) { baseDroneHit = d; break; }
+        }
+      }
+      if (baseDroneHit) {
+        baseDroneHit.blockFlash = .2;
+        G.core.shieldFlash = .22;
+        b.dead = true;
+        addEffect({ type: 'ring', x: b.x, y: b.y, radius: 24, life: .24, maxLife: .24, color: '#bafff0' });
+        for (let i = 0; i < 4; i++) addParticle(b.x, b.y, rand(90, -90), rand(90, -90), '#bafff0', 'spark', .28, 1.5);
+        continue;
+      }
       let blockDrone = null;
       for (const p of G.players || []) {
         if (!p.alive || p.downed) continue;
@@ -5890,13 +5943,59 @@
     }
   }
 
+  function baseInDefenseArc(angle) {
+    const a = ((angle % TAU) + TAU) % TAU;
+    return a >= Math.PI || a <= 1e-6;
+  }
+
+  function nearestBaseTarget() {
+    const c = G.core;
+    if (!c) return null;
+    let best = null, bestD2 = BASE_RANGE * BASE_RANGE;
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      if (!baseInDefenseArc(Math.atan2(e.y - c.cy, e.x - c.cx))) continue;
+      const d2 = dist2(c.cx, c.cy, e.x, e.y);
+      if (d2 < bestD2) { bestD2 = d2; best = e; }
+    }
+    return best;
+  }
+
+  function updateBaseDrones(c, dt, count) {
+    const prev = c.droneState || [];
+    c.dronePhase = ((c.dronePhase || 0) + dt * .5) % 1;
+    c.shieldFlash = Math.max(0, (c.shieldFlash || 0) - dt);
+    if (count <= 0) { c.droneState = []; return; }
+    const orbit = BASE_RADIUS + 22;
+    const start = Math.PI;
+    const span = Math.PI;
+    const next = [];
+    for (let i = 0; i < count; i++) {
+      const u = (c.dronePhase + i / count) % 1;
+      const angle = start + u * span;
+      const old = prev[i];
+      next.push({
+        angle,
+        ox: Math.cos(angle) * orbit,
+        oy: Math.sin(angle) * orbit,
+        x: c.cx + Math.cos(angle) * orbit,
+        y: c.cy + Math.sin(angle) * orbit,
+        radius: 18,
+        aimAngle: old ? old.aimAngle : angle,
+        blockFlash: Math.max(0, (old ? old.blockFlash : 0) - dt)
+      });
+    }
+    c.droneState = next;
+  }
+
   function fireBaseShot(target, turretIndex) {
     const c = G.core;
     if (!c || !c.alive || !target) return;
-    const mounts = [[0, -22], [22, 0], [0, 22], [-22, 0]];
-    const [ox, oy] = mounts[(turretIndex || 0) % mounts.length];
-    const sx = c.cx + ox, sy = c.cy + oy;
+    const drone = (c.droneState || [])[turretIndex % Math.max(1, (c.droneState || []).length)];
+    const sx = drone ? drone.x : c.cx;
+    const sy = drone ? drone.y : c.cy - BASE_RADIUS;
     const a = Math.atan2(target.y - sy, target.x - sx);
+    if (drone) drone.aimAngle = a;
     c.turretAngle = a;
     const muzzle = 14;
     G.bullets.push({
@@ -5918,18 +6017,16 @@
     if (c.hp < c.maxHp && c.noDamage > c.repairDelay) {
       c.hp = Math.min(c.maxHp, c.hp + c.repairRate * dt);
     }
-    const turretCount = c.turrets || 0;
+    const turretCount = Math.min(4, c.turrets || 0);
+    updateBaseDrones(c, dt, turretCount);
     if (turretCount <= 0) return;
     c.turretCd -= dt;
     if (c.turretCd <= 0) {
-      let fired = false;
-      for (let i = 0; i < turretCount; i++) {
-        const target = nearestEnemy(c.cx, c.cy, BASE_RANGE);
-        if (!target) break;
-        fireBaseShot(target, i);
-        fired = true;
-      }
-      c.turretCd = fired ? .92 : .2;
+      // Only the three-sided defense arc fires; the bottom sector is blind.
+      const target = nearestBaseTarget();
+      if (!target) { c.turretCd = .2; return; }
+      for (let i = 0; i < turretCount; i++) fireBaseShot(target, i);
+      c.turretCd = .92;
     }
   }
 
@@ -6108,12 +6205,12 @@
         if ((G.core.turrets || 0) < max) {
           G.core.turrets = (G.core.turrets || 0) + 1;
           addEffect({ type: 'ring', x: G.core.cx, y: G.core.cy, radius: 46, life: .55, maxLife: .55, color: '#8fffe6' });
-          showPickupToast(p, `基地防御塔 ${G.core.turrets} / ${max} · 自动索敌启用`);
+          showPickupToast(p, `哨戒无人机 ${G.core.turrets} / ${max} · 三向拦截启用`);
           AUDIO.item();
         } else {
           const heal = G.core.maxHp * .1;
           G.core.hp = Math.min(G.core.maxHp, G.core.hp + heal);
-          showPickupToast(p, '防御塔已满 // 基地装甲 +10%');
+          showPickupToast(p, '无人机已满编 // 基地装甲 +10%');
           AUDIO.tick();
         }
       }
@@ -6652,7 +6749,7 @@
     if (U.baseMeter) U.baseMeter.classList.toggle('is-low', basePct < 30);
     if (U.baseTurretNote) {
       const turrets = (G.core && G.core.turrets) || 0;
-      U.baseTurretNote.textContent = turrets > 0 ? `防御塔 ${turrets} / 4 · 自动索敌` : '防御塔 0 / 4 · 拾取炮塔后启用';
+      U.baseTurretNote.textContent = turrets > 0 ? `拦截无人机 ${turrets} / 4 · 左/上/右三向` : '拦截无人机 0 / 4 · 拾取后启用';
       U.baseTurretNote.classList.toggle('is-active', turrets > 0);
     }
     U.coreState.classList.toggle('is-danger', basePct < 30 || hpPct < 35);
