@@ -394,32 +394,32 @@
 
   const ENEMIES = {
     scout: {
-      name: '侦察履带', en: 'SCOUT', hp: 22, speed: 43, damage: 6, fire: 2.5, bulletSpeed: 235,
+      name: '侦察履带', en: 'SCOUT', hp: 31, speed: 43, damage: 6, fire: 2.5, bulletSpeed: 235,
       xp: 2, radius: 11, color: '#d37346', dark: '#713721', light: '#ffb47a', core: '#ff6f3a', class: 'light',
       codex: '轻装侦察单位。速度快、装甲薄，负责试探防线和拉扯火力。'
     },
     grunt: {
-      name: '突击坦克', en: 'ASSAULT', hp: 44, speed: 35, damage: 8, fire: 2.3, bulletSpeed: 260,
+      name: '突击坦克', en: 'ASSAULT', hp: 62, speed: 35, damage: 8, fire: 2.3, bulletSpeed: 260,
       xp: 3, radius: 13, color: '#b94f43', dark: '#612522', light: '#ff967b', core: '#ff5f4a', class: 'medium',
       codex: '标准突击单位。火力与机动均衡，会优先逼近车体，基地明显更近时才转火。'
     },
     heavy: {
-      name: '重装攻城车', en: 'SIEGE', hp: 150, speed: 23, damage: 14, fire: 3.1, bulletSpeed: 205,
+      name: '重装攻城车', en: 'SIEGE', hp: 210, speed: 23, damage: 14, fire: 3.1, bulletSpeed: 205,
       xp: 7, radius: 16, color: '#8b6f4b', dark: '#45341f', light: '#dbc38b', core: '#ffd16b', class: 'heavy',
       codex: '重装攻城单位。装甲厚、炮弹重，推进缓慢但能持续拆墙。'
     },
     bomber: {
-      name: '自爆履带', en: 'BOMBER', hp: 52, speed: 69, damage: 20, fire: 0, bulletSpeed: 0,
+      name: '自爆履带', en: 'BOMBER', hp: 73, speed: 69, damage: 20, fire: 0, bulletSpeed: 0,
       xp: 4, radius: 12, color: '#c65766', dark: '#5c202b', light: '#ff9eaa', core: '#ff3d5a', class: 'bomber',
       codex: '高速自爆单位。没有远程武器，贴身瞬间引爆，优先追击最近目标。'
     },
     sniper: {
-      name: '磁轨猎手', en: 'RAIL HUNTER', hp: 62, speed: 29, damage: 17, fire: 3.6, bulletSpeed: 560,
+      name: '磁轨猎手', en: 'RAIL HUNTER', hp: 87, speed: 29, damage: 17, fire: 3.6, bulletSpeed: 560,
       xp: 6, radius: 12, color: '#6c78b4', dark: '#2d3158', light: '#b9c6ff', core: '#7c9cff', class: 'sniper',
       codex: '远程磁轨单位。弹速极快，会在掩体后方狙击车体和基地。'
     },
     elite: {
-      name: '精英·破城者', en: 'BREAKER ELITE', hp: 680, speed: 20, damage: 18, fire: 2.8, bulletSpeed: 225,
+      name: '精英·破城者', en: 'BREAKER ELITE', hp: 1000, speed: 20, damage: 18, fire: 2.8, bulletSpeed: 225,
       xp: 42, radius: 14.5, color: '#c99332', dark: '#40260b', light: '#fff0b8', core: '#ffca4a', class: 'elite', elite: true,
       codex: '精英破城者。高装甲、高伤害，周期性释放环形弹幕，是封印守卫的基准型号。'
     },
@@ -1065,11 +1065,11 @@
     },
     {
       id: 'hard', name: '困难', en: 'HARD', desc: '敌军强化 · 核心奖励 +25%',
-      mod: { enemyHp: 1.22, enemyDamage: 1.3, enemySpeed: 1.08, spawnMul: 1.15, bossHp: 1.25, xpMul: 1.08, coreMul: 1.25 }
+      mod: { enemyHp: 1.35, enemyDamage: 1.3, enemySpeed: 1.08, spawnMul: 1.15, bossHp: 1.25, xpMul: 1.08, coreMul: 1.25 }
     },
     {
       id: 'nightmare', name: '噩梦', en: 'NIGHTMARE', desc: '极限围杀 · 核心奖励 +60%',
-      mod: { enemyHp: 1.5, enemyDamage: 1.6, enemySpeed: 1.18, spawnMul: 1.35, bossHp: 1.5, xpMul: 1.18, coreMul: 1.6 }
+      mod: { enemyHp: 1.8, enemyDamage: 1.6, enemySpeed: 1.18, spawnMul: 1.35, bossHp: 1.5, xpMul: 1.18, coreMul: 1.6 }
     }
   ];
 
