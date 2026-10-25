@@ -7,7 +7,7 @@
   <title>钢铁余烬</title>
   <meta name="description" content="钢铁余烬：经典坦克大战 × 肉鸽生存。在泰坦降临前建立构筑，击破钢铁潮汐。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080b0b'/%3E%3Cpath d='M5 10h3v14H5zM24 10h3v14h-3zM8 12h16v10H8zM12 7h8v5h-8zM20 9h9v3h-9z' fill='%23ffb52d'/%3E%3Crect x='15' y='15' width='3' height='3' fill='%235ff0ce'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=20261025-13">
+  <link rel="stylesheet" href="css/style.css?v=20261025-14">
 </head>
 <body>
   <div id="app" class="app state-menu">
@@ -37,13 +37,23 @@
 
       <main class="sf-main">
         <div class="sf-heading">
-          <div class="sf-kicker"></div>
           <h1 class="sf-cn-title">钢铁余烬</h1>
-          <div class="sf-mission">
-            <span id="sfStageSector">第 1 区</span>
-            <strong id="sfStageName">熔炉工厂</strong>
-            <i></i>
-            <strong id="sfTankName">先锋 M-01</strong>
+          <div class="sf-brief" aria-label="当前战役信息">
+            <div class="sf-brief__item">
+              <span>当前战役</span>
+              <strong id="sfStageName">熔炉工厂</strong>
+              <em id="sfStageSector">第 1 区</em>
+            </div>
+            <div class="sf-brief__item">
+              <span>最佳生存</span>
+              <strong id="sfBestTime">--:--</strong>
+              <em id="sfBestLevel">等级 1</em>
+            </div>
+            <div class="sf-brief__item">
+              <span>击破泰坦</span>
+              <strong id="sfBestWins">0</strong>
+              <em>战役累计</em>
+            </div>
           </div>
         </div>
 
@@ -52,7 +62,7 @@
           <div class="sf-showcase__orbit sf-showcase__orbit--two" aria-hidden="true"></div>
           <canvas id="menuCanvas" width="720" height="760" aria-label="坦克展示画面"></canvas>
           <div class="sf-unit-tag">
-            <span>P1 当前机体</span>
+            <span>当前机体</span>
             <strong id="sfUnitName">先锋 M-01</strong>
             <em id="sfUnitRole">均衡</em>
           </div>
@@ -778,10 +788,10 @@
     <div id="rotateHint" class="rotate-hint"><span>↻</span> 旋转设备 · 横屏体验更佳</div>
   </div>
 
-  <script src="js/content.js?v=20261025-13"></script>
-  <script src="js/icons.js?v=20261025-13"></script>
-  <script src="js/audio.js?v=20261025-13"></script>
-  <script src="js/game.js?v=20261025-13"></script>
-  <script src="js/main.js?v=20261025-13"></script>
+  <script src="js/content.js?v=20261025-14"></script>
+  <script src="js/icons.js?v=20261025-14"></script>
+  <script src="js/audio.js?v=20261025-14"></script>
+  <script src="js/game.js?v=20261025-14"></script>
+  <script src="js/main.js?v=20261025-14"></script>
 </body>
 </html>

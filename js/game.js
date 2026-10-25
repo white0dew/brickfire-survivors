@@ -7277,6 +7277,9 @@
     if (U.bestTime) U.bestTime.textContent = r.bestTime > 0 ? fmtShort(r.bestTime) : '--:--';
     if (U.bestLevel) U.bestLevel.textContent = `等级 ${Math.max(1, r.bestLevel)}`;
     if (U.bestWins) U.bestWins.textContent = String(r.wins);
+    if (U.sfBestTime) U.sfBestTime.textContent = r.bestTime > 0 ? fmtShort(r.bestTime) : '--:--';
+    if (U.sfBestLevel) U.sfBestLevel.textContent = `等级 ${Math.max(1, r.bestLevel)}`;
+    if (U.sfBestWins) U.sfBestWins.textContent = String(r.wins);
   }
 
   function endRun(win, reason) {
@@ -8030,7 +8033,7 @@
       'killCount', 'comboCount', 'pickupCount', 'threatLabel', 'threatBars', 'sideTip', 'primaryIcon', 'primaryName', 'dashStatus', 'dashMeter', 'recallBtn', 'recallStatus', 'recallMeter', 'mobileRecall',
       'objectiveLabel', 'dangerTint', 'tutorialScreen', 'tutorialStart', 'tutorialClose', 'itemTutorialScreen', 'itemTutorialGrid', 'itemTutorialStart', 'itemTutorialClose', 'levelupScreen', 'newLevel', 'upgradeCards', 'rerollBtn', 'rerollCount', 'levelupOwner', 'levelupPlayers', 'levelupP1', 'levelupP2', 'levelupKeyHint', 'pauseScreen', 'resumeBtn',
       'restartBtn', 'quitBtn', 'pauseSettingsBtn', 'pauseFusionBtn', 'settingsScreen', 'settingsClose', 'settingsDone', 'settingsDoneLabel', 'settingsFullscreen', 'padSwapBtn', 'padAssignment', 'sfxVolume', 'sfxVolumeValue', 'bgmVolume', 'bgmVolumeValue', 'resultScreen', 'resultTag', 'resultTitle', 'resultSeal', 'resultFlavor', 'resultTime', 'resultLevel',
-      'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins',
+      'resultKills', 'resultCore', 'resultCoreLabel', 'resultBuild', 'nextBtn', 'againBtn', 'backBtn', 'mobileStick', 'mobileDash', 'bestTime', 'bestLevel', 'bestWins', 'sfBestTime', 'sfBestLevel', 'sfBestWins',
       'arenaOptions', 'endlessOptions', 'stageProgress', 'stageHint', 'tankPickerBtn', 'tankPickerBtn2', 'tankCountLabel', 'pilotPreview', 'pilotPreview2', 'pilotName', 'pilotName2', 'pilotRole', 'pilotRole2', 'pilotTrait', 'pilotTrait2', 'pilotHudName',
       'sfStageName', 'sfStageSector', 'sfTankName', 'sfUnitName', 'sfUnitRole', 'sfModeName', 'menuNav',
       'visualUnit', 'visualUnitSub', 'fusionBtn', 'tankScreen', 'tankGrid', 'tankDetail', 'tankClose', 'tankConfirm', 'tankSlotLabel', 'tankCores', 'tankUnlockBtn', 'tankScreenHint', 'fusionScreen', 'fusionGrid', 'fusionClose', 'fusionDone', 'fusionDoneLabel',
