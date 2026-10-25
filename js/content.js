@@ -528,6 +528,24 @@
       domain: 'ground', ai: 'rusher', role: 'rusher', tier: 1, size: .7,
       codex: '分裂运输车死亡后掉出的高速碎片。血少、速度快，优先用范围武器清掉。'
     },
+    borer: {
+      name: '钻地车', en: 'BURROWER', hp: 260, speed: 34, damage: 20, fire: 0, bulletSpeed: 0,
+      xp: 15, radius: 14, color: '#8a5b3c', dark: '#2d1a11', light: '#ffc187', core: '#ff8a4a', class: 'medium',
+      domain: 'ground', ai: 'borer', role: 'ambusher', tier: 2, size: 1.05,
+      codex: '钻地突进单位。会短暂潜地后从目标侧后方钻出，钻出前有土层震动；不要背对它。'
+    },
+    charger: {
+      name: '破阵冲锋车', en: 'BREAKER RAM', hp: 140, speed: 54, damage: 22, fire: 0, bulletSpeed: 0,
+      xp: 9, radius: 13, color: '#b64f38', dark: '#3a1711', light: '#ffb07a', core: '#ff5b3a', class: 'light',
+      domain: 'ground', ai: 'charger', role: 'rusher', tier: 1, size: 1.0,
+      codex: '高速冲锋单位。没有远程武器，靠撞击和数量压穿防线；用减速、地雷和范围火力截停。'
+    },
+    welder: {
+      name: '维修车', en: 'FIELD WELDER', hp: 110, speed: 30, damage: 0, fire: 0, bulletSpeed: 0,
+      xp: 8, radius: 12, color: '#6e8f4a', dark: '#24311a', light: '#d9ff9a', core: '#a9e56e', class: 'light',
+      domain: 'ground', ai: 'welder', role: 'support', tier: 1, size: .95,
+      codex: '战场维修单位。会周期性修复周围敌军，自己不攻击；优先点掉它，别让前排一直回血。'
+    },
 
     // ---- EXPANSION PILOT: Sky Swarm air units ----
     drone: {
@@ -553,6 +571,12 @@
       xp: 16, radius: 17, color: '#9e6c45', dark: '#322116', light: '#e8c49b', core: '#ffcf5a', class: 'heavy',
       domain: 'air', ai: 'airGunship', role: 'tank', tier: 2, size: 1.2,
       codex: '悬停炮艇。会在中距离持续压制，逼迫车体离开掩体；用对空爆发或绕到侧后方。'
+    },
+    carrier: {
+      name: '无人机母舰', en: 'DRONE CARRIER', hp: 900, speed: 20, damage: 10, fire: 3.6, bulletSpeed: 220,
+      xp: 35, radius: 20, color: '#6a5a43', dark: '#251a12', light: '#ffd8a4', core: '#5ff0ce', class: 'heavy',
+      domain: 'air', ai: 'airCarrier', role: 'carrier', tier: 3, size: 1.35,
+      codex: '重型空中母舰。会持续放出侦察无人机并用舰炮压制；先拆母舰，否则小飞机越积越多。'
     },
 
     // ---- EXPANSION PILOT: Xeno Fleet hover units ----

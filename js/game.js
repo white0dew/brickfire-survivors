@@ -86,20 +86,22 @@
     { cx: 2, cy: 9, side: 'left' }, { cx: 27, cy: 9, side: 'right' }
   ];
 
-  // Expansion pilot: each map gets a signature detachment on top of its wave table.
-  const MAP_SIGNATURES = {
-    furnace: [{ type: 'mortar', at: 0 }, { type: 'drone', at: 35 }, { type: 'bulwark', at: 70 }, { type: 'minelayer', at: 100 }],
-    marsh: [{ type: 'minelayer', at: 15 }, { type: 'splitter', at: 50 }, { type: 'saucer', at: 85 }, { type: 'strafer', at: 120 }],
-    frost: [{ type: 'mortar', at: 0 }, { type: 'strafer', at: 45 }, { type: 'bulwark', at: 80 }],
-    redtide: [{ type: 'minelayer', at: 10 }, { type: 'drone', at: 40 }, { type: 'saucer', at: 80 }],
-    foundry: [{ type: 'mortar', at: 0 }, { type: 'gunship', at: 50 }, { type: 'splitter', at: 80 }],
-    graveyard: [{ type: 'drone', at: 0 }, { type: 'skybomber', at: 45 }, { type: 'strafer', at: 80 }],
-    reactor: [{ type: 'saucer', at: 0 }, { type: 'warper', at: 45 }, { type: 'warden', at: 80 }, { type: 'beamfrigate', at: 120 }],
-    dome: [{ type: 'gunship', at: 0 }, { type: 'skybomber', at: 45 }, { type: 'warper', at: 90 }],
-    citadel: [{ type: 'strafer', at: 0 }, { type: 'gunship', at: 45 }, { type: 'warden', at: 80 }],
-    abyss: [{ type: 'saucer', at: 0 }, { type: 'warper', at: 50 }, { type: 'beamfrigate', at: 80 }],
-    solar: [{ type: 'saucer', at: 0 }, { type: 'beamfrigate', at: 45 }, { type: 'skybomber', at: 80 }],
-    throne: [{ type: 'warper', at: 0 }, { type: 'warden', at: 45 }, { type: 'skybomber', at: 80 }]
+  // Each map now owns a complete five-phase roster. The first four slots are
+  // map signatures; the fifth is a familiar backbone unit so every sector has
+  // a different opening, midgame and finale instead of sharing three waves.
+  const MAP_ROSTERS = {
+    furnace: ['scout', 'mortar', 'welder', 'bulwark', 'charger'],
+    marsh: ['minelayer', 'splitter', 'borer', 'saucer', 'scout'],
+    frost: ['charger', 'strafer', 'bulwark', 'drone', 'grunt'],
+    redtide: ['bomber', 'minelayer', 'drone', 'strafer', 'sniper'],
+    foundry: ['mortar', 'gunship', 'splitter', 'charger', 'heavy'],
+    graveyard: ['drone', 'skybomber', 'strafer', 'splitter', 'scout'],
+    reactor: ['saucer', 'warper', 'beamfrigate', 'warden', 'grunt'],
+    dome: ['carrier', 'skybomber', 'warper', 'gunship', 'heavy'],
+    citadel: ['strafer', 'gunship', 'warden', 'welder', 'sniper'],
+    abyss: ['borer', 'saucer', 'beamfrigate', 'carrier', 'heavy'],
+    solar: ['beamfrigate', 'saucer', 'skybomber', 'charger', 'grunt'],
+    throne: ['warper', 'skybomber', 'bulwark', 'carrier', 'heavy']
   };
 
   // Expansion pilot: one readable environmental rhythm for the three test maps.
@@ -157,13 +159,11 @@
   // Each run introduces exactly one new regular enemy every two minutes.
   // The previous type is retired when the next one arrives: at most one
   // regular wave species is active at a time (elites/seal guards excepted).
+  // The tutorial keeps its short three-phase ramp; every campaign sector uses
+  // its own five-phase roster from the first second of the run.
   function stageRoster() {
-    if (G.arenaIndex === 0 && !G.endless) return ['scout', 'grunt', 'heavy'];
-    const base = ['scout', 'grunt', 'heavy'];
-    const signatures = (MAP_SIGNATURES[G.arena.id] || [])
-      .map(entry => entry.type)
-      .filter(type => type !== 'warden');
-    return Array.from(new Set(base.concat(signatures))).slice(0, 5);
+    if (G.arenaIndex === 0 && !G.endless) return ['scout', 'grunt', 'mortar'];
+    return MAP_ROSTERS[G.arena.id] || ['scout', 'grunt', 'heavy', 'mortar', 'bulwark'];
   }
 
   function phaseIndex() {
@@ -203,7 +203,8 @@
     gunship:   { shape: 'heavy', color: '#ffc36b', shots: 2, spread: .12, damageMul: .72, radius: 4.4, trail: 24, splash: 26, splashMul: .4 },
     saucer:    { shape: 'orb',   color: '#7fe8ff', shots: 1, homing: true, turn: .72, homingDelay: .12, radius: 3.1, trail: 24 },
     warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 },
-    warden:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 4.2, trail: 32 }
+    warden:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 4.2, trail: 32 },
+    carrier:   { shape: 'orb',   color: '#5ff0ce', shots: 2, spread: .1, damageMul: .62, radius: 3.2, trail: 22 }
   };
 
   let settingsFocusIndex = 0;
@@ -351,7 +352,9 @@
     enemyBomber: 'enemies/bomber.png', enemySniper: 'enemies/sniper.png', enemyElite: 'enemies/elite.png',
     enemyMortar: 'enemies/mortar.png', enemyBulwark: 'enemies/bulwark.png', enemyMinelayer: 'enemies/minelayer.png',
     enemySplitter: 'enemies/splitter.png', enemyScrap: 'enemies/scrap.png',
+    enemyBorer: 'enemies/borer.png', enemyCharger: 'enemies/charger.png', enemyWelder: 'enemies/welder.png',
     enemyDrone: 'enemies/drone.png', enemyStrafer: 'enemies/strafer.png', enemySkybomber: 'enemies/skybomber.png', enemyGunship: 'enemies/gunship.png',
+    enemyCarrier: 'enemies/carrier.png',
     enemySaucer: 'enemies/saucer.png', enemyBeamfrigate: 'enemies/beamfrigate.png', enemyWarper: 'enemies/warper.png', enemyWarden: 'enemies/warden.png',
     enemyScoutHull: 'enemies/scout-hull.png', enemyGruntHull: 'enemies/grunt-hull.png', enemyHeavyHull: 'enemies/heavy-hull.png',
     enemySniperHull: 'enemies/sniper-hull.png', enemyEliteHull: 'enemies/elite-hull.png', enemyMortarHull: 'enemies/mortar-hull.png',
@@ -420,7 +423,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261024-12`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-37`;
     }
   }
 
@@ -1837,7 +1840,7 @@
     ctx.lineWidth = 1;
 
     const airKey = {
-      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship'
+      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship', carrier: 'enemyCarrier'
     }[e.type];
     const airArt = airKey ? artImage(airKey) : null;
     if (airArt) {
@@ -1993,7 +1996,8 @@
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy',
       bomber: 'enemyBomber', sniper: 'enemySniper', elite: 'enemyElite',
       mortar: 'enemyMortar', bulwark: 'enemyBulwark', minelayer: 'enemyMinelayer',
-      splitter: 'enemySplitter', scrap: 'enemyScrap'
+      splitter: 'enemySplitter', scrap: 'enemyScrap',
+      borer: 'enemyBorer', charger: 'enemyCharger', welder: 'enemyWelder'
     }[e.type];
     const hullKey = {
       scout: 'enemyScoutHull', grunt: 'enemyGruntHull', heavy: 'enemyHeavyHull',
@@ -2009,7 +2013,7 @@
     // Mortar / elite / scrap already contain their gun in the AI sheet. Drawing a
     // procedural turret on top produced a second barrel, so rotate the complete
     // sprite instead and let it own the aim direction.
-    const aimWithTurret = e.type === 'mortar' || e.type === 'elite' || e.type === 'scrap';
+    const aimWithTurret = e.type === 'mortar' || e.type === 'elite' || e.type === 'scrap' || e.type === 'borer' || e.type === 'charger' || e.type === 'welder';
     return img ? { img, split: false, aimWithTurret } : null;
   }
 
@@ -4588,11 +4592,14 @@
       }
     }
 
-    // During the Titan duel, stop feeding the arena so the boss pattern is readable.
-    if (G.boss && !G.endless) return;
+    // Population grows over the run: +3 slots per minute, hard-capped at 55.
+    // Bosses do not stop the regular wave pipeline.
     const phase = phaseData();
-    const coopCap = G.twoPlayer ? 1.2 : 1;
-    const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : 40, Math.round(phase.cap * coopCap));
+    // Solo caps out at 55 on the 15:00 mark. Co-op gets a small fixed
+    // head start, not a different growth rate.
+    const timeCap = 10 + Math.floor(G.elapsed / 60) * 3 + (G.twoPlayer ? 2 : 0);
+    const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : 55, timeCap);
+    G.popCap = cap;
     G.spawnTimer -= dt;
     if (G.spawnTimer <= 0 && G.enemies.length < cap) {
       spawnEnemy(pickWaveType());
@@ -4802,6 +4809,9 @@
     } else if (e.ai === 'airGunship') {
       tx = p.x + Math.cos(e.airPhase * .35) * 285;
       ty = p.y + Math.sin(e.airPhase * .35) * 120 - 25;
+    } else if (e.ai === 'airCarrier') {
+      tx = p.x + Math.cos(e.airPhase * .22) * 300;
+      ty = p.y + Math.sin(e.airPhase * .22) * 135 - 30;
     } else {
       tx = p.x + Math.cos(e.airPhase * .6) * 225;
       ty = p.y + Math.sin(e.airPhase * .6) * 105 - 35;
@@ -4825,6 +4835,12 @@
         const aa = a + i * .28;
         queueHostileStrike(p.x + Math.cos(aa) * 42, p.y + Math.sin(aa) * 42, 36, e.damage * .7, '#ffcf5a', 1.0);
       }
+    }
+    if (e.ai === 'airCarrier' && e.abilityCd <= 0 && G.enemies.length < 55) {
+      e.abilityCd = 8.2;
+      spawnEnemy('drone', { spawn: { cx: e.cx, cy: e.cy }, warning: true });
+      addEffect({ type: 'ring', x: e.x, y: e.y, radius: 40, life: .45, maxLife: .45, color: '#5ff0ce' });
+      showToast('母舰释放无人机', 'red');
     }
     if (e.damage > 0 && e.fireCd <= 0 && targetDist < 480 && e.ai !== 'airBomber') {
       const st = ENEMY_ATTACK_STYLE[e.type] || {};
@@ -4943,6 +4959,43 @@
       addEffect({ type: 'ring', x: e.x, y: e.y, radius: 64, life: .5, maxLife: .5, color: '#ffb52d' });
       addShake(3, .2);
     }
+    if (e.chargeBoost > 0) e.chargeBoost = Math.max(0, e.chargeBoost - dt);
+    // borer: short underground reposition, telegraphed by a ring.
+    if (e.ai === 'borer' && e.abilityCd <= 0 && targetDist > 110) {
+      e.abilityCd = 6.2;
+      const a = Math.atan2(p.y - e.y, p.x - e.x) + rand(1.1, -1.1);
+      const radius = rand(120, 70);
+      addEffect({ type: 'ring', x: e.x, y: e.y, radius: 32, life: .4, maxLife: .4, color: '#ffb15a' });
+      addParticles(e.x, e.y, 10, '#8a5b3c', 'spark', .55);
+      e.x = clamp(p.x + Math.cos(a) * radius, 38, W - 38);
+      e.y = clamp(p.y + Math.sin(a) * radius, 38, H - 54);
+      e.cx = Math.round((e.x - TILE / 2) / TILE);
+      e.cy = Math.round((e.y - TILE / 2) / TILE);
+      e.moving = false; e.moveTarget = null;
+      addEffect({ type: 'ring', x: e.x, y: e.y, radius: 30, life: .42, maxLife: .42, color: '#ffcf5a' });
+      addParticles(e.x, e.y, 10, '#ffcf5a', 'spark', .55);
+    }
+    // charger: short speed burst instead of a gun.
+    if (e.ai === 'charger' && e.abilityCd <= 0 && targetDist < 330) {
+      e.abilityCd = 4.2;
+      e.chargeBoost = .8;
+      addEffect({ type: 'ring', x: e.x, y: e.y, radius: 24, life: .25, maxLife: .25, color: '#ff8a4a' });
+    }
+    // welder: repairs nearby enemies; it has no weapon of its own.
+    if (e.ai === 'welder' && e.abilityCd <= 0) {
+      e.abilityCd = 4.0;
+      let healed = 0;
+      for (const ally of G.enemies) {
+        if (!ally || ally === e || ally.dead || ally.hp <= 0 || ally.boss) continue;
+        if (dist(e.x, e.y, ally.x, ally.y) > 150) continue;
+        ally.hp = Math.min(ally.maxHp, ally.hp + ally.maxHp * .08);
+        healed++;
+      }
+      if (healed) {
+        addEffect({ type: 'ring', x: e.x, y: e.y, radius: 54, life: .5, maxLife: .5, color: '#a9e56e' });
+        addParticles(e.x, e.y, 8, '#a9e56e', 'spark', .55);
+      }
+    }
     // minelayer leaves a hostile mine trail; this is its pressure, not a gun.
     if (e.ai === 'minelayer' && e.abilityCd <= 0) {
       e.abilityCd = 2.6;
@@ -4964,7 +5017,7 @@
       addEffect({ type: 'ring', x: px, y: py, radius: 34, life: .35, maxLife: .35, color: '#ffb15a' });
       e.fireCd = (e.fireInterval || 3.8) * rand(1.2, .85);
       e.recoil = 1;
-    } else if (targetDist < 455 && e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher') {
+    } else if (targetDist < 455 && e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher' && e.ai !== 'charger' && e.ai !== 'borer' && e.ai !== 'welder') {
       const interval = e.fireInterval || ENEMIES[e.type].fire || 2.3;
       const shots = Math.max(1, attackStyle.shots || (e.elite ? 3 : 1));
       const spread = attackStyle.spread != null ? attackStyle.spread : (e.elite ? .16 : 0);
@@ -4995,7 +5048,7 @@
     if (e.moving && e.moveTarget) {
       const dx = e.moveTarget.x - e.x, dy = e.moveTarget.y - e.y;
       const dd = Math.hypot(dx, dy);
-      const step = e.speed * (e.slowTimer > 0 ? .7 : 1) * dt;
+      const step = e.speed * (e.slowTimer > 0 ? .7 : 1) * (e.chargeBoost > 0 ? 1.65 : 1) * dt;
       if (dd <= step) {
         e.x = e.moveTarget.x; e.y = e.moveTarget.y;
         e.cx = Math.round((e.x - TILE / 2) / TILE);
@@ -5011,6 +5064,8 @@
       if (targetDist < 205) shouldHold = true;
       if (e.ai === 'artillery' && targetDist < 300) shouldHold = true;
       if (e.ai === 'minelayer' && targetDist < 180) shouldHold = true;
+      // Dedicated rammers must keep closing to contact range.
+      if (e.ai === 'charger' || e.ai === 'borer') shouldHold = false;
       if (!shouldHold) {
         const flow = p.isBase ? G.flowBase : (G.flowPlayers[p.index] || G.flowPlayer);
         let dir = flowDirection(flow, e.x, e.y, null);
@@ -5024,7 +5079,7 @@
             // dig in
             e.bodyAngle = Math.atan2(dir.dy, dir.dx);
             e.turretAngle = e.bodyAngle;
-            if (e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher') {
+            if (e.fireCd <= 0 && e.type !== 'bomber' && e.ai !== 'minelayer' && e.ai !== 'artillery' && e.ai !== 'rusher' && e.ai !== 'charger' && e.ai !== 'borer' && e.ai !== 'welder') {
               const bx = (dir.nx + .5) * TILE, by = (dir.ny + .5) * TILE;
               fireEnemyBullet(e, e.x + Math.cos(e.bodyAngle) * (e.radius + 4), e.y + Math.sin(e.bodyAngle) * (e.radius + 4), e.bodyAngle, e.bulletSpeed * (attackStyle.speedMul || 1), e.damage * 1.1, {
                 color: attackStyle.color || '#ff8062', radius: attackStyle.radius || 3.2,
@@ -7768,8 +7823,8 @@
   function codexEntries() {
     const normalKeys = [
       'scout', 'grunt', 'heavy', 'bomber', 'sniper',
-      'mortar', 'bulwark', 'minelayer', 'splitter', 'scrap',
-      'drone', 'strafer', 'skybomber', 'gunship',
+      'mortar', 'bulwark', 'minelayer', 'splitter', 'borer', 'charger', 'welder', 'scrap',
+      'drone', 'strafer', 'skybomber', 'gunship', 'carrier',
       'saucer', 'beamfrigate', 'warper', 'warden'
     ];
     const normal = normalKeys.map(key => {
@@ -7834,8 +7889,9 @@
     const artKey = entry.key === 'boss' ? 'boss' : {
       scout: 'enemyScout', grunt: 'enemyGrunt', heavy: 'enemyHeavy', bomber: 'enemyBomber',
       sniper: 'enemySniper', elite: 'enemyElite', mortar: 'enemyMortar', bulwark: 'enemyBulwark',
-      minelayer: 'enemyMinelayer', splitter: 'enemySplitter', scrap: 'enemyScrap',
-      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship',
+      minelayer: 'enemyMinelayer', splitter: 'enemySplitter', borer: 'enemyBorer',
+      charger: 'enemyCharger', welder: 'enemyWelder', scrap: 'enemyScrap',
+      drone: 'enemyDrone', strafer: 'enemyStrafer', skybomber: 'enemySkybomber', gunship: 'enemyGunship', carrier: 'enemyCarrier',
       saucer: 'enemySaucer', beamfrigate: 'enemyBeamfrigate', warper: 'enemyWarper', warden: 'enemyWarden'
     }[entry.key];
     const codexArt = !locked && artKey ? artImage(artKey) : null;
