@@ -480,6 +480,7 @@
       shield: 0, shieldMax: 0, shieldRecharge: 0, noDamageTime: 0,
       radius: PLAYER_BASE.radius, speed: PLAYER_BASE.speed,
       fireCd: .15, invincible: 0, dashTimer: 0, dashCd: 0, dashMax: 2.3, dashInvuln: .34, waterWalkTimer: 0,
+      paralyzeTimer: 0, paralyzeImmunity: 0,
       moving: false, moveX: 0, moveY: 0, vx: 0, vy: 0, trackPhase: 0, recoil: 0,
       hitFlash: 0, lastX: x, lastY: y, alive: true, downed: false, reviveProgress: 0,
       level: 1, xp: 0, xpNext: xpNeeded(1), pendingLevels: 0, rerolls: 2,
@@ -2250,6 +2251,31 @@
       ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
       ctx.restore();
     }
+    if (p.paralyzeTimer > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const r = 26 + Math.sin(t * 15) * 2;
+      ctx.strokeStyle = 'rgba(255,207,90,.8)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]); ctx.lineDashOffset = t * 24;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      for (let i = 0; i < 4; i++) {
+        const a = t * 7 + i * Math.PI / 2;
+        const x = p.x + Math.cos(a) * r;
+        const y = p.y + Math.sin(a) * r;
+        ctx.strokeStyle = 'rgba(255,235,150,.75)';
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(a + .55) * 5, y + Math.sin(a + .55) * 5);
+        ctx.lineTo(x + Math.cos(a + 1.05) * 2, y + Math.sin(a + 1.05) * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,207,90,.92)';
+      ctx.font = '7px Silkscreen, monospace'; ctx.textAlign = 'center';
+      ctx.fillText('麻痹', p.x, p.y - 44);
+      ctx.restore();
+    }
   }
 
   function drawBullets(t) {
@@ -3700,6 +3726,8 @@
     p.dashCd = Math.max(0, p.dashCd - dt);
     p.dashTimer = Math.max(0, p.dashTimer - dt);
     p.waterWalkTimer = Math.max(0, (p.waterWalkTimer || 0) - dt);
+    p.paralyzeTimer = Math.max(0, (p.paralyzeTimer || 0) - dt);
+    p.paralyzeImmunity = Math.max(0, (p.paralyzeImmunity || 0) - dt);
     p.invincible = Math.max(0, p.invincible - dt);
     p.hitFlash = Math.max(0, p.hitFlash - dt * 5);
     p.recoil = Math.max(0, p.recoil - dt * 8);
@@ -3717,7 +3745,7 @@
     const wantDash = idx === 0 ? Input.dashQueued : Input.dashQueued2;
     if (wantDash) {
       if (idx === 0) Input.dashQueued = false; else Input.dashQueued2 = false;
-      if (p.dashCd <= .02 && p.alive) {
+      if (p.dashCd <= .02 && p.alive && p.paralyzeTimer <= 0) {
         p.dashCd = p.dashMax;
         p.dashTimer = .2;
         p.invincible = Math.max(p.invincible, p.dashInvuln || .34);
@@ -3752,6 +3780,10 @@
       if (Input.keys.has('ArrowUp')) iy -= 1;
       if (Input.keys.has('ArrowDown')) iy += 1;
       if (pad && pad.connected) { ix += pad.x; iy += pad.y; }
+    }
+    if (p.paralyzeTimer > 0) {
+      ix = 0; iy = 0;
+      p.vx = 0; p.vy = 0;
     }
     const mag = Math.hypot(ix, iy);
     const onWater = tileAt(p.x, p.y).type === 'water';
@@ -4432,7 +4464,10 @@
           addEffect({ type: 'explosion', x: s.x, y: s.y, radius: s.radius, life: .42, maxLife: .42, color });
           addParticles(s.x, s.y, 12, color, 'spark', 1.1);
           for (const p of activePlayers()) {
-            if (dist2(s.x, s.y, p.x, p.y) < (s.radius + p.radius) ** 2) damagePlayer(s.damage, p);
+            if (dist2(s.x, s.y, p.x, p.y) >= (s.radius + p.radius) ** 2) continue;
+            const canStun = p.alive && !p.downed && p.invincible <= 0 && p.dashTimer <= 0;
+            damagePlayer(s.damage, p);
+            if (canStun) applyStrikeParalysis(p);
           }
           for (const sentry of G.sentries || []) {
             if (sentry.life > 0 && sentry.hp > 0 && dist2(s.x, s.y, sentry.x, sentry.y) < (s.radius + sentry.radius) ** 2) damageSentry(sentry, s.damage * .8, 'strike');
@@ -4726,6 +4761,19 @@
       radius, damage, delay: delay || .9, timer: delay || .9, state: 'warn',
       color: color || '#ffb15a', hostile: true
     });
+  }
+
+  function applyStrikeParalysis(p) {
+    if (!p || !p.alive || p.downed) return false;
+    if ((p.paralyzeImmunity || 0) > 0) return false;
+    p.paralyzeTimer = Math.max(p.paralyzeTimer || 0, 1);
+    // Immunity covers the paralysis itself plus one extra second, so repeated
+    // sky strikes cannot chain-lock a pilot.
+    p.paralyzeImmunity = 2;
+    addEffect({ type: 'ring', x: p.x, y: p.y, radius: 34, life: .48, maxLife: .48, color: '#ffcf5a' });
+    addParticles(p.x, p.y, 12, '#ffcf5a', 'spark', 1);
+    showToast(`${p.label || '车体'} 受到冲击 · 麻痹 1 秒`, 'red');
+    return true;
   }
 
   function updateAirEnemy(e, dt) {

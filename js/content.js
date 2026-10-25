@@ -812,7 +812,7 @@
         { damage: 88, interval: 4.85, radius: 174, disrupt: 1.5, text: '电容阵列升级，伤害 <b>+16</b>。' },
         { damage: 108, interval: 4.6, radius: 186, disrupt: 1.65, text: '瘫痪 <b>1.65</b> 秒，敌方火控短暂失效。' },
         { damage: 132, interval: 4.35, radius: 200, disrupt: 1.8, text: '脉冲半径 <b>200</b>，覆盖整片近场。' },
-        { damage: 165, interval: 4.1, radius: 220, disrupt: 2.0, text: '<b>零域脉冲</b>：大范围瘫痪并抹除敌方弹幕。' }
+        { damage: 165, interval: 3.0, radius: 220, disrupt: 2.0, text: '<b>零域脉冲</b>：大范围瘫痪并抹除敌方弹幕。' }
       ]
     },
     rail: {
