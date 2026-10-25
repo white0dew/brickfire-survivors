@@ -26,6 +26,7 @@
   const CORE_H = 64;
   const BASE_MAX_HP = 520;
   const ENEMY_HP_SCALE = 1.5;
+  const ENEMY_DAMAGE_SCALE = 1.25;
   const BASE_RADIUS = 24;
   const BASE_RANGE = 315;
   // Enemy target selection leans toward pilots, not the static base. A base
@@ -201,7 +202,8 @@
     drone:     { shape: 'orb',   color: '#7fe8ff', shots: 1, radius: 3.0, trail: 20 },
     gunship:   { shape: 'heavy', color: '#ffc36b', shots: 2, spread: .12, damageMul: .72, radius: 4.4, trail: 24, splash: 26, splashMul: .4 },
     saucer:    { shape: 'orb',   color: '#7fe8ff', shots: 1, homing: true, turn: .72, homingDelay: .12, radius: 3.1, trail: 24 },
-    warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 }
+    warper:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 3.4, trail: 26 },
+    warden:    { shape: 'orb',   color: '#b9a8ff', shots: 1, radius: 4.2, trail: 32 }
   };
 
   let settingsFocusIndex = 0;
@@ -4633,7 +4635,7 @@
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
       hp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * (cfg.elite ? 1.15 : 1) * (mod.enemyHp || 1),
-      damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
+      damage: cfg.damage * (type === 'warden' ? 1 : ENEMY_DAMAGE_SCALE) * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
@@ -4664,7 +4666,7 @@
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
       hp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1), maxHp: cfg.hp * ENEMY_HP_SCALE * scale * (mod.bossHp || 1),
-      damage: cfg.damage * .88 * (mod.enemyDamage || 1),
+      damage: cfg.damage * ENEMY_DAMAGE_SCALE * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
       elite: false, boss: true, xp: cfg.xp, spawnTimer: 1.35, spawnTotal: 1.35,
@@ -5958,11 +5960,6 @@
         amount *= .35;
         if (chance(.18)) addEffect({ type: 'ring', x: e.x, y: e.y, radius: 24, life: .18, maxLife: .18, color: '#ffb87a' });
       }
-    }
-    // Warden: nearby xeno units take reduced damage until the warden is killed.
-    if (e.type !== 'warden') {
-      const warden = G.enemies.find(w => w.type === 'warden' && !w.dead && dist2(w.x, w.y, e.x, e.y) < 125 * 125);
-      if (warden) amount *= .65;
     }
     // Boss phase armor: Cryo/Sentinel expose a window, then raise shields again.
     if (e.boss && e.shieldTimer > 0) amount *= e.bossKind === 'sentinel' ? .42 : .6;

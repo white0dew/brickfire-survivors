@@ -575,10 +575,10 @@
       codex: '会周期性传送到目标侧后方。传送前有空间扭曲，保持移动并准备近身爆发。'
     },
     warden: {
-      name: '异星守卫', en: 'XENO WARDEN', hp: 380, speed: 22, damage: 0, fire: 0, bulletSpeed: 0,
-      xp: 18, radius: 16, color: '#55458c', dark: '#1b1533', light: '#b9a8ff', core: '#9b7bff', class: 'elite',
-      domain: 'hover', ai: 'xenoWarden', role: 'support', tier: 2, size: 1.1,
-      codex: '异星护盾节点。会给周围敌人提供减伤护盾，自己不攻击；优先集火破盾。'
+      name: '异星守卫', en: 'XENO WARDEN', hp: 380, speed: 22, damage: 36, fire: 2.4, bulletSpeed: 300,
+      xp: 18, radius: 16, color: '#55458c', dark: '#1b1533', light: '#b9a8ff', core: '#9b7bff', class: 'heavy',
+      domain: 'hover', ai: 'xenoWarden', role: 'assault', tier: 2, size: 1.1,
+      codex: '异星重炮节点。不再提供护盾，改为发射高伤害异星弹；开火前优先击破。'
     }
   };
 
