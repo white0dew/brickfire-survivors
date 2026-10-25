@@ -3569,6 +3569,27 @@
     return { hard: false, blocked };
   }
 
+  function frontBrickTarget(p) {
+    if (!p) return null;
+    const facing = Number.isFinite(p.bodyAngle) ? p.bodyAngle : 0;
+    const maxD = TILE * 1.9;
+    for (let d = 2; d <= maxD; d += 4) {
+      const x = p.x + Math.cos(facing) * d;
+      const y = p.y + Math.sin(facing) * d;
+      const tile = tileAt(x, y);
+      if (tile.type === 'steel' || tile.type === 'void') return null;
+      if (tile.type !== 'brick') continue;
+      // Friendly base walls cannot be broken; never waste the cannon on them.
+      if (tile.friendlyWall) return null;
+      const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      return {
+        isBrick: true, tile, dead: false, moving: false, bodyAngle: 0, speed: 0,
+        x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, radius: TILE * .55
+      };
+    }
+    return null;
+  }
+
   function nearestDirectionalAttackable(p, range) {
     if (!p) return null;
     const r2 = range * range;
@@ -3793,7 +3814,9 @@
     // empty, and distance decides inside each half.
     let aimAngle = p.turretAngle;
     let aimPoint = null;
-    const autoTarget = nearestDirectionalAttackable(p, PLAYER_AUTO_RANGE);
+    // A brick directly in front is the immediate obstacle: clear it before
+    // turning the turret toward enemies elsewhere.
+    const autoTarget = frontBrickTarget(p) || nearestDirectionalAttackable(p, PLAYER_AUTO_RANGE);
     if (autoTarget) {
       const lead = Math.min(.55, dist(p.x, p.y, autoTarget.x, autoTarget.y) / 620);
       const vx = autoTarget.moving ? Math.cos(autoTarget.bodyAngle) * autoTarget.speed : 0;
@@ -6702,6 +6725,37 @@
     AUDIO.levelUp();
   }
 
+  function fusionHintFor(c) {
+    if (!c || c.kind === 'utility') return '';
+    const p = G.levelupPlayer || G.player;
+    const fset = fusionsFor(p);
+    const weaponName = id => (WEAPONS[id] && (WEAPONS[id].short || WEAPONS[id].name)) || id;
+    const passiveName = id => (PASSIVES[id] && PASSIVES[id].name) || id;
+    const all = Object.values(FUSIONS).filter(f => !fset[f.id]);
+    if (c.kind === 'fusion') {
+      return `<span class="fusion-label">已满足</span>${weaponName(c.fusion.weapon)} + ${passiveName(c.fusion.passive)} → <b>${c.fusion.name}</b>`;
+    }
+    if (c.kind === 'weapon') {
+      const f = all.find(x => x.weapon === c.id);
+      if (!f) return '';
+      const need = Math.max(1, PASSIVE_TIER_LEVEL.indexOf(f.passiveLevel));
+      const cur = (passivesFor(p) || {})[f.passive] || 0;
+      const ready = cur >= f.passiveLevel;
+      return `<span class="fusion-label">合成需求</span>搭配 <b>${passiveName(f.passive)}</b>${ready ? '<em>已满足</em>' : `<em>需 Lv.${need}</em>`} → ${f.name}`;
+    }
+    if (c.kind === 'passive') {
+      const links = all.filter(x => x.passive === c.id);
+      if (!links.length) return '';
+      const parts = links.map(f => {
+        const need = Math.max(1, WEAPON_TIER_LEVEL.indexOf(f.weaponLevel));
+        const cur = (weaponsFor(p) || {})[f.weapon] || 0;
+        return `<b>${weaponName(f.weapon)}</b>${cur >= f.weaponLevel ? '<em>✓</em>' : `<em>Lv.${need}</em>`}→${f.name}`;
+      });
+      return `<span class="fusion-label">可合成</span>${parts.join(' · ')}`;
+    }
+    return '';
+  }
+
   function renderUpgradeCards(choices) {
     const ownerTag = G.levelupPlayer ? G.levelupPlayer.label : (G.twoPlayer ? 'P2' : 'P1');
     const cards = choices.map((c, i) => {
@@ -6722,6 +6776,7 @@
       const icon = c.kind === 'utility' ? c.utility.icon : data.icon;
       const color = c.kind === 'utility' ? c.utility.color : data.color;
       const role = c.kind === 'utility' ? '即时补给' : c.kind === 'fusion' ? '武器进化' : (data.role || '') + (data.focus ? ' · ' + data.focus : '');
+      const fusionHint = fusionHintFor(c);
       return `<button class="upgrade-card" type="button" data-index="${i}" style="--accent:${color}" aria-label="${ownerTag} 选择 ${name}">
         <span class="upgrade-card__corner" aria-hidden="true"></span>
         <div class="upgrade-card__top"><span class="upgrade-card__type">${typeLabel}</span><span class="upgrade-card__level">${levelLabel}</span></div>
@@ -6731,6 +6786,7 @@
           <div class="upgrade-card__role">${role}</div>
           <p class="upgrade-card__desc">${desc}</p>
         </div>
+        ${fusionHint ? `<div class="upgrade-card__fusion">${fusionHint}</div>` : ''}
         <div class="upgrade-card__pips">${pips}</div>
         <span class="upgrade-card__pad" aria-hidden="true">${ownerTag}</span>
         <span class="upgrade-card__key">${i + 1}</span>

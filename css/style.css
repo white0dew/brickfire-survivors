@@ -646,6 +646,10 @@ button:focus-visible, [tabindex]:focus-visible {
 .upgrade-card__role { margin-top: 6px; font-family: var(--font-cn); font-size: clamp(13px, .85vw, 17px); letter-spacing: .05em; color: var(--accent); border-left: 2px solid var(--accent); padding-left: 9px; opacity: .95; }
 .upgrade-card__desc { margin: clamp(16px, 1.4vw, 24px) 0 18px; min-height: 60px; font-family: var(--font-cn); color: #c0ccc3; font-size: clamp(15px, .95vw, 19px); line-height: 1.75; }
 .upgrade-card__desc b { color: var(--accent); font-weight: 700; }
+.upgrade-card__fusion { position: relative; z-index: 1; margin: 0 clamp(26px, 2.1vw, 38px) 12px; padding: 7px 9px; border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 6%, rgba(3,8,6,.5)); color: #b7c5bb; font-family: var(--font-cn); font-size: clamp(12px, .82vw, 14px); line-height: 1.5; letter-spacing: .02em; }
+.upgrade-card__fusion b { color: var(--accent); font-weight: 700; }
+.upgrade-card__fusion em { font-style: normal; color: var(--cyan); margin-left: 4px; }
+.upgrade-card__fusion .fusion-label { display: inline-block; margin-right: 6px; color: var(--accent); font-weight: 700; letter-spacing: .08em; }
 .upgrade-card__pips { display: flex; gap: 5px; padding: 0 clamp(26px, 2.1vw, 38px) 26px; position: relative; z-index: 1; }
 .upgrade-card__pips i { width: 24px; height: 4px; background: rgba(237,230,211,.12); }
 .upgrade-card__pips i.is-on { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -917,6 +921,7 @@ button:focus-visible, [tabindex]:focus-visible {
   .upgrade-card__body { grid-column: 2; grid-row: 2; padding: 0 0 0 16px; }
   .upgrade-card__name { font-size: 17px; }
   .upgrade-card__desc { margin: 5px 0; min-height: 0; font-size: 11px; line-height: 1.65; }
+  .upgrade-card__fusion { margin: 4px 0; padding: 4px 6px; font-size: 10px; line-height: 1.4; }
   .upgrade-card__pips { grid-column: 1 / -1; padding: 5px 0 0; }
   .upgrade-card__key { display: none; }
   .levelup__content { max-height: 92svh; }
