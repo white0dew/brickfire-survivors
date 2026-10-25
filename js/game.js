@@ -32,6 +32,7 @@
   const ENEMY_TARGET_LOCK = 3.2;
   const ENEMY_BASE_DIST_MULT = 1.75;
   const PLAYER_AUTO_RANGE = 560;
+  const REFRACT_RADIUS = 170;
   const SHAKE_SCALE = .5;
   const RECALL_CD = 30;
   const MAX_PARTICLES = 620;
@@ -317,7 +318,7 @@
     lastEnemySound: 0,
     resolvingUpgrade: false,
     levelupPlayer: null,
-    stats: { damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8, pickup: 58, xpGain: 1, dropChance: .032, pierceAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0 }
+    stats: { damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8, pickup: 58, xpGain: 1, dropChance: .032, refractAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0 }
   };
 
   const Input = {
@@ -3278,7 +3279,7 @@
       const shieldLvl = pass.shield || 0;
       const regenLvl = pass.regen || 0;
       const platingLvl = pass.plating || 0;
-      const pierceLvl = pass.pierce || 0;
+      const refractLvl = pass.pierce || 0;
       const dashLvl = pass.dash || 0;
       const fortuneLvl = pass.fortune || 0;
       const executeLvl = pass.execute || 0;
@@ -3299,7 +3300,7 @@
         dropChance: .025 + salvageLvl * .015 + fortuneLvl * .02,
         regen: regenLvl * 1.1,
         damageTaken: Math.max(.55, 1 - platingLvl * .04),
-        pierceAdd: pierceLvl + (phaseLvl > 1 ? 1 : 0),
+        refractAdd: refractLvl + (phaseLvl > 1 ? 1 : 0),
         waterWalk: amphibiousLvl > 0 ? 1 : 0,
         waterSpeed: 1 + amphibiousLvl * .12,
         steelPierce: phaseLvl > 0 ? 1 : 0,
@@ -3321,7 +3322,7 @@
         dropChance: base.dropChance + (tank.dropAdd || 0),
         regen: base.regen,
         damageTaken: base.damageTaken,
-        pierceAdd: base.pierceAdd,
+        refractAdd: base.refractAdd,
         waterWalk: base.waterWalk,
         waterSpeed: base.waterSpeed,
         steelPierce: base.steelPierce,
@@ -3355,7 +3356,7 @@
     G.stats = first && first.stats ? first.stats : {
       damage: 1, attackSpeed: 1, cdr: 1, area: 1, crit: .05, critMult: 1.8,
       pickup: PLAYER_BASE.pickupRadius, xpGain: 1, dropChance: .025, regen: 0,
-      damageTaken: 1, pierceAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0,
+      damageTaken: 1, refractAdd: 0, waterWalk: 0, waterSpeed: 1, steelPierce: 0,
       execute: 0, venom: 0, frostbite: 0, duration: 1
     };
   }
@@ -3479,6 +3480,17 @@
       if (excludeDead && (e.dead || e.spawnTimer > 0)) continue;
       const d = dist2(x, y, e.x, e.y);
       if (d < r2 && d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
+
+  function nearestRefractTarget(x, y, range, hit) {
+    let best = null, bd = range * range;
+    for (const e of G.enemies) {
+      if (e.dead || e.spawnTimer > 0) continue;
+      if (hit && hit.has(e.id)) continue;
+      const d = dist2(x, y, e.x, e.y);
+      if (d < bd) { bd = d; best = e; }
     }
     return best;
   }
@@ -3750,7 +3762,7 @@
     const fusion = fused('cannon', p);
     const shots = (w.shots || 1) + (tank.extraShots || 0) + (fusion ? 1 : 0);
     const spread = shots > 1 ? .055 : 0;
-    const pierce = (w.pierce || 0) + (tank.pierceAdd || 0) + (st.pierceAdd || 0) + (fusion ? 2 : 0);
+    const refract = (w.refract || 0) + (tank.refractAdd || 0) + (st.refractAdd || 0) + (fusion ? 2 : 0);
     const explode = (w.explode ? w.explode * st.area : 0) + (tank.explodeAdd ? tank.explodeAdd * st.area : 0) + (fusion ? 38 * st.area : 0);
     const muzzleDist = artImage('playerHull') ? 22 : 25;
     for (let i = 0; i < shots; i++) {
@@ -3760,7 +3772,7 @@
       const mx = p.x + Math.cos(a) * muzzleDist, my = p.y + Math.sin(a) * muzzleDist;
       G.bullets.push({
         x: mx, y: my, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed,
-        radius: 3, damage: dmg, crit, pierce, explode, owner: p, steelPierce: !!st.steelPierce,
+        radius: 3, damage: dmg, crit, refract, explode, owner: p, steelPierce: !!st.steelPierce,
         life: 1.6, maxLife: 1.6, color: st.steelPierce ? '#b896ff' : '#ffd15c', trail: 15, enemy: false, hit: new Set()
       });
     }
@@ -3778,7 +3790,7 @@
     const crit = chance(st.crit);
     G.bullets.push({
       x: ds.x, y: ds.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, radius: 2.3,
-      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone', p) ? 1.3 : 1), crit, pierce: st.pierceAdd || 0, explode: 0, owner: p, steelPierce: !!st.steelPierce,
+      damage: w.damage * st.damage * (crit ? st.critMult : 1) * (fused('drone', p) ? 1.3 : 1), crit, refract: st.refractAdd || 0, explode: 0, owner: p, steelPierce: !!st.steelPierce,
       life: .9, maxLife: .9, color: st.steelPierce ? '#b896ff' : '#5ff0ce', trail: 10, enemy: false, hit: new Set()
     });
     addEffect({ type: 'muzzle', x: ds.x, y: ds.y, life: .08, maxLife: .08, color: '#5ff0ce' });
@@ -3807,7 +3819,7 @@
       x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
       radius: opts.radius || 2.6,
       damage, crit,
-      pierce: (opts.pierce || 0) + (st.pierceAdd || 0),
+      refract: (opts.refract || 0) + (st.refractAdd || 0),
       explode: opts.explode || 0,
       slow: opts.slow || 0,
       steelPierce: opts.steelPierce !== undefined ? !!opts.steelPierce : !!st.steelPierce,
@@ -4012,7 +4024,7 @@
           for (let i = 0; i < pellets; i++) {
             const a = baseA + (i - (pellets - 1) / 2) * (spread / Math.max(1, pellets - 1));
             spawnPlayerBullet(p.x + Math.cos(a) * 22, p.y + Math.sin(a) * 22, a, w.speed, w.damage, p, {
-              pierce: w.pierce || 0, radius: 2.4, life: .9, color: '#ff9a4a', trail: 9,
+              refract: w.refract || 0, radius: 2.4, life: .9, color: '#ff9a4a', trail: 9,
               explode: fused('scatter', p) ? 26 * st.area : 0
             });
           }
@@ -4032,7 +4044,7 @@
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
           spawnPlayerBullet(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, a, w.speed, w.damage * (fused('laser', p) ? 1.55 : 1), p, {
-            pierce: w.pierce, radius: fused('laser', p) ? 3.6 : 2.6, life: .95, color: '#ff6b8a', trail: 54, laser: true
+            refract: w.refract, radius: fused('laser', p) ? 3.6 : 2.6, life: .95, color: '#ff6b8a', trail: 54, laser: true
           });
           addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 25, y: p.y + Math.sin(a) * 25, angle: a, life: .1, maxLife: .1, color: '#ff6b8a', radius: 12 });
           AUDIO.tone(880, .08, 'sawtooth', .018, 1600);
@@ -4233,7 +4245,7 @@
         if (target) {
           const a = Math.atan2(target.y - p.y, target.x - p.x);
           spawnPlayerBullet(p.x + Math.cos(a) * 26, p.y + Math.sin(a) * 26, a, w.speed, w.damage * (fused('rail', p) ? 1.35 : 1), p, {
-            pierce: w.pierce, explode: w.explode * st.area * (fused('rail', p) ? 1.3 : 1), radius: 4.2, life: 1.15, color: '#9dbbff', trail: 42
+            refract: w.refract, explode: w.explode * st.area * (fused('rail', p) ? 1.3 : 1), radius: 4.2, life: 1.15, color: '#9dbbff', trail: 42
           });
           addEffect({ type: 'muzzle', x: p.x + Math.cos(a) * 28, y: p.y + Math.sin(a) * 28, angle: a, life: .16, maxLife: .16, color: '#9dbbff', radius: 16 });
           addShake(2.5, .15); AUDIO.tone(70, .3, 'square', .025, 160);
@@ -5655,13 +5667,31 @@
         if (b.hit && b.hit.has(e.id)) continue;
         const rr = e.radius * e.size + b.radius;
         if (dist2(b.x, b.y, e.x, e.y) < rr * rr) {
-          if (b.hit) b.hit.add(e.id);
+          if (!b.hit) b.hit = new Set();
+          b.hit.add(e.id);
           damageEnemy(e, b.damage, b.crit, 'bullet', b.owner);
           addParticle(b.x, b.y, rand(50, -50), rand(50, -50), b.color, 'spark', .2, 1.5);
           if (b.explode > 0) {
             explodeAt(b.x, b.y, b.explode, b.damage * .6, b.color, { source: 'cannon', owner: b.owner, slow: b.slow, crit: b.crit });
-            b.dead = true;
-          } else if (b.pierce <= 0 || (b.hit && b.hit.size > b.pierce)) {
+          }
+          // No projectile passes through a target. If it has refraction
+          // charges, it instead snaps toward the nearest fresh enemy around
+          // the impact point; otherwise it is consumed here.
+          if ((b.refract || 0) > 0) {
+            const next = nearestRefractTarget(e.x, e.y, REFRACT_RADIUS, b.hit);
+            if (next) {
+              b.refract -= 1;
+              const speed = Math.max(120, Math.hypot(b.vx, b.vy));
+              const angle = Math.atan2(next.y - b.y, next.x - b.x);
+              b.vx = Math.cos(angle) * speed;
+              b.vy = Math.sin(angle) * speed;
+              b.x = e.x; b.y = e.y;
+              addEffect({ type: 'lightning', points: [{ x: e.x, y: e.y }, { x: next.x, y: next.y }], life: .14, maxLife: .14, color: b.color || '#ffd15c' });
+              addEffect({ type: 'ring', x: e.x, y: e.y, radius: 18, life: .18, maxLife: .18, color: b.color || '#ffd15c' });
+            } else {
+              b.dead = true;
+            }
+          } else {
             b.dead = true;
           }
           if (b.dead) break;
@@ -6056,7 +6086,7 @@
       vx: Math.cos(a) * 520, vy: Math.sin(a) * 520,
       radius: 3.2, damage: 25, life: 1.2, maxLife: 1.2,
       color: '#8fffe6', trail: 16, enemy: false, baseShot: true,
-      owner: null, crit: false, pierce: 0, explode: 0, hit: new Set()
+      owner: null, crit: false, refract: 0, explode: 0, hit: new Set()
     });
     addEffect({ type: 'muzzle', x: sx + Math.cos(a) * 19, y: sy + Math.sin(a) * 19, angle: a, life: .16, maxLife: .16, color: '#8fffe6', radius: 11 });
     AUDIO.shoot();

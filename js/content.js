@@ -608,14 +608,14 @@
       name: '撕裂者主炮', en: 'RIPPER CANNON', short: '主炮', icon: 'cannon', color: '#ffb52d', type: 'weapon',
       desc: '自动锁定最近敌人。所有构筑的起点。',
       levels: [
-        { damage: 22, interval: .58, speed: 620, pierce: 0, shots: 1, explode: 0, text: '自动锁定最近敌人，发射穿甲弹。' },
-        { damage: 28, interval: .56, speed: 640, pierce: 0, shots: 1, explode: 0, text: '弹芯强化：伤害 <b>+6</b>，装填略微缩短。' },
-        { damage: 26, interval: .60, speed: 665, pierce: 1, shots: 1, explode: 0, text: '炮弹可贯穿 <b>1</b> 个敌人。' },
-        { damage: 34, interval: .54, speed: 690, pierce: 1, shots: 1, explode: 0, text: '高压装药：伤害 <b>+8</b>，射速提升。' },
-        { damage: 43, interval: .50, speed: 720, pierce: 2, shots: 1, explode: 25, text: '命中引发 <b>小型爆炸</b>，穿透 2 个目标。' },
-        { damage: 54, interval: .46, speed: 750, pierce: 2, shots: 2, explode: 30, text: '双联装填：每次发射 <b>2</b> 发炮弹。' },
-        { damage: 68, interval: .40, speed: 790, pierce: 3, shots: 2, explode: 40, text: '破甲弹芯：穿透 <b>3</b>，爆炸范围提升。' },
-        { damage: 96, interval: .33, speed: 860, pierce: 6, shots: 2, explode: 62, text: '<b>湮灭协议</b>：重炮撕裂整条战线。' }
+        { damage: 22, interval: .58, speed: 620, refract: 0, shots: 1, explode: 0, text: '自动锁定最近敌人，发射标准炮弹。' },
+        { damage: 28, interval: .56, speed: 640, refract: 0, shots: 1, explode: 0, text: '弹芯强化：伤害 <b>+6</b>，装填略微缩短。' },
+        { damage: 26, interval: .60, speed: 665, refract: 1, shots: 1, explode: 0, text: '命中后折射至目标附近 <b>1</b> 名敌人。' },
+        { damage: 34, interval: .54, speed: 690, refract: 1, shots: 1, explode: 0, text: '高压装药：伤害 <b>+8</b>，射速提升。' },
+        { damage: 43, interval: .50, speed: 720, refract: 2, shots: 1, explode: 25, text: '命中引发 <b>小型爆炸</b>，并折射至附近 2 名敌人。' },
+        { damage: 54, interval: .46, speed: 750, refract: 2, shots: 2, explode: 30, text: '双联装填：每次发射 <b>2</b> 发炮弹。' },
+        { damage: 68, interval: .40, speed: 790, refract: 3, shots: 2, explode: 40, text: '折射弹芯：折射 <b>3</b> 次，爆炸范围提升。' },
+        { damage: 96, interval: .33, speed: 860, refract: 6, shots: 2, explode: 62, text: '<b>湮灭协议</b>：重炮撕裂整条战线。' }
       ]
     },
     drone: {
@@ -692,28 +692,28 @@
       name: '碎星霰弹', en: 'STARBURST SCATTER', short: '霰弹', icon: 'cannon', color: '#ff9a4a', type: 'weapon',
       desc: '朝目标喷出扇形弹幕，贴脸时全部命中。',
       levels: [
-        { damage: 12, interval: 1.08, speed: 500, pellets: 4, spread: .58, pierce: 0, text: '向目标喷出 <b>4</b> 枚弹丸。' },
-        { damage: 15, interval: 1.0, speed: 510, pellets: 5, spread: .62, pierce: 0, text: '弹丸 <b>+1</b>，伤害提升。' },
-        { damage: 18, interval: .94, speed: 520, pellets: 6, spread: .66, pierce: 0, text: '扇面扩大到 <b>6</b> 枚。' },
-        { damage: 22, interval: .86, speed: 540, pellets: 6, spread: .7, pierce: 1, text: '弹丸可贯穿 <b>1</b> 个目标。' },
-        { damage: 27, interval: .78, speed: 560, pellets: 7, spread: .74, pierce: 1, text: '伤害 <b>+5</b>，装填加速。' },
-        { damage: 33, interval: .70, speed: 580, pellets: 8, spread: .78, pierce: 1, text: '近距爆发提升，弹丸 <b>8</b> 枚。' },
-        { damage: 40, interval: .62, speed: 600, pellets: 9, spread: .82, pierce: 1, text: '弹幕密度大幅提升。' },
-        { damage: 50, interval: .54, speed: 630, pellets: 12, spread: .96, pierce: 2, text: '<b>超新星散射</b>：12 枚弹丸覆盖整片扇区。' }
+        { damage: 12, interval: 1.08, speed: 500, pellets: 4, spread: .58, refract: 0, text: '向目标喷出 <b>4</b> 枚弹丸。' },
+        { damage: 15, interval: 1.0, speed: 510, pellets: 5, spread: .62, refract: 0, text: '弹丸 <b>+1</b>，伤害提升。' },
+        { damage: 18, interval: .94, speed: 520, pellets: 6, spread: .66, refract: 0, text: '扇面扩大到 <b>6</b> 枚。' },
+        { damage: 22, interval: .86, speed: 540, pellets: 6, spread: .7, refract: 1, text: '弹丸命中后折射 <b>1</b> 次。' },
+        { damage: 27, interval: .78, speed: 560, pellets: 7, spread: .74, refract: 1, text: '伤害 <b>+5</b>，装填加速。' },
+        { damage: 33, interval: .70, speed: 580, pellets: 8, spread: .78, refract: 1, text: '近距爆发提升，弹丸 <b>8</b> 枚。' },
+        { damage: 40, interval: .62, speed: 600, pellets: 9, spread: .82, refract: 1, text: '弹幕密度大幅提升。' },
+        { damage: 50, interval: .54, speed: 630, pellets: 12, spread: .96, refract: 2, text: '<b>超新星散射</b>：12 枚弹丸覆盖整片扇区。' }
       ]
     },
     laser: {
       name: '棱镜激光', en: 'PRISM LANCE', short: '激光', icon: 'arc', color: '#ff6b8a', type: 'weapon',
-      desc: '高频直线光束，瞬间贯穿一整列敌人。',
+      desc: '高频折射光束，在敌群之间连续跳跃。',
       levels: [
-        { damage: 24, interval: 1.25, speed: 1450, pierce: 99, text: '每 <b>1.25</b> 秒发射一道贯穿光束。' },
-        { damage: 30, interval: 1.16, speed: 1500, pierce: 99, text: '光束伤害 <b>+6</b>。' },
-        { damage: 37, interval: 1.08, speed: 1550, pierce: 99, text: '聚焦透镜升级，伤害提升。' },
-        { damage: 45, interval: .98, speed: 1600, pierce: 99, text: '冷却缩短，光束更密集。' },
-        { damage: 54, interval: .88, speed: 1650, pierce: 99, text: '伤害 <b>+9</b>，穿透整条直线。' },
-        { damage: 64, interval: .78, speed: 1720, pierce: 99, text: '棱镜过载，发射频率提升。' },
-        { damage: 76, interval: .66, speed: 1800, pierce: 99, text: '高热光束灼穿重甲。' },
-        { damage: 92, interval: .52, speed: 1900, pierce: 99, text: '<b>湮灭棱镜</b>：几乎不间断的贯穿射线。' }
+        { damage: 24, interval: 1.25, speed: 1450, refract: 99, text: '每 <b>1.25</b> 秒发射一道折射光束。' },
+        { damage: 30, interval: 1.16, speed: 1500, refract: 99, text: '光束伤害 <b>+6</b>。' },
+        { damage: 37, interval: 1.08, speed: 1550, refract: 99, text: '聚焦透镜升级，伤害提升。' },
+        { damage: 45, interval: .98, speed: 1600, refract: 99, text: '冷却缩短，光束更密集。' },
+        { damage: 54, interval: .88, speed: 1650, refract: 99, text: '伤害 <b>+9</b>，折射覆盖整片战区。' },
+        { damage: 64, interval: .78, speed: 1720, refract: 99, text: '棱镜过载，发射频率提升。' },
+        { damage: 76, interval: .66, speed: 1800, refract: 99, text: '高热光束灼穿重甲。' },
+        { damage: 92, interval: .52, speed: 1900, refract: 99, text: '<b>湮灭棱镜</b>：几乎不间断的折射射线。' }
       ]
     },
     missile: {
@@ -747,16 +747,16 @@
     toxin: {
       // Legacy id kept for saves; the weapon itself is now a kinetic orbital rod.
       name: '天基动能棒', en: 'RODS FROM GOD', short: '天基', icon: 'orbital', color: '#9dbbff', type: 'weapon',
-      desc: '从轨道投下钨棒，延迟后贯穿并震碎目标区域。',
+      desc: '从轨道投下钨棒，延迟后砸落并震碎目标区域。',
       levels: [
         { damage: 105, interval: 5.2, radius: 44, count: 1, delay: .9, text: '每 <b>5.2</b> 秒锁定目标，投下 1 根钨棒。' },
         { damage: 130, interval: 5.05, radius: 48, count: 1, delay: .86, text: '动能伤害 <b>+25</b>，落点更精准。' },
         { damage: 160, interval: 4.85, radius: 52, count: 1, delay: .82, text: '再入速度提升，冲击半径扩大。' },
-        { damage: 195, interval: 4.6, radius: 58, count: 1, delay: .78, text: '钨棒质量增加，贯穿效果提升。' },
+        { damage: 195, interval: 4.6, radius: 58, count: 1, delay: .78, text: '钨棒质量增加，震碎效果提升。' },
         { damage: 240, interval: 4.35, radius: 64, count: 2, delay: .72, text: '每次呼叫 <b>2</b> 根钨棒。' },
         { damage: 295, interval: 4.1, radius: 70, count: 2, delay: .66, text: '轨道投送窗口缩短。' },
         { damage: 365, interval: 3.8, radius: 78, count: 2, delay: .6, text: '连续动能打击覆盖敌群。' },
-        { damage: 455, interval: 3.45, radius: 88, count: 3, delay: .52, text: '<b>天基制裁</b>：三根钨棒同时贯穿战区。' }
+        { damage: 455, interval: 3.45, radius: 88, count: 3, delay: .52, text: '<b>天基制裁</b>：三根钨棒同时砸向战区。' }
       ]
     },
     gravity: {
@@ -817,16 +817,16 @@
     },
     rail: {
       name: '磁轨重炮', en: 'RAIL CANNON', short: '磁轨', icon: 'cannon', color: '#9dbbff', type: 'weapon',
-      desc: '蓄力发射超高速磁轨弹，穿透并爆破整条直线。',
+      desc: '蓄力发射超高速磁轨弹，命中后折射并爆破周围目标。',
       levels: [
-        { damage: 64, interval: 2.4, speed: 1750, pierce: 99, explode: 42, text: '发射穿透磁轨弹，命中引发爆炸。' },
-        { damage: 79, interval: 2.28, speed: 1800, pierce: 99, explode: 46, text: '磁轨伤害 <b>+15</b>。' },
-        { damage: 97, interval: 2.16, speed: 1850, pierce: 99, explode: 50, text: '电容升级，伤害提升。' },
-        { damage: 119, interval: 2.02, speed: 1900, pierce: 99, explode: 56, text: '穿透爆破范围扩大。' },
-        { damage: 146, interval: 1.86, speed: 1980, pierce: 99, explode: 62, text: '磁轨加速，装填缩短。' },
-        { damage: 178, interval: 1.68, speed: 2060, pierce: 99, explode: 70, text: '弹芯密度提升。' },
-        { damage: 218, interval: 1.48, speed: 2150, pierce: 99, explode: 78, text: '接近舰炮级输出。' },
-        { damage: 270, interval: 1.22, speed: 2300, pierce: 99, explode: 92, text: '<b>歼星磁轨</b>：一发贯穿整条战线。' }
+        { damage: 64, interval: 2.4, speed: 1750, refract: 99, explode: 42, text: '发射折射磁轨弹，命中引发爆炸。' },
+        { damage: 79, interval: 2.28, speed: 1800, refract: 99, explode: 46, text: '磁轨伤害 <b>+15</b>。' },
+        { damage: 97, interval: 2.16, speed: 1850, refract: 99, explode: 50, text: '电容升级，伤害提升。' },
+        { damage: 119, interval: 2.02, speed: 1900, refract: 99, explode: 56, text: '折射爆破范围扩大。' },
+        { damage: 146, interval: 1.86, speed: 1980, refract: 99, explode: 62, text: '磁轨加速，装填缩短。' },
+        { damage: 178, interval: 1.68, speed: 2060, refract: 99, explode: 70, text: '弹芯密度提升。' },
+        { damage: 218, interval: 1.48, speed: 2150, refract: 99, explode: 78, text: '接近舰炮级输出。' },
+        { damage: 270, interval: 1.22, speed: 2300, refract: 99, explode: 92, text: '<b>歼星磁轨</b>：一发折射整条战线。' }
       ]
     }
   };
@@ -893,9 +893,9 @@
       stats: ['受到伤害 -4%'], text: '受到的全部伤害 <b>-4%</b>。'
     },
     pierce: {
-      name: '穿甲校准', en: 'PIERCE CALIBRATION', short: '穿透', icon: 'warhead', color: '#ffcf5a',
-      desc: '所有弹丸额外贯穿敌人。', max: 5,
-      stats: ['弹丸穿透 +1'], text: '所有弹丸 <b>穿透 +1</b>。'
+      name: '折射校准', en: 'REFRACTION CALIBRATION', short: '折射', icon: 'warhead', color: '#ffcf5a',
+      desc: '弹丸命中后折射到目标周围最近的另一名敌人。', max: 5,
+      stats: ['弹丸折射 +1'], text: '所有弹丸命中后额外 <b>折射 1</b> 次。'
     },
     dash: {
       name: '矢量推进', en: 'VECTOR THRUST', short: '冲刺', icon: 'engine', color: '#9bd8ff',
@@ -940,7 +940,7 @@
     phase: {
       name: '相位弹芯', en: 'PHASE CORE', short: '穿钢', icon: 'warhead', color: '#b896ff',
       desc: '炮弹穿过钢板但不破坏钢板，可隔墙射击。', max: 2, minLevel: 12,
-      stats: ['炮弹穿过钢板'], text: '炮弹可穿过 <b>钢板</b>且不损伤钢板；升级追加弹丸穿透。'
+      stats: ['炮弹穿过钢板'], text: '炮弹可穿过 <b>钢板</b>且不损伤钢板；升级追加弹丸折射。'
     },
   };
 
@@ -950,7 +950,7 @@
     { id:'twin', name:'双管 M-02', en:'TWINBARREL', role:'连射', desc:'双联装填，把弹幕铺成一面墙。', trait:'主炮 +1 发齐射；攻速 -5%', colors:{body:'#b35a32',light:'#ffb07a',dark:'#4b2114',core:'#ffcf5a'}, extraShots:1, attackSpeedMul:.95, affinity:['cannon','loader','warhead'], start:{weapons:{cannon:1}} },
     { id:'bastion', name:'铁壁 M-03', en:'BASTION', role:'重装', desc:'慢，但很难被真正打穿。', trait:'最大装甲 +30%；受伤 -18%；速度 -8%', colors:{body:'#6f7b7d',light:'#d4e0dc',dark:'#2b3435',core:'#9bd8ff'}, hpMul:1.3, damageTakenMul:.82, speedMul:.92, affinity:['armor','shield','cannon'], start:{weapons:{cannon:1},passives:{armor:1}} },
     { id:'gale', name:'疾风 M-04', en:'GALE', role:'机动', desc:'用速度换位置，用冲刺换命。', trait:'速度 +18%；冲刺冷却 -30%', colors:{body:'#3f9e91',light:'#b4fff2',dark:'#123c38',core:'#5ff0ce'}, speedMul:1.18, dashCdMul:.7, affinity:['engine','cannon','cooling'], start:{weapons:{cannon:1},passives:{engine:1}} },
-    { id:'railgun', name:'磁轨 M-05', en:'RAILGUN', role:'穿透', desc:'一条直线，穿过多层装甲。', trait:'主炮穿透 +2；暴击率 +8%', colors:{body:'#6574ad',light:'#c2d3ff',dark:'#252d55',core:'#9dbbff'}, pierceAdd:2, critAdd:.08, affinity:['cannon','crit','cooling'], start:{weapons:{cannon:1}} },
+    { id:'railgun', name:'磁轨 M-05', en:'RAILGUN', role:'折射', desc:'命中后跳到附近目标，连续拆解装甲。', trait:'主炮折射 +2；暴击率 +8%', colors:{body:'#6574ad',light:'#c2d3ff',dark:'#252d55',core:'#9dbbff'}, refractAdd:2, critAdd:.08, affinity:['cannon','crit','cooling'], start:{weapons:{cannon:1}} },
     { id:'pyro', name:'焚化 M-06', en:'PYRO', role:'火海', desc:'战场不是棋盘，是燃料。', trait:'开场携带燃迹；爆炸范围 +15%', colors:{body:'#d24a2e',light:'#ffb066',dark:'#4e170e',core:'#ff7a2a'}, areaMul:1.15, affinity:['flame','warhead','cannon'], start:{weapons:{cannon:1,flame:1},passives:{warhead:1}} },
     { id:'storm', name:'雷暴 M-07', en:'STORMCALLER', role:'连锁', desc:'让闪电在敌群里自己找路。', trait:'开场携带电弧；连锁 +2；冷却 -10%', colors:{body:'#486fc0',light:'#b8d7ff',dark:'#19294f',core:'#79b9ff'}, arcAdd:2, cdrMul:.9, affinity:['arc','cooling','cannon'], start:{weapons:{cannon:1,arc:1}} },
     { id:'hive', name:'蜂巢 M-08', en:'HIVE', role:'无人机', desc:'你只需要移动，环绕蜂群负责扣扳机。', trait:'开场携带环绕蜂群；环绕机 +1', colors:{body:'#b38a3e',light:'#ffe6a0',dark:'#493414',core:'#ffd15c'}, droneAdd:1, affinity:['drone','loader','cannon'], start:{weapons:{cannon:1,drone:1}} },
@@ -969,14 +969,14 @@
   ];
 
   const FUSIONS = {
-    cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，穿透+2，命中引发 <b>轨道爆裂</b>。' },
+    cannon: { id:'cannon', weapon:'cannon', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'湮灭轨道炮', en:'ANNIHILATOR RAIL', color:'#ffb52d', icon:'cannon', desc:'主炮+1齐射，折射+2，命中引发 <b>轨道爆裂</b>。' },
     drone: { id:'drone', weapon:'drone', passive:'loader', weaponLevel:3, passiveLevel:2, name:'母舰蜂群', en:'MOTHERSHIP SWARM', color:'#5ff0ce', icon:'drone', desc:'环绕机 +1，脉冲伤害提高，蜂群形成贴身弹幕屏障。' },
     arc: { id:'arc', weapon:'arc', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'超导风暴', en:'SUPERCONDUCTING STORM', color:'#79b9ff', icon:'arc', desc:'电弧连锁 +2，冷却缩短，超导线圈把闪电导向更多目标。' },
     flame: { id:'flame', weapon:'flame', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'热熔过载', en:'THERMAL OVERLOAD', color:'#ff7a2a', icon:'flame', desc:'火焰范围 +30%，伤害 +30%，留下持续燃烧的热熔带。' },
     mine: { id:'mine', weapon:'mine', passive:'armor', weaponLevel:3, passiveLevel:2, name:'奇点雷区', en:'SINGULARITY FIELD', color:'#ffcf5a', icon:'mine', desc:'每次布雷 +1，爆炸半径与伤害大幅提高。' },
     orbital: { id:'orbital', weapon:'orbital', passive:'crit', weaponLevel:3, passiveLevel:2, name:'天基熔断', en:'ORBITAL OVERRIDE', color:'#b896ff', icon:'orbital', desc:'光矛 +1，暴击由轨道放大，熔断覆盖整片战区。' },
     scatter: { id:'scatter', weapon:'scatter', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'超新星霰弹', en:'SUPERNOVA BUCKSHOT', color:'#ff9a4a', icon:'cannon', desc:'弹丸 +3，扇面爆炸，命中引发 <b>超新星爆裂</b>。' },
-    laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:3, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，贯穿线上的一切目标。' },
+    laser: { id:'laser', weapon:'laser', passive:'crit', weaponLevel:3, passiveLevel:2, name:'湮灭棱镜', en:'ANNIHILATION PRISM', color:'#ff6b8a', icon:'arc', desc:'光束宽度与暴击提升，在敌群之间连续折射。' },
     missile: { id:'missile', weapon:'missile', passive:'loader', weaponLevel:3, passiveLevel:2, name:'蜂群饱和', en:'SWARM SATURATION', color:'#ffd05a', icon:'mine', desc:'导弹 +2，追踪转向更快，爆炸范围扩大。' },
     frost: { id:'frost', weapon:'frost', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'绝对零度', en:'ABSOLUTE ZERO', color:'#9bd8ff', icon:'cooling', desc:'霜环范围 +30%，减速延长，脉冲伤害提升。' },
     toxin: { id:'toxin', weapon:'toxin', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'天基齐射', en:'ORBITAL BARRAGE', color:'#9dbbff', icon:'orbital', desc:'动能棒 +1，冲击半径 +25%，落点引发二次震波。' },
@@ -984,18 +984,18 @@
     mortar: { id:'mortar', weapon:'mortar', passive:'warhead', weaponLevel:3, passiveLevel:2, name:'电浆过载', en:'PLASMA OVERLOAD', color:'#b896ff', icon:'orbital', desc:'电浆弹 +1，落点爆炸半径与电磁迟滞时间提升。' },
     sentry: { id:'sentry', weapon:'sentry', passive:'armor', weaponLevel:3, passiveLevel:2, name:'堡垒网络', en:'FORTRESS NET', color:'#8fffe6', icon:'turret', desc:'哨戒 +1，耐久与嘲讽范围提升，形成会吸火的交叉防线。' },
     emp: { id:'emp', weapon:'emp', passive:'cooling', weaponLevel:3, passiveLevel:2, name:'零域脉冲', en:'NULL FIELD', color:'#6fd8ff', icon:'emp', desc:'脉冲半径 +30%，瘫痪时间延长，零域覆盖整片近场。' },
-    rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，贯穿整条战线。' }
+    rail: { id:'rail', weapon:'rail', passive:'overdrive', weaponLevel:3, passiveLevel:2, name:'歼星磁轨', en:'STARBREAKER', color:'#9dbbff', icon:'cannon', desc:'磁轨伤害 +35%，爆炸范围扩大，折射整条战线。' }
   };
 
   // Role tags make each upgrade card's battlefield job explicit.
-  Object.assign(WEAPONS.cannon, { role:'单体爆发', focus:'首领 / 直线穿透' });
+  Object.assign(WEAPONS.cannon, { role:'单体爆发', focus:'首领 / 折射连锁' });
   Object.assign(WEAPONS.drone, { role:'环绕护卫', focus:'贴身索敌 / 弹幕拦截' });
   Object.assign(WEAPONS.arc, { role:'连锁清场', focus:'密集敌群 / 跳跃' });
   Object.assign(WEAPONS.flame, { role:'区域封锁', focus:'走位 / 持续灼烧' });
   Object.assign(WEAPONS.mine, { role:'陷阱控场', focus:'埋伏 / 爆发' });
   Object.assign(WEAPONS.orbital, { role:'重型炮击', focus:'敌群 / 高伤害' });
   Object.assign(WEAPONS.scatter, { role:'近距爆发', focus:'贴脸 / 扇形清群' });
-  Object.assign(WEAPONS.laser, { role:'直线穿透', focus:'单列 / 高频射线' });
+  Object.assign(WEAPONS.laser, { role:'折射连锁', focus:'敌群 / 高频射线' });
   Object.assign(WEAPONS.missile, { role:'追踪爆发', focus:'自动锁定 / 爆炸' });
   Object.assign(WEAPONS.frost, { role:'范围控场', focus:'减速 / 近身防御' });
   Object.assign(WEAPONS.toxin, { role:'重型打击', focus:'天基 / 单体爆发' });
@@ -1003,7 +1003,7 @@
   Object.assign(WEAPONS.mortar, { role:'远程炮击', focus:'抛射 / 范围瘫痪' });
   Object.assign(WEAPONS.sentry, { role:'嘲讽阵地', focus:'吸引火力 / 基地守区' });
   Object.assign(WEAPONS.emp, { role:'反弹幕 / 近场控制', focus:'电磁脉冲 / 瘫痪与清弹' });
-  Object.assign(WEAPONS.rail, { role:'重型穿透', focus:'直线爆破 / 重甲' });
+  Object.assign(WEAPONS.rail, { role:'重型折射', focus:'连锁爆破 / 重甲' });
   Object.assign(PASSIVES.engine, { role:'机动' });
   Object.assign(PASSIVES.armor, { role:'生存' });
   Object.assign(PASSIVES.loader, { role:'输出频率' });
@@ -1016,7 +1016,7 @@
   Object.assign(PASSIVES.shield, { role:'容错' });
   Object.assign(PASSIVES.regen, { role:'续航' });
   Object.assign(PASSIVES.plating, { role:'减伤' });
-  Object.assign(PASSIVES.pierce, { role:'穿透' });
+  Object.assign(PASSIVES.pierce, { role:'折射' });
   Object.assign(PASSIVES.dash, { role:'机动' });
   Object.assign(PASSIVES.fortune, { role:'资源' });
   Object.assign(PASSIVES.execute, { role:'收割' });
