@@ -21,7 +21,13 @@
   const ENDLESS_WAVE_SPAN = 75;
   const ENDLESS_FIRST_BOSS = 120;
   const ENDLESS_BOSS_GAP = 90;
-  const ENDLESS_MAX_ENEMIES = 78;
+  const ENDLESS_MAX_ENEMIES = 90;
+  const ENEMY_POP_CAP = 70;
+  // One explicit time coefficient for regular enemies/elites. Per-unit HP is
+  // still the fixed tier value; map/stage HP multipliers are not used.
+  const ENEMY_TIME_HP_RATE = 1.1;
+  const EXTRA_SPAWN_XP_MUL = .35;
+  const EXTRA_SPAWN_DROP_MUL = .5;
   const CORE_W = 64;
   const CORE_H = 64;
   const BASE_MAX_HP = 520;
@@ -127,21 +133,21 @@
     throne: 'bossWarlord'
   };
 
-  // Static stage pressure. Difficulty comes from the enemy roster and the
-  // stage itself, never from a hidden per-minute HP/damage multiplier.
+  // Static stage pressure only controls damage and spawn cadence. Enemy HP is
+  // the fixed tier value plus the single explicit time curve in enemyTimeHpMul().
   const STAGE_PRESSURE = [
-    { hp: .72, dmg: .62, spawn: 1.06 }, // tutorial
-    { hp: .82, dmg: .72, spawn: 1.00 },
-    { hp: .90, dmg: .80, spawn: .98 },
-    { hp: .98, dmg: .88, spawn: .96 },
-    { hp: 1.06, dmg: .96, spawn: .94 },
-    { hp: 1.14, dmg: 1.04, spawn: .92 },
-    { hp: 1.22, dmg: 1.10, spawn: .90 },
-    { hp: 1.30, dmg: 1.16, spawn: .88 },
-    { hp: 1.38, dmg: 1.22, spawn: .86 },
-    { hp: 1.46, dmg: 1.28, spawn: .84 },
-    { hp: 1.55, dmg: 1.34, spawn: .82 },
-    { hp: 1.65, dmg: 1.40, spawn: .80 }
+    { dmg: .62, spawn: 1.06 }, // tutorial
+    { dmg: .72, spawn: 1.00 },
+    { dmg: .80, spawn: .98 },
+    { dmg: .88, spawn: .96 },
+    { dmg: .96, spawn: .94 },
+    { dmg: 1.04, spawn: .92 },
+    { dmg: 1.10, spawn: .90 },
+    { dmg: 1.16, spawn: .88 },
+    { dmg: 1.22, spawn: .86 },
+    { dmg: 1.28, spawn: .84 },
+    { dmg: 1.34, spawn: .82 },
+    { dmg: 1.40, spawn: .80 }
   ];
 
   const TUTORIAL_PHASES = [
@@ -4567,6 +4573,56 @@
     }
   }
 
+  function enemyTimeHpMul() {
+    const t = clamp((G.elapsed || 0) / 600, 0, 1.5);
+    return 1 + t * ENEMY_TIME_HP_RATE;
+  }
+
+  function spawnSquad(type, count, opts) {
+    opts = opts || {};
+    const cap = Math.min(
+      G.endless ? ENDLESS_MAX_ENEMIES : ENEMY_POP_CAP,
+      G.popCap || (G.endless ? ENDLESS_MAX_ENEMIES : ENEMY_POP_CAP)
+    );
+    const spawned = [];
+    for (let i = 0; i < count && G.enemies.length < cap; i++) {
+      const spawnAt = opts.spawnAt ? opts.spawnAt(i) : opts.spawn;
+      const e = spawnEnemy(type, {
+        spawn: spawnAt || undefined,
+        xpMul: i === 0 ? (opts.firstXpMul == null ? 1 : opts.firstXpMul) : (opts.xpMul == null ? EXTRA_SPAWN_XP_MUL : opts.xpMul),
+        dropMul: i === 0 ? 1 : (opts.dropMul == null ? EXTRA_SPAWN_DROP_MUL : opts.dropMul)
+      });
+      if (e) spawned.push(e);
+    }
+    return spawned;
+  }
+
+  function eliteEscortPoints(elite) {
+    if (!elite) return [];
+    const offsets = [[-2, 0], [2, 0], [0, 2], [0, -2], [-2, -1], [2, 1], [-2, 1], [2, -1], [-3, 0], [3, 0]];
+    const out = [];
+    for (const [dx, dy] of offsets) {
+      const cx = clamp(elite.cx + dx, 1, COLS - 2);
+      const cy = clamp(elite.cy + dy, 1, ROWS - 2);
+      const tile = G.tiles[cy] && G.tiles[cy][cx];
+      if (tile && (tile.type === 'brick' || tile.type === 'steel' || tile.type === 'water' || tile.type === 'core')) continue;
+      out.push({ cx, cy });
+    }
+    return out;
+  }
+
+  function spawnEliteEscort(elite) {
+    if (!elite) return;
+    const count = 4 + Math.min(2, phaseIndex());
+    const points = eliteEscortPoints(elite);
+    spawnSquad(pickWaveType(), count, {
+      spawnAt: () => points.length ? pick(points) : chooseSpawnPoint(),
+      firstXpMul: .65,
+      xpMul: .55,
+      dropMul: .6
+    });
+  }
+
   function updateWaves(dt) {
     const pi = phaseIndex();
     if (pi !== G.waveIndex) {
@@ -4578,7 +4634,8 @@
       retireOldWaveTypes(roster[pi]);
       showToast(`第 ${pi + 1} 阶段 · ${phaseLabel()}${G.endless ? ' · 无尽' : ''}`, 'cyan');
       if (G.elapsed > 1 && G.mode === 'playing') {
-        for (let i = 0; i < 2; i++) spawnEnemy(pickWaveType());
+        const surge = G.arenaIndex === 0 ? 2 + pi : 4 + pi * 2;
+        spawnSquad(pickWaveType(), surge, { xpMul: .55, dropMul: .55 });
       }
       AUDIO.tick();
       AUDIO.setIntensity(pi >= 3 ? 1 : 0);
@@ -4592,6 +4649,7 @@
       const eliteAlive = G.enemies.some(e => e.elite && !e.sealTankId && !e.dead);
       if (!eliteAlive) {
         const elite = spawnTimedElite({ warning: true });
+        spawnEliteEscort(elite);
         const label = elite && elite.eliteLabel ? `精英·${elite.eliteLabel}` : '精英·破城者';
         showToast(`警告：${label}进入战区 · 击破必掉战术宝箱`, 'red');
         AUDIO.boss();
@@ -4600,6 +4658,7 @@
     if (G.endless && G.elapsed >= G.endlessEliteAt) {
       G.endlessEliteAt = G.elapsed + ELITE_GAP;
       const elite = spawnTimedElite({ warning: true });
+      spawnEliteEscort(elite);
       const label = elite && elite.eliteLabel ? `精英·${elite.eliteLabel}` : '精英·破城者';
       showToast(`无尽猎杀 · ${label}进入战区`, 'red');
       AUDIO.boss();
@@ -4625,17 +4684,16 @@
       }
     }
 
-    // Population grows over the run: +3 slots per minute, hard-capped at 55.
+    // Population grows over the run: +4 slots per minute, capped at 70.
     // Bosses do not stop the regular wave pipeline.
     const phase = phaseData();
-    // Solo caps out at 55 on the 15:00 mark. Co-op gets a small fixed
-    // head start, not a different growth rate.
-    const timeCap = 10 + Math.floor(G.elapsed / 60) * 3 + (G.twoPlayer ? 2 : 0);
-    const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : 55, timeCap);
+    const timeCap = 12 + Math.floor(G.elapsed / 60) * 4 + (G.twoPlayer ? 2 : 0);
+    const cap = Math.min(G.endless ? ENDLESS_MAX_ENEMIES : ENEMY_POP_CAP, timeCap);
     G.popCap = cap;
     G.spawnTimer -= dt;
     if (G.spawnTimer <= 0 && G.enemies.length < cap) {
-      spawnEnemy(pickWaveType());
+      const squad = G.arenaIndex === 0 ? (pi >= 2 ? 2 : 1) : (pi >= 4 ? 3 : pi >= 2 ? 2 : 1);
+      spawnSquad(pickWaveType(), squad);
       G.spawnTimer = Math.max(.55, phase.spawn * rand(1.08, .82) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1));
     }
 
@@ -4645,10 +4703,8 @@
       const sidePoints = spawnPoolSides();
       if (G.enemies.length < cap && sidePoints.length) {
         if (!G.sideWarned) { G.sideWarned = true; showToast('侧翼通道开启 · 地图边缘开始入场', 'red'); }
-        const squad = G.endless ? Math.min(3, 1 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 240 ? 2 : 1);
-        for (let i = 0; i < squad && G.enemies.length < cap; i++) {
-          spawnEnemy(pickWaveType(), { spawn: chooseSpawnPoint(sidePoints) });
-        }
+        const squad = G.endless ? Math.min(6, 2 + Math.floor(G.elapsed / 240)) : (G.elapsed >= 240 ? 4 : 2);
+        spawnSquad(pickWaveType(), squad, { spawnAt: () => chooseSpawnPoint(sidePoints) });
         G.sideSpawnTimer = Math.max(2.2, 5.6 - Math.min(1, G.elapsed / 600) * 2.6) * (G.runMod && G.runMod.spawnMul ? G.runMod.spawnMul : 1);
       } else {
         G.sideSpawnTimer = 1.2;
@@ -4674,11 +4730,13 @@
       id: ++G.entityId,
       type, x, y, cx: sp.cx, cy: sp.cy,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1),
+      hp: cfg.hp * (cfg.elite ? 1.15 : 1) * enemyTimeHpMul() * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1), maxHp: cfg.hp * (cfg.elite ? 1.15 : 1) * enemyTimeHpMul() * ((G.difficultyMod && G.difficultyMod.enemyHp) || 1),
       damage: cfg.damage * .84 * (mod.enemyDamage || 1), speed: cfg.speed * (mod.enemySpeed || 1), fireCd: rand(2.8, 1.4) / (mod.fireRate || 1), fireInterval: cfg.fire, bulletSpeed: cfg.bulletSpeed,
       radius: cfg.radius, size: cfg.size || (cfg.elite ? 1.32 : type === 'heavy' ? 1.25 : type === 'bomber' ? .96 : type === 'scout' ? .9 : type === 'sniper' ? 1.0 : 1.04),
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
-      xp: cfg.xp, elite: !!cfg.elite, boss: !!cfg.boss,
+      xp: Math.max(1, Math.round(cfg.xp * (opts.xpMul == null ? 1 : opts.xpMul))),
+      dropMul: opts.dropMul == null ? 1 : opts.dropMul,
+      elite: !!cfg.elite, boss: !!cfg.boss,
       domain: cfg.domain || 'ground', ai: cfg.ai || 'line', role: cfg.role || 'line', tier: cfg.tier || 1,
       airPhase: rand(TAU), orbit: rand(TAU), orbitDir: chance(.5) ? 1 : -1, teleportCd: rand(4.5, 2.2),
       spawnTimer: opts.warning ? 1.15 : .62, spawnTotal: opts.warning ? 1.15 : .62,
@@ -4699,14 +4757,15 @@
     const x = W / 2, y = flying ? 122 : 150;
     const scale = 1 + (G.endless ? G.endlessBossKills * .16 : 0);
     const mod = G.runMod || {};
+    const bossTimeHp = 1 + (enemyTimeHpMul() - 1) * .5;
     const e = {
       id: ++G.entityId, type: 'boss', bossKey, bossKind: cfg.bossKind || 'siege',
       bossName: cfg.name, bossTag: cfg.tag || cfg.en, bossScale: cfg.bossScale || 1.45,
       domain: cfg.domain || 'ground',
       x, y, cx: 14, cy: 4,
       bodyAngle: Math.PI / 2, turretAngle: Math.PI / 2,
-      hp: cfg.hp * scale * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
-      maxHp: cfg.hp * scale * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
+      hp: cfg.hp * scale * bossTimeHp * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
+      maxHp: cfg.hp * scale * bossTimeHp * ((G.difficultyMod && G.difficultyMod.bossHp) || 1) * (G.twoPlayer ? 1.35 : 1),
       damage: cfg.damage * .88 * (mod.enemyDamage || 1),
       speed: cfg.speed * (mod.enemySpeed || 1), radius: cfg.radius, size: cfg.bossScale || 1.5, bulletSpeed: cfg.bulletSpeed,
       color: cfg.color, dark: cfg.dark, light: cfg.light, coreColor: cfg.core,
@@ -6114,7 +6173,7 @@
         addEffect({ type: 'explosion', x: e.x, y: e.y, radius: 34, life: .3, maxLife: .3, color: '#ff9d5a' });
       }
       spawnPickup('xp', e.x, e.y, xpValue);
-      const dropChance = (e.elite ? .95 : statsFor(owner).dropChance);
+      const dropChance = (e.elite ? .95 : statsFor(owner).dropChance) * (e.dropMul || 1);
       if (chance(dropChance)) {
         const itemKeys = ['star', 'grenade', 'helmet', 'timer', 'shovel', 'tank', 'turret'];
         const weights = [15, 15, 15, 13, 15, 20, 10];
