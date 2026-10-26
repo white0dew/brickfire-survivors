@@ -455,7 +455,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-47`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-49`;
     }
   }
 

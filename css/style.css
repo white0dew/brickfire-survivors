@@ -443,9 +443,17 @@ button:focus-visible, [tabindex]:focus-visible {
   gap: 15px; padding-top: 13px;
 }
 .battle-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.battle-statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px 3px;
+}
 .battle-frame {
   position: relative; width: 100%; aspect-ratio: 5 / 3;
-  max-height: calc(100svh - 186px);
+  max-height: calc(100svh - 226px);
   margin: 0 auto;
   border: 1px solid rgba(95,240,206,.24);
   background: #07100d;
@@ -2204,8 +2212,8 @@ body.pad-connected .sf-hint { display: flex; }
   width: min(280px, 31%);
   padding: 9px 11px 10px;
   border-left: 2px solid var(--amber);
-  background: linear-gradient(90deg, rgba(5,10,8,.9), rgba(5,10,8,.58));
-  box-shadow: 0 8px 24px rgba(0,0,0,.24);
+  background: linear-gradient(90deg, rgba(5,10,8,.58), rgba(5,10,8,.12));
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
   pointer-events: none;
 }
 .hud-pilot--p1 { left: 10px; }
@@ -2214,7 +2222,7 @@ body.pad-connected .sf-hint { display: flex; }
   left: auto;
   border-left: 0;
   border-right: 2px solid var(--cyan);
-  background: linear-gradient(270deg, rgba(5,10,8,.9), rgba(5,10,8,.58));
+  background: linear-gradient(270deg, rgba(5,10,8,.58), rgba(5,10,8,.12));
 }
 .hud-pilot.is-hidden { display: none; }
 .hud-pilot__top { display: flex; align-items: center; gap: 7px; min-width: 0; }
@@ -2278,11 +2286,8 @@ body.pad-connected .sf-hint { display: flex; }
 }
 .hud-pilot__build b { color: var(--paper-dim); font-weight: 400; }
 .hud-base {
-  position: absolute;
+  position: static;
   z-index: 9;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 206px;
   display: flex;
   align-items: center;
@@ -2340,7 +2345,7 @@ body.pad-connected .sf-hint { display: flex; }
 .toast { border-left: 0; border-bottom: 2px solid var(--amber); }
 
 @media (max-width: 1100px) {
-  .battle-frame { width: min(100%, calc((100svh - 230px) * 1.6667)); }
+  .battle-frame { width: min(100%, calc((100svh - 270px) * 1.6667)); }
   .hud-pilot { width: min(250px, 32%); }
   .hud-base { width: 180px; }
 }
@@ -2382,6 +2387,7 @@ body.pad-connected .sf-hint { display: flex; }
 .hud-meter { height: 5px; }
 .toast { max-width: min(460px, 72vw); font-size: 10px; padding: 6px 10px; }
 @media (max-width: 700px) {
+  .battle-statusbar { display: none; }
   .hud-base { display: none; }
 }
 .pause__actions .text-btn { font-size: 17px; min-height: 56px; }
@@ -2458,9 +2464,9 @@ body.pad-connected .sf-hint { display: flex; }
 }
 
 /* With the side column gone, let the battlefield take the available width. */
-.battle-frame { width: min(100%, calc((100svh - 212px) * 1.6667)); }
+.battle-frame { width: min(100%, calc((100svh - 252px) * 1.6667)); }
 @media (max-width: 1100px) {
-  .battle-frame { width: min(100%, calc((100svh - 188px) * 1.6667)); }
+  .battle-frame { width: min(100%, calc((100svh - 228px) * 1.6667)); }
 }
 
 /* Large displays: remove the old 1500px desktop cap and let the battlefield
@@ -2518,7 +2524,7 @@ body.pad-connected .sf-hint { display: flex; }
 
 /* Keep the slightly roomier 4K reserve from shrinking ordinary desktop play. */
 @media (min-width: 1101px) and (max-width: 1899px) {
-  .battle-frame { width: min(100%, calc((100svh - 200px) * 1.6667)); }
+  .battle-frame { width: min(100%, calc((100svh - 240px) * 1.6667)); }
 }
 
 /* Main menu: eight command-rail entries and a slightly lower rail. */
