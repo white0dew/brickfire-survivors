@@ -6415,7 +6415,8 @@
     const speed = type === 'xp' ? rand(65, 20) : rand(30, 8);
     G.pickups.push({
       type, x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-      value: value || 0, life: type === 'chest' ? 120 : 38, seed: rand(TAU), picked: false
+      // Embers persist until collected. Only tactical items and chests time out.
+      value: value || 0, life: type === 'xp' ? Infinity : type === 'chest' ? 120 : 38, seed: rand(TAU), picked: false
     });
     // The scripted opening turret is not a combat drop; let the first real
     // item drop (or first pickup) introduce the supply system.
