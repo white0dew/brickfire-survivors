@@ -1161,7 +1161,7 @@
 
   const PLAYER_BASE = {
     maxHp: 190, speed: 128, radius: 13, fireInterval: .60, damage: 17,
-    pickupRadius: 120, crit: .05, critMult: 1.8, xpGain: 1, cdr: 1, area: 1, damageMult: 1
+    pickupRadius: 80, crit: .05, critMult: 1.8, xpGain: 1, cdr: 1, area: 1, damageMult: 1
   };
   window.BF_CONTENT = { MAPS, ENEMIES, WAVES, ITEMS, WEAPONS, PASSIVES, TANKS, FUSIONS, SEAL_TANKS_BY_STAGE, DIFFICULTIES, PLAYER_BASE };
 })();

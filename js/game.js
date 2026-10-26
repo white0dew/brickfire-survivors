@@ -449,7 +449,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-45`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-47`;
     }
   }
 
@@ -6371,11 +6371,6 @@
       if (!p) continue;
       const d = dist(pk.x, pk.y, p.x, p.y);
       const magnetR = statsFor(p).pickup * (pk.type === 'xp' ? 1.8 : .8);
-      if (pk.type === 'xp' && d > magnetR && pk.life < 34) {
-        const drift = Math.min(80, 42 + (34 - pk.life) * 2);
-        pk.x += (p.x - pk.x) / d * drift * dt;
-        pk.y += (p.y - pk.y) / d * drift * dt;
-      }
       if (d < magnetR) {
         const a = Math.atan2(p.y - pk.y, p.x - pk.x);
         const pull = 600 * clamp(1 - d / magnetR, .2, 1);
