@@ -455,7 +455,7 @@
         if (U.codexScreen && !U.codexScreen.classList.contains('hidden')) scheduleTankArtRedraw();
       };
       img.onerror = () => { console.warn('[art] missing', requestStage, file); };
-      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-49`;
+      img.src = `assets/game/stages/${requestStage}/${file}?v=20261025-50`;
     }
   }
 
@@ -3631,7 +3631,9 @@
   function frontBrickTarget(p) {
     if (!p) return null;
     const facing = Number.isFinite(p.bodyAngle) ? p.bodyAngle : 0;
-    const limit = Math.hypot(W, H) + TILE;
+    // Only clear walls that are actually in the way of movement; do not snipe
+    // a brick somewhere across the map when no enemy is nearby.
+    const limit = TILE * 3.2;
     for (let d = 2; d <= limit; d += 6) {
       const x = p.x + Math.cos(facing) * d;
       const y = p.y + Math.sin(facing) * d;
@@ -3874,14 +3876,14 @@
       p.moving = false; p.moveX = 0; p.moveY = 0;
       if (mag <= .08) { p.vx = 0; p.vy = 0; }
     }
-    // Automatic fire control only. The turret prefers targets in the forward
-    // half of the hull's facing; the rear half is used only when the front is
-    // empty, and distance decides inside each half.
+    // Automatic fire control only. Enemies and seals always come first; a
+    // nearby brick is cleared only when there is no attackable target at all.
+    // The turret prefers targets in the forward half of the hull's facing; the
+    // rear half is used only when the front is empty, and distance decides
+    // inside each half.
     let aimAngle = p.turretAngle;
     let aimPoint = null;
-    // A brick directly in front is the immediate obstacle: clear it before
-    // turning the turret toward enemies elsewhere.
-    const autoTarget = frontBrickTarget(p) || nearestDirectionalAttackable(p, PLAYER_AUTO_RANGE);
+    const autoTarget = nearestDirectionalAttackable(p, PLAYER_AUTO_RANGE) || frontBrickTarget(p);
     if (autoTarget) {
       const lead = Math.min(.55, dist(p.x, p.y, autoTarget.x, autoTarget.y) / 620);
       const vx = autoTarget.moving ? Math.cos(autoTarget.bodyAngle) * autoTarget.speed : 0;
